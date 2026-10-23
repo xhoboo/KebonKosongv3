@@ -95,17 +95,16 @@
   .nav-item:active { background: var(--track); }
   .nav-item[aria-current="page"] { background: var(--track); font-weight: 600; }
 
-  .items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
   .item {
-    display: flex; align-items: center; gap: 12px;
+    aspect-ratio: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
     background: var(--card);
     border: 1px solid var(--line);
     border-radius: 12px;
-    padding: 12px 14px;
   }
-  .item-icon { font-size: 24px; line-height: 1; }
-  .item-name { flex: 1; font-weight: 600; }
-  .item-qty { color: var(--wood); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .item-icon { font-size: 30px; line-height: 1; }
+  .item-qty { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
   .empty { color: var(--muted); font-size: 14px; margin: 0; }
 
   .setting {
@@ -242,25 +241,26 @@
   const TEXT = {
     id: {
       trees: 'Pohon', inventory: 'Inventory', settings: 'Pengaturan',
-      acacia: 'Pohon Akasia', seconds: 'detik', wood: 'Kayu', empty: 'Belum ada item.',
+      acacia: 'Pohon Akasia', seconds: 'detik', acaciaWood: 'Kayu Akasia', empty: 'Belum ada item.',
       theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
       openMenu: 'Buka menu',
     },
     en: {
       trees: 'Trees', inventory: 'Inventory', settings: 'Settings',
-      acacia: 'Acacia Tree', seconds: 'sec', wood: 'Wood', empty: 'No items yet.',
+      acacia: 'Acacia Tree', seconds: 'sec', acaciaWood: 'Acacia Wood', empty: 'No items yet.',
       theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
       openMenu: 'Open menu',
     },
   };
 
-  const state = { wood: 0, running: false, progress: 0, lastTick: Date.now() };
+  const state = { acaciaWood: 0, running: false, progress: 0, lastTick: Date.now() };
   const settings = { theme: document.documentElement.dataset.theme, lang: 'id' };
 
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (saved) Object.assign(state, saved);
   } catch {}
+  if (state.wood) { state.acaciaWood += state.wood; delete state.wood; } // simpanan lama: 'wood' = kayu akasia
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
     if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
@@ -275,7 +275,7 @@
   // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
   if (state.running) {
     const elapsed = Date.now() - state.lastTick + state.progress;
-    state.wood += Math.floor(elapsed / CHOP_TIME);
+    state.acaciaWood += Math.floor(elapsed / CHOP_TIME);
     state.progress = elapsed % CHOP_TIME;
   }
 
@@ -289,7 +289,7 @@
   }
 
   // Semua item yang bisa didapat; key = nama field di state
-  const ITEMS = [{ key: 'wood', icon: '🪵' }];
+  const ITEMS = [{ key: 'acaciaWood', icon: '🪵' }];
 
   function popup() {
     const el = document.createElement('span');
@@ -305,9 +305,11 @@
   function renderInventory() {
     const owned = ITEMS.filter(it => state[it.key] >= 1);
     const locale = settings.lang === 'id' ? 'id-ID' : 'en-US';
-    itemsEl.innerHTML = owned.map(it =>
-      `<li class="item"><span class="item-icon">${it.icon}</span><span class="item-name">${t(it.key)}</span>` +
-      `<span class="item-qty">${Math.floor(state[it.key]).toLocaleString(locale)}</span></li>`).join('');
+    itemsEl.innerHTML = owned.map(it => {
+      const qty = Math.floor(state[it.key]).toLocaleString(locale);
+      return `<li class="item" title="${t(it.key)}" aria-label="${t(it.key)}: ${qty}">` +
+        `<span class="item-icon" aria-hidden="true">${it.icon}</span><span class="item-qty" aria-hidden="true">${qty}</span></li>`;
+    }).join('');
     emptyEl.hidden = owned.length > 0;
   }
 
@@ -345,7 +347,7 @@
       state.progress += dt;
       if (state.progress >= CHOP_TIME) {
         const chops = Math.floor(state.progress / CHOP_TIME);
-        state.wood += chops;
+        state.acaciaWood += chops;
         state.progress %= CHOP_TIME;
         if (page === 'pohon') popup();
         else renderInventory();
