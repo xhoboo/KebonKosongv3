@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b2a1f">
+<title>Idle Penebang</title>
+<style>
+  :root {
+    --bg: #f3efe6;
+    --card: #fffdf8;
+    --ink: #2a2620;
+    --muted: #7a7266;
+    --line: #e4ddcf;
+    --accent: #3f7d4e;
+    --accent-ink: #ffffff;
+    --track: #ebe5d8;
+    --wood: #a0673a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141a16;
+      --card: #1d2520;
+      --ink: #ece7dc;
+      --muted: #9a9486;
+      --line: #2c3530;
+      --accent: #5fa46f;
+      --accent-ink: #0f1511;
+      --track: #2a332d;
+      --wood: #c98a55;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100dvh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  }
+  .app { max-width: 480px; margin: 0 auto; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; margin: 8px 0 20px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .total { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .total b { color: var(--wood); font-size: 18px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+  }
+  .card-top { display: flex; gap: 14px; align-items: center; }
+  .icon {
+    width: 56px; height: 56px; flex: none;
+    border-radius: 14px;
+    background: var(--track);
+    display: grid; place-items: center;
+    font-size: 30px;
+    position: relative;
+  }
+  .axe { position: absolute; right: -4px; top: -6px; font-size: 22px; transform-origin: 80% 80%; }
+  .running .axe { animation: swing var(--dur, 2s) ease-in infinite; }
+  @keyframes swing {
+    0%, 70% { transform: rotate(-35deg); }
+    85% { transform: rotate(20deg); }
+    100% { transform: rotate(-35deg); }
+  }
+  .meta { flex: 1; min-width: 0; }
+  .meta h2 { font-size: 16px; margin: 0 0 4px; }
+  .meta p { font-size: 13px; color: var(--muted); margin: 0; }
+
+  .bar {
+    margin: 16px 0 6px;
+    height: 10px;
+    background: var(--track);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .fill { height: 100%; width: 0%; background: var(--accent); border-radius: inherit; }
+  .bar-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  button {
+    margin-top: 14px;
+    width: 100%;
+    min-height: 48px;
+    border: 0;
+    border-radius: 12px;
+    font: 600 16px/1 inherit;
+    font-family: inherit;
+    background: var(--accent);
+    color: var(--accent-ink);
+    cursor: pointer;
+    transition: transform .08s;
+  }
+  button:active { transform: scale(.98); }
+  button.on { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+
+  .pop {
+    position: fixed; pointer-events: none;
+    font-weight: 700; color: var(--wood);
+    animation: rise .9s ease-out forwards;
+  }
+  @keyframes rise { to { transform: translateY(-40px); opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Idle Penebang</h1>
+    <div class="total">🪵 <b id="wood">0</b> kayu</div>
+  </header>
+
+  <section class="card" id="card">
+    <div class="card-top">
+      <div class="icon">🌳<span class="axe">🪓</span></div>
+      <div class="meta">
+        <h2>Tebang Pohon</h2>
+        <p>Kapak menebang otomatis. +1 kayu tiap tebangan.</p>
+      </div>
+    </div>
+    <div class="bar"><div class="fill" id="fill"></div></div>
+    <div class="bar-info"><span id="status">Berhenti</span><span id="time">0.0 / 2.0 dtk</span></div>
+    <button id="toggle">Mulai Menebang</button>
+  </section>
+</div>
+
+<script>
+  const CHOP_TIME = 2000; // ms per tebangan
+  const SAVE_KEY = 'idle-penebang-v1';
+
+  const state = { wood: 0, running: false, progress: 0, lastTick: Date.now() };
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
+    if (saved) Object.assign(state, saved);
+  } catch {}
+
+  const $ = id => document.getElementById(id);
+  const woodEl = $('wood'), fillEl = $('fill'), statusEl = $('status'),
+        timeEl = $('time'), btn = $('toggle'), card = $('card');
+  card.style.setProperty('--dur', CHOP_TIME + 'ms');
+
+  // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
+  if (state.running) {
+    const elapsed = Date.now() - state.lastTick + state.progress;
+    state.wood += Math.floor(elapsed / CHOP_TIME);
+    state.progress = elapsed % CHOP_TIME;
+  }
+
+  function save() {
+    state.lastTick = Date.now();
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  function popup() {
+    const r = woodEl.getBoundingClientRect();
+    const el = document.createElement('div');
+    el.className = 'pop';
+    el.textContent = '+1';
+    el.style.left = r.left + 'px';
+    el.style.top = (r.bottom + 4) + 'px';
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+
+  function render() {
+    woodEl.textContent = Math.floor(state.wood).toLocaleString('id-ID');
+    fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
+    timeEl.textContent = (state.progress / 1000).toFixed(1) + ' / ' + (CHOP_TIME / 1000).toFixed(1) + ' dtk';
+    statusEl.textContent = state.running ? 'Menebang…' : 'Berhenti';
+    btn.textContent = state.running ? 'Berhenti' : 'Mulai Menebang';
+    btn.classList.toggle('on', state.running);
+    card.classList.toggle('running', state.running);
+  }
+
+  btn.addEventListener('click', () => {
+    state.running = !state.running;
+    save();
+    render();
+  });
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = now - last;
+    last = now;
+    if (state.running) {
+      state.progress += dt;
+      if (state.progress >= CHOP_TIME) {
+        const chops = Math.floor(state.progress / CHOP_TIME);
+        state.wood += chops;
+        state.progress %= CHOP_TIME;
+        popup();
+      }
+    }
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  setInterval(save, 5000);
+  document.addEventListener('visibilitychange', save);
+  window.addEventListener('pagehide', save);
+</script>
+</body>
+</html>
