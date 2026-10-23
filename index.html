@@ -3,8 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1b2a1f">
+<meta name="theme-color" content="#f3efe6">
 <title>Kebon Kosong</title>
+<script>
+  // Pasang tema sebelum halaman digambar supaya tidak berkedip
+  (function () {
+    let theme = null;
+    try { theme = JSON.parse(localStorage.getItem('kebon-kosong-settings')).theme; } catch {}
+    if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = theme;
+  })();
+</script>
 <style>
   :root {
     --bg: #f3efe6;
@@ -17,22 +26,20 @@
     --on-bg: #3f7d4e;
     --on-ink: #ffffff;
     --on-edge: #2b5a37;
-    --scrim: rgba(20, 16, 10, .35);
+    color-scheme: light;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #141a16;
-      --card: #1d2520;
-      --ink: #ece7dc;
-      --muted: #9a9486;
-      --line: #2c3530;
-      --track: #2a332d;
-      --wood: #c98a55;
-      --on-bg: #2f6b3e;
-      --on-ink: #eaf5ec;
-      --on-edge: #1c4227;
-      --scrim: rgba(0, 0, 0, .5);
-    }
+  :root[data-theme="dark"] {
+    --bg: #141a16;
+    --card: #1d2520;
+    --ink: #ece7dc;
+    --muted: #9a9486;
+    --line: #2c3530;
+    --track: #2a332d;
+    --wood: #c98a55;
+    --on-bg: #2f6b3e;
+    --on-ink: #eaf5ec;
+    --on-edge: #1c4227;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; }
@@ -46,11 +53,11 @@
   }
   .app { max-width: 480px; margin: 0 auto; }
 
-  header { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 16px; }
   h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
   h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 12px; }
   .menu-btn {
-    width: 40px; height: 40px; margin-left: -8px;
+    width: 40px; height: 40px; margin-right: -8px;
     display: grid; place-items: center;
     background: none; border: 0; border-radius: 10px;
     color: var(--ink); cursor: pointer;
@@ -59,17 +66,19 @@
 
   .scrim {
     position: fixed; inset: 0; z-index: 10;
-    background: var(--scrim);
+    background: transparent;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
     opacity: 0; pointer-events: none;
     transition: opacity .25s;
   }
   .drawer {
-    position: fixed; top: 0; bottom: 0; left: 0; z-index: 11;
+    position: fixed; top: 0; bottom: 0; right: 0; z-index: 11;
     width: min(260px, 75vw);
     background: var(--card);
-    border-right: 1px solid var(--line);
+    border-left: 1px solid var(--line);
     padding: max(16px, env(safe-area-inset-top)) 12px 16px;
-    transform: translateX(-100%);
+    transform: translateX(100%);
     visibility: hidden;
     transition: transform .25s ease, visibility .25s;
   }
@@ -99,6 +108,23 @@
   .item-qty { color: var(--wood); font-weight: 700; font-variant-numeric: tabular-nums; }
   .empty { color: var(--muted); font-size: 14px; margin: 0; }
 
+  .setting {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .setting-label { display: block; font-weight: 600; margin-bottom: 10px; }
+  .segment { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--track); border-radius: 10px; padding: 4px; }
+  .segment button {
+    min-height: 36px;
+    background: none; border: 0; border-radius: 7px;
+    font: inherit; font-size: 14px; color: var(--muted);
+    cursor: pointer;
+  }
+  .segment button[aria-pressed="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .card {
     position: relative;
@@ -124,6 +150,8 @@
   .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .card.on .duration { color: inherit; opacity: .8; }
   .icon { display: block; font-size: 40px; line-height: 1; margin-top: 12px; }
+  .icon.bump { animation: bump .3s ease-out; }
+  @keyframes bump { 40% { transform: scale(1.15); } }
 
   .bar {
     display: block;
@@ -137,37 +165,43 @@
   .fill { display: block; height: 100%; width: 0%; background: var(--muted); border-radius: inherit; }
   .card.on .fill { background: var(--on-ink); }
 
+  /* Muncul di atas kartu, jadi tidak menimpa teks atau ikon */
   .pop {
-    position: absolute; left: 50%; pointer-events: none;
-    font-size: 14px; font-weight: 700;
-    transform: translateX(-50%);
+    position: absolute; left: 50%; bottom: 100%;
+    pointer-events: none; white-space: nowrap;
+    font-size: 14px; font-weight: 700; color: var(--wood);
     animation: rise .9s ease-out forwards;
   }
-  @keyframes rise { to { transform: translate(-50%, -32px); opacity: 0; } }
+  @keyframes rise {
+    from { transform: translate(-50%, 4px); opacity: 0; }
+    20% { opacity: 1; }
+    to { transform: translate(-50%, -20px); opacity: 0; }
+  }
 </style>
 </head>
 <body>
 <div class="scrim" id="scrim"></div>
 <nav class="drawer" id="drawer" aria-label="Menu">
   <div class="brand">Kebon Kosong</div>
-  <button class="nav-item" data-page="pohon"><span>🌳</span>Pohon</button>
-  <button class="nav-item" data-page="inventory"><span>🎒</span>Inventory</button>
+  <button class="nav-item" data-page="pohon"><span>🌳</span><span data-i18n="trees"></span></button>
+  <button class="nav-item" data-page="inventory"><span>🎒</span><span data-i18n="inventory"></span></button>
+  <button class="nav-item" data-page="settings"><span>⚙️</span><span data-i18n="settings"></span></button>
 </nav>
 
 <div class="app">
   <header>
-    <button class="menu-btn" id="menu-btn" aria-label="Buka menu" aria-controls="drawer" aria-expanded="false">
+    <h1>Kebon Kosong</h1>
+    <button class="menu-btn" id="menu-btn" aria-controls="drawer" aria-expanded="false">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
-    <h1>Kebon Kosong</h1>
   </header>
 
   <main id="page-pohon">
-  <h2>Pohon</h2>
+  <h2 data-i18n="trees"></h2>
   <div class="cards">
   <button class="card" id="toggle" aria-pressed="false">
-    <span class="name">Pohon Akasia</span>
-    <span class="duration" id="duration">2 detik</span>
+    <span class="name" data-i18n="acacia"></span>
+    <span class="duration" id="duration"></span>
     <span class="icon">🌳</span>
     <span class="bar"><span class="fill" id="fill"></span></span>
   </button>
@@ -175,28 +209,68 @@
   </main>
 
   <main id="page-inventory" hidden>
-    <h2>Inventory</h2>
+    <h2 data-i18n="inventory"></h2>
     <ul class="items" id="items"></ul>
-    <p class="empty" id="empty">Belum ada item.</p>
+    <p class="empty" id="empty" data-i18n="empty"></p>
+  </main>
+
+  <main id="page-settings" hidden>
+    <h2 data-i18n="settings"></h2>
+    <div class="setting">
+      <span class="setting-label" data-i18n="theme"></span>
+      <div class="segment">
+        <button data-theme-choice="light" data-i18n="light"></button>
+        <button data-theme-choice="dark" data-i18n="dark"></button>
+      </div>
+    </div>
+    <div class="setting">
+      <span class="setting-label" data-i18n="language"></span>
+      <div class="segment">
+        <button data-lang-choice="id">Indonesia</button>
+        <button data-lang-choice="en">English</button>
+      </div>
+    </div>
   </main>
 </div>
 
 <script>
   const CHOP_TIME = 2000; // ms per tebangan
   const SAVE_KEY = 'kebon-kosong';
+  const SETTINGS_KEY = 'kebon-kosong-settings';
   try { localStorage.removeItem('idle-penebang-v1'); } catch {} // buang simpanan versi lama
 
+  const TEXT = {
+    id: {
+      trees: 'Pohon', inventory: 'Inventory', settings: 'Pengaturan',
+      acacia: 'Pohon Akasia', seconds: 'detik', wood: 'Kayu', empty: 'Belum ada item.',
+      theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
+      openMenu: 'Buka menu',
+    },
+    en: {
+      trees: 'Trees', inventory: 'Inventory', settings: 'Settings',
+      acacia: 'Acacia Tree', seconds: 'sec', wood: 'Wood', empty: 'No items yet.',
+      theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
+      openMenu: 'Open menu',
+    },
+  };
+
   const state = { wood: 0, running: false, progress: 0, lastTick: Date.now() };
+  const settings = { theme: document.documentElement.dataset.theme, lang: 'id' };
 
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (saved) Object.assign(state, saved);
   } catch {}
+  try {
+    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
+    if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
+  } catch {}
 
   const $ = id => document.getElementById(id);
-  const fillEl = $('fill'), btn = $('toggle'), itemsEl = $('items'), emptyEl = $('empty');
+  const fillEl = $('fill'), btn = $('toggle'), iconEl = btn.querySelector('.icon'),
+        itemsEl = $('items'), emptyEl = $('empty');
+  const t = key => TEXT[settings.lang][key];
   let page = 'pohon';
-  $('duration').textContent = (CHOP_TIME / 1000) + ' detik';
 
   // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
   if (state.running) {
@@ -210,23 +284,30 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
   }
 
+  function saveSettings() {
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {}
+  }
+
   // Semua item yang bisa didapat; key = nama field di state
-  const ITEMS = [{ key: 'wood', icon: '🪵', name: 'Kayu' }];
+  const ITEMS = [{ key: 'wood', icon: '🪵' }];
 
   function popup() {
     const el = document.createElement('span');
     el.className = 'pop';
     el.textContent = '+1 🪵';
-    el.style.top = btn.querySelector('.icon').offsetTop + 'px';
     btn.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
+    iconEl.classList.remove('bump');
+    void iconEl.offsetWidth; // mulai ulang animasi
+    iconEl.classList.add('bump');
   }
 
   function renderInventory() {
     const owned = ITEMS.filter(it => state[it.key] >= 1);
+    const locale = settings.lang === 'id' ? 'id-ID' : 'en-US';
     itemsEl.innerHTML = owned.map(it =>
-      `<li class="item"><span class="item-icon">${it.icon}</span><span class="item-name">${it.name}</span>` +
-      `<span class="item-qty">${Math.floor(state[it.key]).toLocaleString('id-ID')}</span></li>`).join('');
+      `<li class="item"><span class="item-icon">${it.icon}</span><span class="item-name">${t(it.key)}</span>` +
+      `<span class="item-qty">${Math.floor(state[it.key]).toLocaleString(locale)}</span></li>`).join('');
     emptyEl.hidden = owned.length > 0;
   }
 
@@ -234,6 +315,19 @@
     fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
     btn.classList.toggle('on', state.running);
     btn.setAttribute('aria-pressed', state.running);
+  }
+
+  function applySettings() {
+    const root = document.documentElement;
+    root.dataset.theme = settings.theme;
+    root.lang = settings.lang;
+    document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim();
+    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+    $('duration').textContent = (CHOP_TIME / 1000) + ' ' + t('seconds');
+    $('menu-btn').setAttribute('aria-label', t('openMenu'));
+    document.querySelectorAll('[data-theme-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeChoice === settings.theme));
+    document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
+    renderInventory();
   }
 
   btn.addEventListener('click', () => {
@@ -263,6 +357,7 @@
   requestAnimationFrame(loop);
 
   // Menu & halaman
+  const PAGES = ['pohon', 'inventory', 'settings'];
   const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
   function setMenu(open) {
@@ -271,9 +366,8 @@
   }
 
   function showPage(name) {
-    page = name === 'inventory' ? 'inventory' : 'pohon';
-    $('page-pohon').hidden = page !== 'pohon';
-    $('page-inventory').hidden = page !== 'inventory';
+    page = PAGES.includes(name) ? name : 'pohon';
+    PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
     navItems.forEach(n => {
       if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
       else n.removeAttribute('aria-current');
@@ -289,6 +383,19 @@
     setMenu(false);
   }));
   window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
+
+  document.querySelectorAll('[data-theme-choice]').forEach(b => b.addEventListener('click', () => {
+    settings.theme = b.dataset.themeChoice;
+    saveSettings();
+    applySettings();
+  }));
+  document.querySelectorAll('[data-lang-choice]').forEach(b => b.addEventListener('click', () => {
+    settings.lang = b.dataset.langChoice;
+    saveSettings();
+    applySettings();
+  }));
+
+  applySettings();
   showPage(location.hash.slice(1));
 
   setInterval(save, 5000);
