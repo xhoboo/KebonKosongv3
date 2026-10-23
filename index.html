@@ -53,17 +53,18 @@
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: 16px;
+    text-align: center;
   }
-  .card-top { display: flex; gap: 14px; align-items: center; }
+  .card h2 { font-size: 16px; margin: 0; }
+  .duration { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
   .icon {
-    width: 56px; height: 56px; flex: none;
+    width: 56px; height: 56px;
+    margin: 12px auto 0;
     border-radius: 14px;
     background: var(--track);
     display: grid; place-items: center;
     font-size: 30px;
   }
-  .meta { flex: 1; min-width: 0; }
-  .meta h2 { font-size: 16px; margin: 0; }
 
   .bar {
     margin: 16px 0 0;
@@ -75,12 +76,12 @@
   .fill { height: 100%; width: 0%; background: var(--accent); border-radius: inherit; }
 
   button {
-    margin-top: 14px;
+    margin-top: 12px;
     width: 100%;
-    min-height: 48px;
+    min-height: 40px;
     border: 0;
-    border-radius: 12px;
-    font: 600 16px/1 inherit;
+    border-radius: 10px;
+    font: 600 15px/1 inherit;
     font-family: inherit;
     background: var(--accent);
     color: var(--accent-ink);
@@ -107,14 +108,11 @@
 
   <div class="cards">
   <section class="card">
-    <div class="card-top">
-      <div class="icon">🌳</div>
-      <div class="meta">
-        <h2>Tebang Pohon</h2>
-      </div>
-    </div>
+    <h2>Pohon Akasia</h2>
+    <p class="duration" id="duration">2 detik</p>
+    <div class="icon">🌳</div>
     <div class="bar"><div class="fill" id="fill"></div></div>
-    <button id="toggle">Mulai</button>
+    <button id="toggle">Tebang</button>
   </section>
   </div>
 </div>
@@ -133,6 +131,7 @@
 
   const $ = id => document.getElementById(id);
   const woodEl = $('wood'), fillEl = $('fill'), btn = $('toggle');
+  $('duration').textContent = (CHOP_TIME / 1000) + ' detik';
 
   // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
   if (state.running) {
@@ -160,7 +159,7 @@
   function render() {
     woodEl.textContent = Math.floor(state.wood).toLocaleString('id-ID');
     fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
-    btn.textContent = state.running ? 'Berhenti' : 'Mulai';
+    btn.textContent = state.running ? 'Berhenti' : 'Tebang';
     btn.classList.toggle('on', state.running);
   }
 
