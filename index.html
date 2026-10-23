@@ -26,6 +26,7 @@
     --on-bg: #3f7d4e;
     --on-ink: #ffffff;
     --on-edge: #2b5a37;
+    --level: #2f7fe0;
     color-scheme: light;
   }
   :root[data-theme="dark"] {
@@ -39,6 +40,7 @@
     --on-bg: #2f6b3e;
     --on-ink: #eaf5ec;
     --on-edge: #1c4227;
+    --level: #5aa2ff;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -179,6 +181,18 @@
     box-shadow: 0 4px 0 var(--on-edge), 0 12px 18px -8px rgba(0, 0, 0, .45);
   }
   .card:active { transform: translateY(0) scale(.97); box-shadow: none; }
+  /* Cincin level: garis biru tipis di tepi kartu, mulai dari tengah atas searah jarum jam */
+  .card::before {
+    content: ""; position: absolute; inset: -1px;
+    border-radius: inherit; padding: 2px;
+    background: conic-gradient(var(--level) var(--lv, 0%), transparent 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+    pointer-events: none;
+  }
+  .level { display: block; font-size: 11px; font-weight: 700; color: var(--level); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .card.on .level { color: inherit; }
   .name { display: block; font-size: 16px; font-weight: 700; }
   .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .card.on .duration { color: inherit; opacity: .8; }
@@ -233,6 +247,7 @@
   <h2 data-i18n="trees"></h2>
   <div class="cards">
   <button class="card" id="toggle" aria-pressed="false">
+    <span class="level" id="level"></span>
     <span class="name" data-i18n="acacia"></span>
     <span class="duration" id="duration"></span>
     <span class="icon">🌳</span>
@@ -276,19 +291,19 @@
   const TEXT = {
     id: {
       trees: 'Pohon', inventory: 'Inventory', settings: 'Pengaturan',
-      acacia: 'Pohon Akasia', seconds: 'detik', acaciaWood: 'Kayu Akasia', empty: 'Belum ada item.',
+      acacia: 'Pohon Akasia', seconds: 'detik', acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', empty: 'Belum ada item.',
       theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
-      openMenu: 'Buka menu',
+      openMenu: 'Buka menu', level: 'Level',
     },
     en: {
       trees: 'Trees', inventory: 'Inventory', settings: 'Settings',
-      acacia: 'Acacia Tree', seconds: 'sec', acaciaWood: 'Acacia Wood', empty: 'No items yet.',
+      acacia: 'Acacia Tree', seconds: 'sec', acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', empty: 'No items yet.',
       theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
-      openMenu: 'Open menu',
+      openMenu: 'Open menu', level: 'Level',
     },
   };
 
-  const state = { acaciaWood: 0, running: false, progress: 0, lastTick: Date.now() };
+  const state = { acaciaWood: 0, twig: 0, leaf: 0, acaciaLevel: 0, acaciaXp: 0, running: false, progress: 0, lastTick: Date.now() };
   const settings = { theme: document.documentElement.dataset.theme, lang: 'id' };
 
   try {
@@ -303,16 +318,9 @@
 
   const $ = id => document.getElementById(id);
   const fillEl = $('fill'), btn = $('toggle'), iconEl = btn.querySelector('.icon'),
-        itemsEl = $('items'), emptyEl = $('empty');
+        itemsEl = $('items'), emptyEl = $('empty'), levelEl = $('level');
   const t = key => TEXT[settings.lang][key];
   let page = 'pohon';
-
-  // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
-  if (state.running) {
-    const elapsed = Date.now() - state.lastTick + state.progress;
-    state.acaciaWood += Math.floor(elapsed / CHOP_TIME);
-    state.progress = elapsed % CHOP_TIME;
-  }
 
   function save() {
     state.lastTick = Date.now();
@@ -324,12 +332,47 @@
   }
 
   // Semua item yang bisa didapat; key = nama field di state
-  const ITEMS = [{ key: 'acaciaWood', icon: '🪵' }];
+  const ITEMS = [
+    { key: 'acaciaWood', icon: '🪵' },
+    { key: 'twig', icon: '🌿' },
+    { key: 'leaf', icon: '🍃' },
+  ];
+  const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
 
-  function popup() {
+  // Level pohon akasia: 1 XP per tebangan, XP yang dibutuhkan naik 7% tiap level.
+  // Kira-kira: Lv 10 ≈ 2 menit, Lv 50 ≈ 1 jam, Lv 100 ≈ 27 jam menebang.
+  const MAX_LEVEL = 100;
+  const xpNeeded = level => Math.floor(4 * 1.07 ** level);
+
+  // Peluang kayu akasia naik lurus dari 40% (Lv 0) ke 100% (Lv 100); sisanya dibagi rata ranting & daun
+  function rollDrop() {
+    const woodChance = 0.4 + 0.6 * state.acaciaLevel / MAX_LEVEL;
+    const r = Math.random();
+    if (r < woodChance) return 'acaciaWood';
+    return r < woodChance + (1 - woodChance) / 2 ? 'twig' : 'leaf';
+  }
+
+  function chop() {
+    const drop = rollDrop();
+    state[drop]++;
+    if (state.acaciaLevel < MAX_LEVEL && ++state.acaciaXp >= xpNeeded(state.acaciaLevel)) {
+      state.acaciaXp = 0;
+      state.acaciaLevel++;
+    }
+    return drop;
+  }
+
+  // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
+  if (state.running) {
+    const elapsed = Date.now() - state.lastTick + state.progress;
+    for (let i = Math.floor(elapsed / CHOP_TIME); i > 0; i--) chop();
+    state.progress = elapsed % CHOP_TIME;
+  }
+
+  function popup(drop) {
     const el = document.createElement('span');
     el.className = 'pop';
-    el.textContent = '+1 🪵';
+    el.textContent = '+1 ' + icons[drop];
     btn.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
     iconEl.classList.remove('bump');
@@ -354,6 +397,9 @@
 
   function render() {
     fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
+    const lv = state.acaciaLevel;
+    levelEl.textContent = t('level') + ' ' + lv;
+    btn.style.setProperty('--lv', (lv >= MAX_LEVEL ? 100 : state.acaciaXp / xpNeeded(lv) * 100) + '%');
     btn.classList.toggle('on', state.running);
     btn.setAttribute('aria-pressed', state.running);
   }
@@ -416,10 +462,10 @@
     if (state.running) {
       state.progress += dt;
       if (state.progress >= CHOP_TIME) {
-        const chops = Math.floor(state.progress / CHOP_TIME);
-        state.acaciaWood += chops;
+        let drop;
+        for (let i = Math.floor(state.progress / CHOP_TIME); i > 0; i--) drop = chop();
         state.progress %= CHOP_TIME;
-        if (page === 'pohon') popup();
+        if (page === 'pohon') popup(drop);
         else renderInventory();
       }
     }
