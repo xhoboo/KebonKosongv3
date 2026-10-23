@@ -206,6 +206,8 @@
   .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .card.on .duration { color: inherit; opacity: .8; }
   .icon { display: block; font-size: 40px; line-height: 1; margin-top: 12px; }
+  svg.emoji { width: 1em; height: 1em; vertical-align: -0.125em; }
+  .pop.miss { color: var(--muted); }
   .icon.bump { animation: bump .3s ease-out; }
   @keyframes bump { 40% { transform: scale(1.15); } }
 
@@ -240,6 +242,7 @@
 <nav class="drawer" id="drawer" aria-label="Menu">
   <div class="brand">Kebon Kosong</div>
   <button class="nav-item" data-page="pohon"><span>🌳</span><span data-i18n="trees"></span></button>
+  <button class="nav-item" data-page="goa"><span>⛰️</span><span data-i18n="cave"></span></button>
   <button class="nav-item" data-page="inventory"><span>🎒</span><span data-i18n="inventory"></span></button>
   <button class="nav-item" data-page="settings"><span>⚙️</span><span data-i18n="settings"></span></button>
 </nav>
@@ -254,15 +257,12 @@
 
   <main id="page-pohon">
   <h2 data-i18n="trees"></h2>
-  <div class="cards">
-  <button class="card" id="toggle" aria-pressed="false">
-    <span class="level" id="level"></span>
-    <span class="name" data-i18n="acacia"></span>
-    <span class="duration" id="duration"></span>
-    <span class="icon">🌳</span>
-    <span class="bar"><span class="fill" id="fill"></span></span>
-  </button>
-  </div>
+  <div class="cards" data-area="pohon"></div>
+  </main>
+
+  <main id="page-goa" hidden>
+  <h2 data-i18n="cave"></h2>
+  <div class="cards" data-area="goa"></div>
   </main>
 
   <main id="page-inventory" hidden>
@@ -296,7 +296,6 @@
 </div>
 
 <script>
-  const CHOP_TIME = 2000; // ms per tebangan
   const SAVE_KEY = 'kebon-kosong-v2';
   const SETTINGS_KEY = 'kebon-kosong-settings';
   // Buang simpanan versi lama (progres sengaja dimulai ulang)
@@ -304,39 +303,114 @@
 
   const TEXT = {
     id: {
-      trees: 'Pohon', inventory: 'Inventory', settings: 'Pengaturan',
-      acacia: 'Pohon Akasia', seconds: 'detik', acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', empty: 'Belum ada item.',
+      trees: 'Pohon', cave: 'Goa', inventory: 'Inventory', settings: 'Pengaturan',
+      acacia: 'Pohon Akasia', rock: 'Batu', seconds: 'detik',
+      acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', stone: 'Batu', pebble: 'Kerikil',
+      miss: 'Zonk', empty: 'Belum ada item.',
       theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
       openMenu: 'Buka menu', level: 'Level',
       progress: 'Progres', reset: 'Klik 3 kali untuk reset progress', resetLeft: n => `Klik ${n} kali lagi`,
     },
     en: {
-      trees: 'Trees', inventory: 'Inventory', settings: 'Settings',
-      acacia: 'Acacia Tree', seconds: 'sec', acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', empty: 'No items yet.',
+      trees: 'Trees', cave: 'Cave', inventory: 'Inventory', settings: 'Settings',
+      acacia: 'Acacia Tree', rock: 'Rock', seconds: 'sec',
+      acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', stone: 'Stone', pebble: 'Pebble',
+      miss: 'Miss', empty: 'No items yet.',
       theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
       openMenu: 'Open menu', level: 'Level',
       progress: 'Progress', reset: 'Click 3 times to reset progress', resetLeft: n => `Click ${n} more ${n === 1 ? 'time' : 'times'}`,
     },
   };
 
-  const freshState = () => ({ acaciaWood: 0, twig: 0, leaf: 0, acaciaLevel: 0, acaciaXp: 0, running: false, progress: 0, lastTick: Date.now() });
+  // Tidak ada emoji kerikil, jadi digambar sendiri
+  const PEBBLE_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
+    '<ellipse cx="7" cy="16" rx="5" ry="4" fill="#9a958c"/><ellipse cx="16.5" cy="17" rx="4.5" ry="3.5" fill="#7f7a72"/>' +
+    '<ellipse cx="12" cy="9.5" rx="4" ry="3.2" fill="#b8b2a8"/></svg>';
+
+  // Semua item yang bisa didapat, sesuai urutan tampil di inventory
+  const ITEMS = [
+    { key: 'acaciaWood', icon: '🪵' },
+    { key: 'twig', icon: '🌿' },
+    { key: 'leaf', icon: '🍃' },
+    { key: 'stone', icon: '🪨' },
+    { key: 'pebble', icon: PEBBLE_ICON },
+  ];
+  const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
+
+  // Level: 1 XP per aksi. Bagian eksponensial menjaga awal tetap cepat,
+  // bagian kubik membuat level atas makin berat.
+  // Kira-kira: Lv 10 ≈ 2,5 menit, Lv 50 ≈ 9,5 jam, Lv 75 ≈ 2 hari, Lv 100 ≈ 7 hari.
+  const MAX_LEVEL = 100;
+  const xpNeeded = level => Math.floor(4 * 1.07 ** level + 0.0103 * level ** 3);
+
+  // Sumber daya yang bisa dikerjakan. drops(p) → [item, peluang]; p = level / 100.
+  // Item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
+  const NODES = {
+    acacia: {
+      area: 'pohon', icon: '🌳', time: 2000,
+      drops: p => { const main = 0.4 + 0.6 * p; return [['acaciaWood', main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; },
+    },
+    rock: {
+      area: 'goa', icon: '🪨', time: 2000,
+      drops: p => { const main = 0.4 + 0.6 * p; return [['stone', main], ['pebble', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
+    },
+  };
+
+  const freshState = () => ({
+    items: Object.fromEntries(ITEMS.map(it => [it.key, 0])),
+    nodes: Object.fromEntries(Object.keys(NODES).map(k => [k, { level: 0, xp: 0 }])),
+    active: null, // hanya satu aksi yang berjalan dalam satu waktu
+    progress: 0,
+    lastTick: Date.now(),
+  });
   const state = freshState();
   const settings = { theme: document.documentElement.dataset.theme, lang: 'id' };
 
-  try {
-    const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
-    if (saved) Object.assign(state, saved);
-  } catch {}
+  function loadState(saved) {
+    if (!saved) return;
+    if ('acaciaLevel' in saved) { // simpanan sebelum ada Goa
+      ['acaciaWood', 'twig', 'leaf'].forEach(k => { state.items[k] = saved[k] || 0; });
+      state.nodes.acacia = { level: saved.acaciaLevel || 0, xp: saved.acaciaXp || 0 };
+      state.active = saved.running ? 'acacia' : null;
+      state.progress = saved.progress || 0;
+      state.lastTick = saved.lastTick || Date.now();
+      return;
+    }
+    Object.assign(state.items, saved.items);
+    for (const k in NODES) Object.assign(state.nodes[k], saved.nodes && saved.nodes[k]);
+    state.active = NODES[saved.active] ? saved.active : null;
+    state.progress = saved.progress || 0;
+    state.lastTick = saved.lastTick || Date.now();
+  }
+  try { loadState(JSON.parse(localStorage.getItem(SAVE_KEY))); } catch {}
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
     if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
   } catch {}
 
   const $ = id => document.getElementById(id);
-  const fillEl = $('fill'), btn = $('toggle'), iconEl = btn.querySelector('.icon'),
-        itemsEl = $('items'), emptyEl = $('empty'), levelEl = $('level');
+  const itemsEl = $('items'), emptyEl = $('empty');
   const t = key => TEXT[settings.lang][key];
   let page = 'pohon';
+
+  // Buat kartu untuk tiap sumber daya
+  const cards = {};
+  for (const [key, node] of Object.entries(NODES)) {
+    const el = document.createElement('button');
+    el.className = 'card';
+    el.dataset.node = key;
+    el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${key}"></span>` +
+      `<span class="duration"></span><span class="icon">${node.icon}</span>` +
+      `<span class="bar"><span class="fill"></span></span>`;
+    document.querySelector(`.cards[data-area="${node.area}"]`).appendChild(el);
+    cards[key] = { el, level: el.querySelector('.level'), fill: el.querySelector('.fill'), icon: el.querySelector('.icon') };
+    el.addEventListener('click', () => {
+      state.active = state.active === key ? null : key;
+      state.progress = 0;
+      save();
+      render();
+    });
+  }
 
   function save() {
     state.lastTick = Date.now();
@@ -347,63 +421,53 @@
     try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {}
   }
 
-  // Semua item yang bisa didapat; key = nama field di state
-  const ITEMS = [
-    { key: 'acaciaWood', icon: '🪵' },
-    { key: 'twig', icon: '🌿' },
-    { key: 'leaf', icon: '🍃' },
-  ];
-  const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
-
-  // Level pohon akasia: 1 XP per tebangan. Bagian eksponensial menjaga awal tetap cepat,
-  // bagian kubik membuat level atas makin berat.
-  // Kira-kira: Lv 10 ≈ 2,5 menit, Lv 50 ≈ 9,5 jam, Lv 75 ≈ 2 hari, Lv 100 ≈ 7 hari menebang.
-  const MAX_LEVEL = 100;
-  const xpNeeded = level => Math.floor(4 * 1.07 ** level + 0.0103 * level ** 3);
-
-  // Peluang kayu akasia naik lurus dari 40% (Lv 0) ke 100% (Lv 100); sisanya dibagi rata ranting & daun
-  function rollDrop() {
-    const woodChance = 0.4 + 0.6 * state.acaciaLevel / MAX_LEVEL;
-    const r = Math.random();
-    if (r < woodChance) return 'acaciaWood';
-    return r < woodChance + (1 - woodChance) / 2 ? 'twig' : 'leaf';
+  function rollDrop(key) {
+    let r = Math.random();
+    for (const [item, chance] of NODES[key].drops(state.nodes[key].level / MAX_LEVEL)) {
+      if ((r -= chance) < 0) return item;
+    }
+    return null;
   }
 
-  function chop() {
-    const drop = rollDrop();
-    state[drop]++;
-    if (state.acaciaLevel < MAX_LEVEL && ++state.acaciaXp >= xpNeeded(state.acaciaLevel)) {
-      state.acaciaXp = 0;
-      state.acaciaLevel++;
+  // Satu aksi (tebang/tambang): undi hasil, tambah XP, naik level kalau cukup
+  function act(key) {
+    const drop = rollDrop(key);
+    if (drop) state.items[drop]++;
+    const n = state.nodes[key];
+    if (n.level < MAX_LEVEL && ++n.xp >= xpNeeded(n.level)) {
+      n.xp = 0;
+      n.level++;
     }
     return drop;
   }
 
-  // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
-  if (state.running) {
+  // Progres offline: kalau ada aksi berjalan saat ditutup, hitung aksi yang terlewat
+  if (state.active) {
+    const time = NODES[state.active].time;
     const elapsed = Date.now() - state.lastTick + state.progress;
-    for (let i = Math.floor(elapsed / CHOP_TIME); i > 0; i--) chop();
-    state.progress = elapsed % CHOP_TIME;
+    for (let i = Math.floor(elapsed / time); i > 0; i--) act(state.active);
+    state.progress = elapsed % time;
   }
 
-  function popup(drop) {
+  function popup(key, drop) {
+    const card = cards[key];
     const el = document.createElement('span');
-    el.className = 'pop';
-    el.textContent = '+1 ' + icons[drop];
-    btn.appendChild(el);
+    el.className = drop ? 'pop' : 'pop miss';
+    el.innerHTML = drop ? '+1 ' + icons[drop] : t('miss');
+    card.el.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
-    iconEl.classList.remove('bump');
-    void iconEl.offsetWidth; // mulai ulang animasi
-    iconEl.classList.add('bump');
+    card.icon.classList.remove('bump');
+    void card.icon.offsetWidth; // mulai ulang animasi
+    card.icon.classList.add('bump');
   }
 
   let openItem = null; // item yang namanya sedang ditampilkan
 
   function renderInventory() {
-    const owned = ITEMS.filter(it => state[it.key] >= 1);
+    const owned = ITEMS.filter(it => state.items[it.key] >= 1);
     const locale = settings.lang === 'id' ? 'id-ID' : 'en-US';
     itemsEl.innerHTML = owned.map(it => {
-      const qty = Math.floor(state[it.key]).toLocaleString(locale);
+      const qty = Math.floor(state.items[it.key]).toLocaleString(locale);
       const open = it.key === openItem;
       return `<li><button class="item" data-item="${it.key}" aria-expanded="${open}" aria-label="${t(it.key)}: ${qty}">` +
         `<span class="item-icon" aria-hidden="true">${it.icon}</span>` +
@@ -413,12 +477,14 @@
   }
 
   function render() {
-    fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
-    const lv = state.acaciaLevel;
-    levelEl.textContent = t('level') + ' ' + lv;
-    btn.style.setProperty('--lv', (lv >= MAX_LEVEL ? 100 : state.acaciaXp / xpNeeded(lv) * 100) + '%');
-    btn.classList.toggle('on', state.running);
-    btn.setAttribute('aria-pressed', state.running);
+    for (const [key, card] of Object.entries(cards)) {
+      const n = state.nodes[key], on = state.active === key;
+      card.fill.style.width = (on ? state.progress / NODES[key].time * 100 : 0) + '%';
+      card.level.textContent = t('level') + ' ' + n.level;
+      card.el.style.setProperty('--lv', (n.level >= MAX_LEVEL ? 100 : n.xp / xpNeeded(n.level) * 100) + '%');
+      card.el.classList.toggle('on', on);
+      card.el.setAttribute('aria-pressed', on);
+    }
   }
 
   function applySettings() {
@@ -427,7 +493,7 @@
     root.lang = settings.lang;
     document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim();
     document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-    $('duration').textContent = (CHOP_TIME / 1000) + ' ' + t('seconds');
+    for (const [key, card] of Object.entries(cards)) card.el.querySelector('.duration').textContent = (NODES[key].time / 1000) + ' ' + t('seconds');
     $('menu-btn').setAttribute('aria-label', t('openMenu'));
     document.querySelectorAll('[data-theme-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeChoice === settings.theme));
     document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
@@ -465,25 +531,20 @@
   window.addEventListener('scroll', () => openItem && showTip(null), { passive: true });
   window.addEventListener('resize', () => openItem && showTip(null));
 
-  btn.addEventListener('click', () => {
-    state.running = !state.running;
-    if (!state.running) state.progress = 0;
-    save();
-    render();
-  });
-
   let last = performance.now();
   function loop(now) {
     const dt = now - last;
     last = now;
-    if (state.running) {
+    const key = state.active;
+    if (key) {
+      const time = NODES[key].time;
       state.progress += dt;
-      if (state.progress >= CHOP_TIME) {
+      if (state.progress >= time) {
         let drop;
-        for (let i = Math.floor(state.progress / CHOP_TIME); i > 0; i--) drop = chop();
-        state.progress %= CHOP_TIME;
-        if (page === 'pohon') popup(drop);
-        else renderInventory();
+        for (let i = Math.floor(state.progress / time); i > 0; i--) drop = act(key);
+        state.progress %= time;
+        if (page === NODES[key].area) popup(key, drop);
+        else if (page === 'inventory') renderInventory();
       }
     }
     render();
@@ -492,7 +553,7 @@
   requestAnimationFrame(loop);
 
   // Menu & halaman
-  const PAGES = ['pohon', 'inventory', 'settings'];
+  const PAGES = ['pohon', 'goa', 'inventory', 'settings'];
   const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
   function setMenu(open) {
@@ -551,7 +612,6 @@
       return;
     }
     disarmReset();
-    for (const k in state) delete state[k];
     Object.assign(state, freshState());
     save();
     render();
