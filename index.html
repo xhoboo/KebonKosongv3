@@ -308,14 +308,14 @@
       acacia: 'Pohon Akasia', seconds: 'detik', acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', empty: 'Belum ada item.',
       theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
       openMenu: 'Buka menu', level: 'Level',
-      progress: 'Progres', reset: 'Reset semua progres', resetConfirm: 'Ketuk lagi untuk mereset',
+      progress: 'Progres', reset: 'Klik 3 kali untuk reset progress', resetLeft: n => `Klik ${n} kali lagi`,
     },
     en: {
       trees: 'Trees', inventory: 'Inventory', settings: 'Settings',
       acacia: 'Acacia Tree', seconds: 'sec', acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', empty: 'No items yet.',
       theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
       openMenu: 'Open menu', level: 'Level',
-      progress: 'Progress', reset: 'Reset all progress', resetConfirm: 'Tap again to reset',
+      progress: 'Progress', reset: 'Click 3 times to reset progress', resetLeft: n => `Click ${n} more ${n === 1 ? 'time' : 'times'}`,
     },
   };
 
@@ -532,18 +532,21 @@
     disarmReset();
   }));
 
-  // Reset progres: ketuk sekali untuk minta konfirmasi, ketuk lagi dalam 3 detik untuk mereset
+  // Reset progres: butuh 3 klik berturut-turut; jeda lebih dari 3 detik membatalkan hitungan
+  const RESET_CLICKS = 3;
   const resetBtn = $('reset');
-  let resetTimer;
+  let resetTimer, resetCount = 0;
   function disarmReset() {
     clearTimeout(resetTimer);
+    resetCount = 0;
     resetBtn.classList.remove('confirm');
     resetBtn.textContent = t('reset');
   }
   resetBtn.addEventListener('click', () => {
-    if (!resetBtn.classList.contains('confirm')) {
+    clearTimeout(resetTimer);
+    if (++resetCount < RESET_CLICKS) {
       resetBtn.classList.add('confirm');
-      resetBtn.textContent = t('resetConfirm');
+      resetBtn.textContent = t('resetLeft')(RESET_CLICKS - resetCount);
       resetTimer = setTimeout(disarmReset, 3000);
       return;
     }
