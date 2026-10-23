@@ -297,8 +297,8 @@
         <span class="tool-xp" id="axe-xp"></span>
       </div>
     </div>
-    <dl class="stats">
-      <div><dt data-i18n="swingTime"></dt><dd id="axe-cut"></dd></div>
+    <dl class="stats" id="axe-stats">
+      <div id="axe-cut-row"><dt data-i18n="axeInterval"></dt><dd id="axe-cut"></dd></div>
       <div id="axe-double-row"><dt data-i18n="doubleWood"></dt><dd id="axe-double"></dd></div>
     </dl>
     <button class="upgrade-btn" id="axe-upgrade"><span id="axe-next"></span><span class="cost" id="axe-cost"></span></button>
@@ -355,7 +355,7 @@
       miss: 'Zonk', empty: 'Belum ada item.',
       theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
       openMenu: 'Buka menu', level: 'Level',
-      axeBasic: 'Kapak Biasa', axeShiny: 'Kapak Berkilau', swingTime: 'Waktu ayunan', doubleWood: 'Peluang 2 kayu',
+      axeBasic: 'Kapak Biasa', axeShiny: 'Kapak Berkilau', axeInterval: 'Interval kapak', doubleWood: 'Peluang 2 kayu',
       max: 'Maks', upgradeTo: name => `Upgrade ke ${name}`,
       progress: 'Progres', reset: 'Klik 3 kali untuk reset progress', resetLeft: n => `Klik ${n} kali lagi`,
     },
@@ -366,7 +366,7 @@
       miss: 'Miss', empty: 'No items yet.',
       theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
       openMenu: 'Open menu', level: 'Level',
-      axeBasic: 'Basic Axe', axeShiny: 'Shiny Axe', swingTime: 'Swing time', doubleWood: 'Chance of 2 wood',
+      axeBasic: 'Basic Axe', axeShiny: 'Shiny Axe', axeInterval: 'Axe interval', doubleWood: 'Chance of 2 wood',
       max: 'Max', upgradeTo: name => `Upgrade to ${name}`,
       progress: 'Progress', reset: 'Click 3 times to reset progress', resetLeft: n => `Click ${n} more ${n === 1 ? 'time' : 'times'}`,
     },
@@ -580,8 +580,11 @@
     $('axe-name').textContent = t(tier.key);
     $('axe-fill').style.width = (maxed ? 100 : axe.xp / axeXpNeeded(axe.level) * 100) + '%';
     $('axe-xp').textContent = maxed ? t('max') : num(axe.xp) + ' / ' + num(axeXpNeeded(axe.level));
-    $('axe-cut').textContent = (axe.level ? '−' : '') + num(AXE_CUT * axe.level * 100, 2) + '%';
+    // Baris bonus hanya tampil kalau bonusnya ada
+    $('axe-cut-row').hidden = !axe.level;
+    $('axe-cut').textContent = '−' + num(AXE_CUT * axe.level * 100, 2) + '%';
     $('axe-double-row').hidden = !tier.double;
+    $('axe-stats').hidden = !axe.level && !tier.double;
     $('axe-double').textContent = num(tier.double * 100) + '%';
     axeUpgradeBtn.hidden = !next;
     if (next) {
