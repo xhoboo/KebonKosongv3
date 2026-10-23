@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1b2a1f">
-<title>Idle Penebang</title>
+<title>Kebon Kosong</title>
 <style>
   :root {
     --bg: #f3efe6;
@@ -62,18 +62,16 @@
     font-size: 30px;
   }
   .meta { flex: 1; min-width: 0; }
-  .meta h2 { font-size: 16px; margin: 0 0 4px; }
-  .meta p { font-size: 13px; color: var(--muted); margin: 0; }
+  .meta h2 { font-size: 16px; margin: 0; }
 
   .bar {
-    margin: 16px 0 6px;
+    margin: 16px 0 0;
     height: 10px;
     background: var(--track);
     border-radius: 999px;
     overflow: hidden;
   }
   .fill { height: 100%; width: 0%; background: var(--accent); border-radius: inherit; }
-  .bar-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
   button {
     margin-top: 14px;
@@ -102,7 +100,7 @@
 <body>
 <div class="app">
   <header>
-    <h1>Idle Penebang</h1>
+    <h1>Kebon Kosong</h1>
     <div class="total">🪵 <b id="wood">0</b> kayu</div>
   </header>
 
@@ -111,12 +109,10 @@
       <div class="icon">🌳</div>
       <div class="meta">
         <h2>Tebang Pohon</h2>
-        <p>Menebang otomatis. +1 kayu tiap tebangan.</p>
       </div>
     </div>
     <div class="bar"><div class="fill" id="fill"></div></div>
-    <div class="bar-info"><span id="status">Berhenti</span><span id="time">0.0 / 2.0 dtk</span></div>
-    <button id="toggle">Mulai Menebang</button>
+    <button id="toggle">Mulai</button>
   </section>
 </div>
 
@@ -132,8 +128,7 @@
   } catch {}
 
   const $ = id => document.getElementById(id);
-  const woodEl = $('wood'), fillEl = $('fill'), statusEl = $('status'),
-        timeEl = $('time'), btn = $('toggle');
+  const woodEl = $('wood'), fillEl = $('fill'), btn = $('toggle');
 
   // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
   if (state.running) {
@@ -161,9 +156,7 @@
   function render() {
     woodEl.textContent = Math.floor(state.wood).toLocaleString('id-ID');
     fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
-    timeEl.textContent = (state.progress / 1000).toFixed(1) + ' / ' + (CHOP_TIME / 1000).toFixed(1) + ' dtk';
-    statusEl.textContent = state.running ? 'Menebang…' : 'Berhenti';
-    btn.textContent = state.running ? 'Berhenti' : 'Mulai Menebang';
+    btn.textContent = state.running ? 'Berhenti' : 'Mulai';
     btn.classList.toggle('on', state.running);
   }
 
