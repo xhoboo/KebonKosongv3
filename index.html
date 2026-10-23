@@ -118,7 +118,8 @@
 
 <script>
   const CHOP_TIME = 2000; // ms per tebangan
-  const SAVE_KEY = 'idle-penebang-v1';
+  const SAVE_KEY = 'kebon-kosong';
+  try { localStorage.removeItem('idle-penebang-v1'); } catch {} // buang simpanan versi lama
 
   const state = { wood: 0, running: false, progress: 0, lastTick: Date.now() };
 
