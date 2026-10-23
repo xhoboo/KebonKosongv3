@@ -171,8 +171,6 @@
   .segment button[aria-pressed="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  /* Kartu paling atas halaman butuh ruang untuk popup hasil supaya tidak menabrak header */
-  .cards:first-child { padding-top: 16px; }
   .card {
     position: relative;
     display: block;
@@ -208,9 +206,10 @@
   .name { display: block; font-size: 16px; font-weight: 700; }
   .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .card.on .duration { color: inherit; opacity: .8; }
-  .icon { display: block; font-size: 40px; line-height: 1; margin-top: 12px; }
+  .stage { position: relative; display: block; margin-top: 12px; }
+  .icon { display: block; font-size: 40px; line-height: 1; }
   svg.emoji { width: 1em; height: 1em; vertical-align: -0.125em; }
-  .pop.miss { color: var(--muted); }
+  .pop.miss { color: color-mix(in srgb, var(--on-ink) 70%, transparent); }
   .icon.bump { animation: bump .3s ease-out; }
   @keyframes bump { 40% { transform: scale(1.15); } }
 
@@ -256,17 +255,19 @@
   .upgrade-btn:not(:disabled):active { transform: scale(.98); }
   .cost { display: block; font-size: 12px; font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-  /* Muncul di atas kartu, jadi tidak menimpa teks atau ikon */
+  /* Hasil aksi muncul di dalam kartu, di ruang kosong sebelah kanan ikon.
+     Durasi diatur dari JS supaya tidak lebih lama dari satu aksi. */
   .pop {
-    position: absolute; left: 50%; bottom: 100%;
+    position: absolute; left: calc(50% + 26px); top: 11px;
     pointer-events: none; white-space: nowrap;
-    font-size: 14px; font-weight: 700; color: var(--wood);
-    animation: rise .9s ease-out forwards;
+    font-size: 14px; font-weight: 700; color: var(--on-ink);
+    animation: rise 1.6s ease-out forwards;
   }
   @keyframes rise {
-    from { transform: translate(-50%, 4px); opacity: 0; }
-    20% { opacity: 1; }
-    to { transform: translate(-50%, -20px); opacity: 0; }
+    from { transform: translateY(6px); opacity: 0; }
+    20% { transform: translateY(0); opacity: 1; }
+    70% { opacity: 1; }
+    to { transform: translateY(-8px); opacity: 0; }
   }
 </style>
 </head>
@@ -482,10 +483,11 @@
     el.className = 'card';
     el.dataset.node = key;
     el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${key}"></span>` +
-      `<span class="duration"></span><span class="icon">${node.icon}</span>` +
+      `<span class="duration"></span><span class="stage"><span class="icon">${node.icon}</span></span>` +
       `<span class="bar"><span class="fill"></span></span>`;
     document.querySelector(`.cards[data-area="${node.area}"]`).appendChild(el);
-    cards[key] = { el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), fill: el.querySelector('.fill'), icon: el.querySelector('.icon') };
+    cards[key] = { el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), fill: el.querySelector('.fill'),
+      stage: el.querySelector('.stage'), icon: el.querySelector('.icon') };
     el.addEventListener('click', () => {
       state.active = state.active === key ? null : key;
       state.progress = 0;
@@ -535,12 +537,16 @@
     state.progress = elapsed;
   }
 
+  // Popup hasil: satu per kartu; kalau aksi lebih cepat dari animasinya, animasi ikut dipercepat
+  const POP_MS = 1600;
   function popup(key, got) {
     const card = cards[key];
     const el = document.createElement('span');
     el.className = got ? 'pop' : 'pop miss';
     el.innerHTML = got ? '+' + got.qty + ' ' + icons[got.item] : t('miss');
-    card.el.appendChild(el);
+    el.style.animationDuration = Math.min(POP_MS, actionTime(key)) + 'ms';
+    card.stage.querySelector('.pop')?.remove();
+    card.stage.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
     card.icon.classList.remove('bump');
     void card.icon.offsetWidth; // mulai ulang animasi
