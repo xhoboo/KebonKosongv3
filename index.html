@@ -60,14 +60,6 @@
     background: var(--track);
     display: grid; place-items: center;
     font-size: 30px;
-    position: relative;
-  }
-  .axe { position: absolute; right: -4px; top: -6px; font-size: 22px; transform-origin: 80% 80%; }
-  .running .axe { animation: swing var(--dur, 2s) ease-in infinite; }
-  @keyframes swing {
-    0%, 70% { transform: rotate(-35deg); }
-    85% { transform: rotate(20deg); }
-    100% { transform: rotate(-35deg); }
   }
   .meta { flex: 1; min-width: 0; }
   .meta h2 { font-size: 16px; margin: 0 0 4px; }
@@ -114,12 +106,12 @@
     <div class="total">🪵 <b id="wood">0</b> kayu</div>
   </header>
 
-  <section class="card" id="card">
+  <section class="card">
     <div class="card-top">
-      <div class="icon">🌳<span class="axe">🪓</span></div>
+      <div class="icon">🌳</div>
       <div class="meta">
         <h2>Tebang Pohon</h2>
-        <p>Kapak menebang otomatis. +1 kayu tiap tebangan.</p>
+        <p>Menebang otomatis. +1 kayu tiap tebangan.</p>
       </div>
     </div>
     <div class="bar"><div class="fill" id="fill"></div></div>
@@ -141,8 +133,7 @@
 
   const $ = id => document.getElementById(id);
   const woodEl = $('wood'), fillEl = $('fill'), statusEl = $('status'),
-        timeEl = $('time'), btn = $('toggle'), card = $('card');
-  card.style.setProperty('--dur', CHOP_TIME + 'ms');
+        timeEl = $('time'), btn = $('toggle');
 
   // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
   if (state.running) {
@@ -174,7 +165,6 @@
     statusEl.textContent = state.running ? 'Menebang…' : 'Berhenti';
     btn.textContent = state.running ? 'Berhenti' : 'Mulai Menebang';
     btn.classList.toggle('on', state.running);
-    card.classList.toggle('running', state.running);
   }
 
   btn.addEventListener('click', () => {
