@@ -27,6 +27,7 @@
     --on-ink: #ffffff;
     --on-edge: #2b5a37;
     --level: #2f7fe0;
+    --danger: #c0392b;
     color-scheme: light;
   }
   :root[data-theme="dark"] {
@@ -41,6 +42,7 @@
     --on-ink: #eaf5ec;
     --on-edge: #1c4227;
     --level: #5aa2ff;
+    --danger: #ff6b5b;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -158,6 +160,13 @@
     font: inherit; font-size: 14px; color: var(--muted);
     cursor: pointer;
   }
+  .reset-btn {
+    width: 100%; min-height: 40px;
+    background: none; border: 1.5px solid var(--danger); border-radius: 10px;
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--danger);
+    cursor: pointer;
+  }
+  .reset-btn.confirm { background: var(--danger); color: var(--card); }
   .segment button[aria-pressed="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -279,14 +288,19 @@
         <button data-lang-choice="en">English</button>
       </div>
     </div>
+    <div class="setting">
+      <span class="setting-label" data-i18n="progress"></span>
+      <button class="reset-btn" id="reset" data-i18n="reset"></button>
+    </div>
   </main>
 </div>
 
 <script>
   const CHOP_TIME = 2000; // ms per tebangan
-  const SAVE_KEY = 'kebon-kosong';
+  const SAVE_KEY = 'kebon-kosong-v2';
   const SETTINGS_KEY = 'kebon-kosong-settings';
-  try { localStorage.removeItem('idle-penebang-v1'); } catch {} // buang simpanan versi lama
+  // Buang simpanan versi lama (progres sengaja dimulai ulang)
+  try { ['idle-penebang-v1', 'kebon-kosong'].forEach(k => localStorage.removeItem(k)); } catch {}
 
   const TEXT = {
     id: {
@@ -294,23 +308,25 @@
       acacia: 'Pohon Akasia', seconds: 'detik', acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', empty: 'Belum ada item.',
       theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
       openMenu: 'Buka menu', level: 'Level',
+      progress: 'Progres', reset: 'Reset semua progres', resetConfirm: 'Ketuk lagi untuk mereset',
     },
     en: {
       trees: 'Trees', inventory: 'Inventory', settings: 'Settings',
       acacia: 'Acacia Tree', seconds: 'sec', acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', empty: 'No items yet.',
       theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
       openMenu: 'Open menu', level: 'Level',
+      progress: 'Progress', reset: 'Reset all progress', resetConfirm: 'Tap again to reset',
     },
   };
 
-  const state = { acaciaWood: 0, twig: 0, leaf: 0, acaciaLevel: 0, acaciaXp: 0, running: false, progress: 0, lastTick: Date.now() };
+  const freshState = () => ({ acaciaWood: 0, twig: 0, leaf: 0, acaciaLevel: 0, acaciaXp: 0, running: false, progress: 0, lastTick: Date.now() });
+  const state = freshState();
   const settings = { theme: document.documentElement.dataset.theme, lang: 'id' };
 
   try {
     const saved = JSON.parse(localStorage.getItem(SAVE_KEY));
     if (saved) Object.assign(state, saved);
   } catch {}
-  if (state.wood) { state.acaciaWood += state.wood; delete state.wood; } // simpanan lama: 'wood' = kayu akasia
   try {
     const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
     if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
@@ -513,7 +529,31 @@
     settings.lang = b.dataset.langChoice;
     saveSettings();
     applySettings();
+    disarmReset();
   }));
+
+  // Reset progres: ketuk sekali untuk minta konfirmasi, ketuk lagi dalam 3 detik untuk mereset
+  const resetBtn = $('reset');
+  let resetTimer;
+  function disarmReset() {
+    clearTimeout(resetTimer);
+    resetBtn.classList.remove('confirm');
+    resetBtn.textContent = t('reset');
+  }
+  resetBtn.addEventListener('click', () => {
+    if (!resetBtn.classList.contains('confirm')) {
+      resetBtn.classList.add('confirm');
+      resetBtn.textContent = t('resetConfirm');
+      resetTimer = setTimeout(disarmReset, 3000);
+      return;
+    }
+    disarmReset();
+    for (const k in state) delete state[k];
+    Object.assign(state, freshState());
+    save();
+    render();
+    renderInventory();
+  });
 
   applySettings();
   showPage(location.hash.slice(1));
