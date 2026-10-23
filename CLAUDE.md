@@ -10,4 +10,6 @@ Game idle sederhana dalam satu file: `index.html`.
 ## Aturan game
 
 - Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang atau menambang, tidak bersamaan). Menyalakan satu kartu otomatis mematikan kartu lain.
-- Setiap sumber daya butuh sekitar 2 hari aksi aktif untuk mencapai level 100.
+- Setiap sumber daya butuh sekitar 2 hari aksi aktif untuk mencapai level 100, dihitung dengan kapak level 0. Kapak yang ikut naik level mempercepat ayunan, jadi Pohon Akasia nyatanya selesai sekitar 1,4 hari; itu disengaja.
+- Kapak dapat exp dari menebang pohon (Akasia 20 Exp) dan butuh sekitar 15 hari menebang Akasia nonstop untuk mencapai level 100. Tiap level memotong waktu ayunan ke pohon 0,75% (75% di level 100).
+- Upgrade Kapak Biasa → Kapak Berkilau (250 Kayu Akasia + 250 Batu) bisa kapan saja, level dan exp kapak tetap, dan memberi 5% peluang dapat 2 kayu.
