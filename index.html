@@ -12,10 +12,10 @@
     --ink: #2a2620;
     --muted: #7a7266;
     --line: #e4ddcf;
-    --accent: #3f7d4e;
-    --accent-ink: #ffffff;
     --track: #ebe5d8;
     --wood: #a0673a;
+    --on-bg: #3f7d4e;
+    --on-ink: #ffffff;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -24,10 +24,10 @@
       --ink: #ece7dc;
       --muted: #9a9486;
       --line: #2c3530;
-      --accent: #5fa46f;
-      --accent-ink: #0f1511;
       --track: #2a332d;
       --wood: #c98a55;
+      --on-bg: #2f6b3e;
+      --on-ink: #eaf5ec;
     }
   }
   * { box-sizing: border-box; }
@@ -49,47 +49,36 @@
 
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .card {
+    display: block;
+    width: 100%;
     background: var(--card);
+    color: var(--ink);
     border: 1px solid var(--line);
     border-radius: 16px;
     padding: 16px;
+    font: inherit;
     text-align: center;
+    cursor: pointer;
+    transition: transform .1s, background-color .2s, color .2s, border-color .2s;
   }
-  .card h2 { font-size: 16px; margin: 0; }
-  .duration { font-size: 12px; color: var(--muted); margin: 2px 0 0; }
-  .icon {
-    width: 56px; height: 56px;
-    margin: 12px auto 0;
-    border-radius: 14px;
-    background: var(--track);
-    display: grid; place-items: center;
-    font-size: 30px;
-  }
+  .card:active { transform: scale(.96); }
+  .card.on { background: var(--on-bg); border-color: var(--on-bg); color: var(--on-ink); }
+  .name { display: block; font-size: 16px; font-weight: 700; }
+  .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .card.on .duration { color: inherit; opacity: .8; }
+  .icon { display: block; font-size: 40px; line-height: 1; margin-top: 12px; }
 
   .bar {
-    margin: 16px 0 0;
+    display: block;
+    margin-top: 16px;
     height: 10px;
     background: var(--track);
     border-radius: 999px;
     overflow: hidden;
   }
-  .fill { height: 100%; width: 0%; background: var(--accent); border-radius: inherit; }
-
-  button {
-    margin-top: 12px;
-    width: 100%;
-    min-height: 40px;
-    border: 0;
-    border-radius: 10px;
-    font: 600 15px/1 inherit;
-    font-family: inherit;
-    background: var(--accent);
-    color: var(--accent-ink);
-    cursor: pointer;
-    transition: transform .08s;
-  }
-  button:active { transform: scale(.98); }
-  button.on { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+  .card.on .bar { background: color-mix(in srgb, var(--on-ink) 25%, transparent); }
+  .fill { display: block; height: 100%; width: 0%; background: var(--muted); border-radius: inherit; }
+  .card.on .fill { background: var(--on-ink); }
 
   .pop {
     position: fixed; pointer-events: none;
@@ -107,13 +96,12 @@
   </header>
 
   <div class="cards">
-  <section class="card">
-    <h2>Pohon Akasia</h2>
-    <p class="duration" id="duration">2 detik</p>
-    <div class="icon">🌳</div>
-    <div class="bar"><div class="fill" id="fill"></div></div>
-    <button id="toggle">Tebang</button>
-  </section>
+  <button class="card" id="toggle" aria-pressed="false">
+    <span class="name">Pohon Akasia</span>
+    <span class="duration" id="duration">2 detik</span>
+    <span class="icon">🌳</span>
+    <span class="bar"><span class="fill" id="fill"></span></span>
+  </button>
   </div>
 </div>
 
@@ -159,8 +147,8 @@
   function render() {
     woodEl.textContent = Math.floor(state.wood).toLocaleString('id-ID');
     fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
-    btn.textContent = state.running ? 'Berhenti' : 'Tebang';
     btn.classList.toggle('on', state.running);
+    btn.setAttribute('aria-pressed', state.running);
   }
 
   btn.addEventListener('click', () => {
