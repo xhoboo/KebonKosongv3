@@ -47,6 +47,7 @@
   .total { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .total b { color: var(--wood); font-size: 18px; }
 
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .card {
     background: var(--card);
     border: 1px solid var(--line);
@@ -104,6 +105,7 @@
     <div class="total">🪵 <b id="wood">0</b> kayu</div>
   </header>
 
+  <div class="cards">
   <section class="card">
     <div class="card-top">
       <div class="icon">🌳</div>
@@ -114,6 +116,7 @@
     <div class="bar"><div class="fill" id="fill"></div></div>
     <button id="toggle">Mulai</button>
   </section>
+  </div>
 </div>
 
 <script>
