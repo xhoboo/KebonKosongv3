@@ -16,6 +16,8 @@
     --wood: #a0673a;
     --on-bg: #3f7d4e;
     --on-ink: #ffffff;
+    --on-edge: #2b5a37;
+    --scrim: rgba(20, 16, 10, .35);
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -28,6 +30,8 @@
       --wood: #c98a55;
       --on-bg: #2f6b3e;
       --on-ink: #eaf5ec;
+      --on-edge: #1c4227;
+      --scrim: rgba(0, 0, 0, .5);
     }
   }
   * { box-sizing: border-box; }
@@ -42,13 +46,62 @@
   }
   .app { max-width: 480px; margin: 0 auto; }
 
-  header { display: flex; align-items: baseline; justify-content: space-between; margin: 8px 0 20px; }
+  header { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; }
   h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-  .total { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .total b { color: var(--wood); font-size: 18px; }
+  h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 12px; }
+  .menu-btn {
+    width: 40px; height: 40px; margin-left: -8px;
+    display: grid; place-items: center;
+    background: none; border: 0; border-radius: 10px;
+    color: var(--ink); cursor: pointer;
+  }
+  .menu-btn:active { background: var(--track); }
+
+  .scrim {
+    position: fixed; inset: 0; z-index: 10;
+    background: var(--scrim);
+    opacity: 0; pointer-events: none;
+    transition: opacity .25s;
+  }
+  .drawer {
+    position: fixed; top: 0; bottom: 0; left: 0; z-index: 11;
+    width: min(260px, 75vw);
+    background: var(--card);
+    border-right: 1px solid var(--line);
+    padding: max(16px, env(safe-area-inset-top)) 12px 16px;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform .25s ease, visibility .25s;
+  }
+  body.menu-open .scrim { opacity: 1; pointer-events: auto; }
+  body.menu-open .drawer { transform: none; visibility: visible; }
+  .drawer .brand { font-weight: 700; padding: 10px 12px 16px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%; padding: 12px;
+    background: none; border: 0; border-radius: 10px;
+    font: inherit; font-size: 15px; color: var(--ink); text-align: left;
+    cursor: pointer;
+  }
+  .nav-item:active { background: var(--track); }
+  .nav-item[aria-current="page"] { background: var(--track); font-weight: 600; }
+
+  .items { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .item-icon { font-size: 24px; line-height: 1; }
+  .item-name { flex: 1; font-weight: 600; }
+  .item-qty { color: var(--wood); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-size: 14px; margin: 0; }
 
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .card {
+    position: relative;
     display: block;
     width: 100%;
     background: var(--card);
@@ -59,10 +112,14 @@
     font: inherit;
     text-align: center;
     cursor: pointer;
-    transition: transform .1s, background-color .2s, color .2s, border-color .2s;
+    transition: transform .12s, box-shadow .12s, background-color .2s, color .2s, border-color .2s;
   }
-  .card:active { transform: scale(.96); }
-  .card.on { background: var(--on-bg); border-color: var(--on-bg); color: var(--on-ink); }
+  .card.on {
+    background: var(--on-bg); border-color: var(--on-bg); color: var(--on-ink);
+    transform: translateY(-4px);
+    box-shadow: 0 4px 0 var(--on-edge), 0 12px 18px -8px rgba(0, 0, 0, .45);
+  }
+  .card:active { transform: translateY(0) scale(.97); box-shadow: none; }
   .name { display: block; font-size: 16px; font-weight: 700; }
   .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .card.on .duration { color: inherit; opacity: .8; }
@@ -81,20 +138,32 @@
   .card.on .fill { background: var(--on-ink); }
 
   .pop {
-    position: fixed; pointer-events: none;
-    font-weight: 700; color: var(--wood);
+    position: absolute; left: 50%; pointer-events: none;
+    font-size: 14px; font-weight: 700;
+    transform: translateX(-50%);
     animation: rise .9s ease-out forwards;
   }
-  @keyframes rise { to { transform: translateY(-40px); opacity: 0; } }
+  @keyframes rise { to { transform: translate(-50%, -32px); opacity: 0; } }
 </style>
 </head>
 <body>
+<div class="scrim" id="scrim"></div>
+<nav class="drawer" id="drawer" aria-label="Menu">
+  <div class="brand">Kebon Kosong</div>
+  <button class="nav-item" data-page="pohon"><span>🌳</span>Pohon</button>
+  <button class="nav-item" data-page="inventory"><span>🎒</span>Inventory</button>
+</nav>
+
 <div class="app">
   <header>
+    <button class="menu-btn" id="menu-btn" aria-label="Buka menu" aria-controls="drawer" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+    </button>
     <h1>Kebon Kosong</h1>
-    <div class="total">🪵 <b id="wood">0</b> kayu</div>
   </header>
 
+  <main id="page-pohon">
+  <h2>Pohon</h2>
   <div class="cards">
   <button class="card" id="toggle" aria-pressed="false">
     <span class="name">Pohon Akasia</span>
@@ -103,6 +172,13 @@
     <span class="bar"><span class="fill" id="fill"></span></span>
   </button>
   </div>
+  </main>
+
+  <main id="page-inventory" hidden>
+    <h2>Inventory</h2>
+    <ul class="items" id="items"></ul>
+    <p class="empty" id="empty">Belum ada item.</p>
+  </main>
 </div>
 
 <script>
@@ -118,7 +194,8 @@
   } catch {}
 
   const $ = id => document.getElementById(id);
-  const woodEl = $('wood'), fillEl = $('fill'), btn = $('toggle');
+  const fillEl = $('fill'), btn = $('toggle'), itemsEl = $('items'), emptyEl = $('empty');
+  let page = 'pohon';
   $('duration').textContent = (CHOP_TIME / 1000) + ' detik';
 
   // Progres offline: kalau sedang berjalan saat ditutup, hitung tebangan yang terlewat
@@ -133,19 +210,27 @@
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
   }
 
+  // Semua item yang bisa didapat; key = nama field di state
+  const ITEMS = [{ key: 'wood', icon: '🪵', name: 'Kayu' }];
+
   function popup() {
-    const r = woodEl.getBoundingClientRect();
-    const el = document.createElement('div');
+    const el = document.createElement('span');
     el.className = 'pop';
-    el.textContent = '+1';
-    el.style.left = r.left + 'px';
-    el.style.top = (r.bottom + 4) + 'px';
-    document.body.appendChild(el);
+    el.textContent = '+1 🪵';
+    el.style.top = btn.querySelector('.icon').offsetTop + 'px';
+    btn.appendChild(el);
     el.addEventListener('animationend', () => el.remove());
   }
 
+  function renderInventory() {
+    const owned = ITEMS.filter(it => state[it.key] >= 1);
+    itemsEl.innerHTML = owned.map(it =>
+      `<li class="item"><span class="item-icon">${it.icon}</span><span class="item-name">${it.name}</span>` +
+      `<span class="item-qty">${Math.floor(state[it.key]).toLocaleString('id-ID')}</span></li>`).join('');
+    emptyEl.hidden = owned.length > 0;
+  }
+
   function render() {
-    woodEl.textContent = Math.floor(state.wood).toLocaleString('id-ID');
     fillEl.style.width = (state.progress / CHOP_TIME * 100) + '%';
     btn.classList.toggle('on', state.running);
     btn.setAttribute('aria-pressed', state.running);
@@ -153,6 +238,7 @@
 
   btn.addEventListener('click', () => {
     state.running = !state.running;
+    if (!state.running) state.progress = 0;
     save();
     render();
   });
@@ -167,13 +253,43 @@
         const chops = Math.floor(state.progress / CHOP_TIME);
         state.wood += chops;
         state.progress %= CHOP_TIME;
-        popup();
+        if (page === 'pohon') popup();
+        else renderInventory();
       }
     }
     render();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
+
+  // Menu & halaman
+  const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
+
+  function setMenu(open) {
+    document.body.classList.toggle('menu-open', open);
+    menuBtn.setAttribute('aria-expanded', open);
+  }
+
+  function showPage(name) {
+    page = name === 'inventory' ? 'inventory' : 'pohon';
+    $('page-pohon').hidden = page !== 'pohon';
+    $('page-inventory').hidden = page !== 'inventory';
+    navItems.forEach(n => {
+      if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
+      else n.removeAttribute('aria-current');
+    });
+    if (page === 'inventory') renderInventory();
+  }
+
+  menuBtn.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
+  $('scrim').addEventListener('click', () => setMenu(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false); });
+  navItems.forEach(n => n.addEventListener('click', () => {
+    location.hash = n.dataset.page;
+    setMenu(false);
+  }));
+  window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
+  showPage(location.hash.slice(1));
 
   setInterval(save, 5000);
   document.addEventListener('visibilitychange', save);
