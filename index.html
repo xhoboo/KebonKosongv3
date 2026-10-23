@@ -110,8 +110,24 @@
     cursor: pointer;
   }
   .item[aria-expanded="true"] { border-color: var(--muted); }
+  /* Popup nama item, melayang di atas kotak */
+  .tip {
+    position: fixed; z-index: 5;
+    transform: translate(-50%, -100%);
+    padding: 6px 10px;
+    background: var(--ink); color: var(--bg);
+    border-radius: 8px;
+    font-size: 12px; font-weight: 600; white-space: nowrap;
+    pointer-events: none;
+    animation: tip-in .15s ease-out;
+  }
+  .tip::after {
+    content: ""; position: absolute; left: 50%; top: 100%;
+    margin-left: calc(var(--arrow, 0px) - 5px);
+    border: 5px solid transparent; border-top-color: var(--ink);
+  }
+  @keyframes tip-in { from { opacity: 0; transform: translate(-50%, calc(-100% + 4px)); } }
   .item-icon { font-size: 30px; line-height: 1; }
-  .item-name { font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--muted); }
   /* Counter duduk di tengah garis bawah kotak */
   .item-qty {
     position: absolute; left: 50%; bottom: 0;
@@ -228,6 +244,7 @@
   <main id="page-inventory" hidden>
     <h2 data-i18n="inventory"></h2>
     <ul class="items" id="items"></ul>
+    <div class="tip" id="tip" role="status" hidden></div>
     <p class="empty" id="empty" data-i18n="empty"></p>
   </main>
 
@@ -330,7 +347,6 @@
       const open = it.key === openItem;
       return `<li><button class="item" data-item="${it.key}" aria-expanded="${open}" aria-label="${t(it.key)}: ${qty}">` +
         `<span class="item-icon" aria-hidden="true">${it.icon}</span>` +
-        (open ? `<span class="item-name" aria-hidden="true">${t(it.key)}</span>` : '') +
         `<span class="item-qty" aria-hidden="true">${qty}</span></button></li>`;
     }).join('');
     emptyEl.hidden = owned.length > 0;
@@ -355,13 +371,36 @@
     renderInventory();
   }
 
-  itemsEl.addEventListener('click', e => {
-    const item = e.target.closest('.item');
-    if (!item) return;
-    openItem = openItem === item.dataset.item ? null : item.dataset.item;
+  const tipEl = $('tip');
+  let tipTimer;
+
+  function showTip(key) {
+    openItem = key;
+    clearTimeout(tipTimer);
     renderInventory();
-    itemsEl.querySelector(`[data-item="${item.dataset.item}"]`).focus();
+    if (!key) { tipEl.hidden = true; return; }
+    const r = itemsEl.querySelector(`[data-item="${key}"]`).getBoundingClientRect();
+    tipEl.textContent = t(key);
+    tipEl.hidden = false;
+    // Jaga popup tetap di dalam layar walau namanya panjang
+    const half = tipEl.offsetWidth / 2;
+    const x = Math.min(Math.max(r.left + r.width / 2, 8 + half), innerWidth - 8 - half);
+    tipEl.style.left = x + 'px';
+    tipEl.style.top = (r.top - 8) + 'px';
+    tipEl.style.setProperty('--arrow', (r.left + r.width / 2 - x) + 'px');
+    tipTimer = setTimeout(() => showTip(null), 2000);
+  }
+
+  // Klik item: munculkan nama; klik item yang sama atau di luar item: tutup
+  document.addEventListener('click', e => {
+    const item = e.target.closest('.item');
+    if (item) {
+      showTip(openItem === item.dataset.item ? null : item.dataset.item);
+      itemsEl.querySelector(`[data-item="${item.dataset.item}"]`).focus();
+    } else if (openItem) showTip(null);
   });
+  window.addEventListener('scroll', () => openItem && showTip(null), { passive: true });
+  window.addEventListener('resize', () => openItem && showTip(null));
 
   btn.addEventListener('click', () => {
     state.running = !state.running;
@@ -399,6 +438,7 @@
   }
 
   function showPage(name) {
+    if (openItem) showTip(null);
     page = PAGES.includes(name) ? name : 'pohon';
     PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
     navItems.forEach(n => {
