@@ -95,16 +95,34 @@
   .nav-item:active { background: var(--track); }
   .nav-item[aria-current="page"] { background: var(--track); font-weight: 600; }
 
-  .items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 8px; }
+  .items { list-style: none; margin: 0; padding: 0 0 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 20px 8px; }
   .item {
+    position: relative;
+    width: 100%;
     aspect-ratio: 1;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    padding: 6px 4px 10px;
     background: var(--card);
+    color: var(--ink);
     border: 1px solid var(--line);
     border-radius: 12px;
+    font: inherit;
+    cursor: pointer;
   }
+  .item[aria-expanded="true"] { border-color: var(--muted); }
   .item-icon { font-size: 30px; line-height: 1; }
-  .item-qty { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .item-name { font-size: 11px; font-weight: 600; line-height: 1.2; color: var(--muted); }
+  /* Counter duduk di tengah garis bawah kotak */
+  .item-qty {
+    position: absolute; left: 50%; bottom: 0;
+    transform: translate(-50%, 50%);
+    min-width: 28px; padding: 2px 8px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-size: 12px; font-weight: 700; line-height: 1.2;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
   .empty { color: var(--muted); font-size: 14px; margin: 0; }
 
   .setting {
@@ -302,13 +320,18 @@
     iconEl.classList.add('bump');
   }
 
+  let openItem = null; // item yang namanya sedang ditampilkan
+
   function renderInventory() {
     const owned = ITEMS.filter(it => state[it.key] >= 1);
     const locale = settings.lang === 'id' ? 'id-ID' : 'en-US';
     itemsEl.innerHTML = owned.map(it => {
       const qty = Math.floor(state[it.key]).toLocaleString(locale);
-      return `<li class="item" title="${t(it.key)}" aria-label="${t(it.key)}: ${qty}">` +
-        `<span class="item-icon" aria-hidden="true">${it.icon}</span><span class="item-qty" aria-hidden="true">${qty}</span></li>`;
+      const open = it.key === openItem;
+      return `<li><button class="item" data-item="${it.key}" aria-expanded="${open}" aria-label="${t(it.key)}: ${qty}">` +
+        `<span class="item-icon" aria-hidden="true">${it.icon}</span>` +
+        (open ? `<span class="item-name" aria-hidden="true">${t(it.key)}</span>` : '') +
+        `<span class="item-qty" aria-hidden="true">${qty}</span></button></li>`;
     }).join('');
     emptyEl.hidden = owned.length > 0;
   }
@@ -331,6 +354,14 @@
     document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
     renderInventory();
   }
+
+  itemsEl.addEventListener('click', e => {
+    const item = e.target.closest('.item');
+    if (!item) return;
+    openItem = openItem === item.dataset.item ? null : item.dataset.item;
+    renderInventory();
+    itemsEl.querySelector(`[data-item="${item.dataset.item}"]`).focus();
+  });
 
   btn.addEventListener('click', () => {
     state.running = !state.running;
