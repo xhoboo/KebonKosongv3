@@ -255,13 +255,15 @@
   .cost { display: block; font-size: 12px; font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
   /* Hasil aksi muncul di posisi acak di dalam kartu (posisinya diatur dari JS) dan boleh menumpuk.
-     Punya latar sendiri supaya tetap terbaca walau menimpa teks atau ikon. */
+     Latarnya agak transparan, tapi isi kartu di belakangnya dikaburkan supaya angka tetap terbaca. */
   .pop {
     position: absolute;
     padding: 3px 8px;
-    background: var(--card); color: var(--ink);
+    background: color-mix(in srgb, var(--card) 70%, transparent); color: var(--ink);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
     border-radius: 999px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
     pointer-events: none; white-space: nowrap;
     font-size: 14px; font-weight: 700; line-height: 1.2;
     animation: rise 1.6s ease-out forwards;
