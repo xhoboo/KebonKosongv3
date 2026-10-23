@@ -339,9 +339,9 @@
 
   // Level: 1 XP per aksi. Bagian eksponensial menjaga awal tetap cepat,
   // bagian kubik membuat level atas makin berat.
-  // Kira-kira: Lv 10 ≈ 2,5 menit, Lv 50 ≈ 9,5 jam, Lv 75 ≈ 2 hari, Lv 100 ≈ 7 hari.
+  // Dengan aksi 2 detik, kira-kira: Lv 10 ≈ 2 menit, Lv 50 ≈ 2 jam, Lv 75 ≈ 11,5 jam, Lv 100 ≈ 2 hari.
   const MAX_LEVEL = 100;
-  const xpNeeded = level => Math.floor(4 * 1.07 ** level + 0.0103 * level ** 3);
+  const xpNeeded = level => Math.floor(4 * 1.07 ** level + 0.0015 * level ** 3);
 
   // Sumber daya yang bisa dikerjakan. drops(p) → [item, peluang]; p = level / 100.
   // Item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
