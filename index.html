@@ -206,10 +206,9 @@
   .name { display: block; font-size: 16px; font-weight: 700; }
   .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
   .card.on .duration { color: inherit; opacity: .8; }
-  .stage { position: relative; display: block; margin-top: 12px; }
-  .icon { display: block; font-size: 40px; line-height: 1; }
+  .icon { display: block; font-size: 40px; line-height: 1; margin-top: 12px; }
   svg.emoji { width: 1em; height: 1em; vertical-align: -0.125em; }
-  .pop.miss { color: color-mix(in srgb, var(--on-ink) 70%, transparent); }
+  .pop.miss { color: var(--muted); }
   .icon.bump { animation: bump .3s ease-out; }
   @keyframes bump { 40% { transform: scale(1.15); } }
 
@@ -255,12 +254,16 @@
   .upgrade-btn:not(:disabled):active { transform: scale(.98); }
   .cost { display: block; font-size: 12px; font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
-  /* Hasil aksi muncul di dalam kartu, di ruang kosong sebelah kanan ikon.
-     Durasi diatur dari JS supaya tidak lebih lama dari satu aksi. */
+  /* Hasil aksi muncul di posisi acak di dalam kartu (posisinya diatur dari JS) dan boleh menumpuk.
+     Punya latar sendiri supaya tetap terbaca walau menimpa teks atau ikon. */
   .pop {
-    position: absolute; left: calc(50% + 26px); top: 11px;
+    position: absolute;
+    padding: 3px 8px;
+    background: var(--card); color: var(--ink);
+    border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
     pointer-events: none; white-space: nowrap;
-    font-size: 14px; font-weight: 700; color: var(--on-ink);
+    font-size: 14px; font-weight: 700; line-height: 1.2;
     animation: rise 1.6s ease-out forwards;
   }
   @keyframes rise {
@@ -483,11 +486,10 @@
     el.className = 'card';
     el.dataset.node = key;
     el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${key}"></span>` +
-      `<span class="duration"></span><span class="stage"><span class="icon">${node.icon}</span></span>` +
+      `<span class="duration"></span><span class="icon">${node.icon}</span>` +
       `<span class="bar"><span class="fill"></span></span>`;
     document.querySelector(`.cards[data-area="${node.area}"]`).appendChild(el);
-    cards[key] = { el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), fill: el.querySelector('.fill'),
-      stage: el.querySelector('.stage'), icon: el.querySelector('.icon') };
+    cards[key] = { el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), fill: el.querySelector('.fill'), icon: el.querySelector('.icon') };
     el.addEventListener('click', () => {
       state.active = state.active === key ? null : key;
       state.progress = 0;
@@ -537,16 +539,26 @@
     state.progress = elapsed;
   }
 
-  // Popup hasil: satu per kartu; kalau aksi lebih cepat dari animasinya, animasi ikut dipercepat
-  const POP_MS = 1600;
+  // Popup hasil di posisi acak di dalam kartu; kalau aksinya cepat, popup menumpuk dan menyebar
   function popup(key, got) {
     const card = cards[key];
     const el = document.createElement('span');
     el.className = got ? 'pop' : 'pop miss';
     el.innerHTML = got ? '+' + got.qty + ' ' + icons[got.item] : t('miss');
-    el.style.animationDuration = Math.min(POP_MS, actionTime(key)) + 'ms';
-    card.stage.querySelector('.pop')?.remove();
-    card.stage.appendChild(el);
+    card.el.appendChild(el);
+    // Tetap di dalam kartu sepanjang animasi (mulai 6px lebih rendah, berakhir 8px lebih tinggi), jarak tepi 6px
+    const x0 = 6, x1 = card.el.clientWidth - el.offsetWidth - 6;
+    const y0 = 6 + 8, y1 = card.el.clientHeight - el.offsetHeight - 6 - 6;
+    // Dari beberapa posisi acak, ambil yang paling jauh dari popup lain supaya tumpukan menyebar dan tetap terbaca
+    const others = [...card.el.querySelectorAll('.pop')].filter(p => p !== el).map(p => [p.offsetLeft, p.offsetTop]);
+    let best, bestDist = -1;
+    for (let i = 0; i < 8; i++) {
+      const x = x0 + Math.random() * Math.max(0, x1 - x0), y = y0 + Math.random() * Math.max(0, y1 - y0);
+      const dist = Math.min(Infinity, ...others.map(([ox, oy]) => Math.hypot(x - ox, y - oy)));
+      if (dist > bestDist) { best = [x, y]; bestDist = dist; }
+    }
+    el.style.left = best[0] + 'px';
+    el.style.top = best[1] + 'px';
     el.addEventListener('animationend', () => el.remove());
     card.icon.classList.remove('bump');
     void card.icon.offsetWidth; // mulai ulang animasi
