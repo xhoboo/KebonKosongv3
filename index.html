@@ -171,6 +171,8 @@
   .segment button[aria-pressed="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  /* Kartu paling atas halaman butuh ruang untuk popup hasil supaya tidak menabrak header */
+  .cards:first-child { padding-top: 16px; }
   .card {
     position: relative;
     display: block;
@@ -287,7 +289,6 @@
   </header>
 
   <main id="page-pohon">
-  <h2 data-i18n="trees"></h2>
   <section class="tool">
     <div class="tool-top">
       <span class="tool-icon" aria-hidden="true">🪓</span>
@@ -307,7 +308,6 @@
   </main>
 
   <main id="page-goa" hidden>
-  <h2 data-i18n="cave"></h2>
   <div class="cards" data-area="goa"></div>
   </main>
 
