@@ -522,6 +522,10 @@
     .tool-side { padding-left: 32px; border-left: 1px solid var(--line); align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
     .tool-side > :first-child, .tool-side > [hidden] + * { margin-top: 0; }
     .tool-side .stats { max-width: none; }
+    /* Nilai panjang (peluang menang per musuh) turun ke baris sendiri, rata kanan, tanpa mematahkan labelnya */
+    .tool-side .stats div { flex-wrap: wrap; column-gap: 12px; }
+    .tool-side .stats dt { white-space: nowrap; }
+    .tool-side .stats dd { margin-left: auto; }
     .tool-side .upgrade-btn { width: 100%; min-width: 0; }
     .tool-split:has(> .tool-side:not(:has(> :not([hidden])))) { grid-template-columns: 1fr; }
     .tool-side:not(:has(> :not([hidden]))) { display: none; }
@@ -539,15 +543,16 @@
     /* Petualangan: status di kiri, perlengkapan di kanan, kartu penuh; tas, bekal, dan jurnal berdampingan */
     #page-petualangan:not([hidden]) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
     #page-petualangan > * { margin: 0; }
-    #page-petualangan > .tool { grid-column: 1; }
-    #page-petualangan > .equip { grid-column: 2 / -1; grid-template-columns: 1fr 1fr; align-self: stretch; }
+    #page-petualangan > .tool { grid-column: 1 / 3; }
+    #page-petualangan > .equip { grid-column: 3; grid-template-columns: 1fr; align-self: stretch; }
     #page-petualangan > .cards { grid-column: 1 / -1; }
     #page-petualangan .panel .market { grid-template-columns: 1fr; }
     .journal { max-height: 480px; }
   }
   @media (min-width: 900px) and (max-width: 1279px) {
     #page-petualangan:not([hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    #page-petualangan > .equip { grid-column: 2; grid-template-columns: 1fr; }
+    #page-petualangan > .tool { grid-column: 1 / -1; }
+    #page-petualangan > .equip { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
   }
 </style>
 </head>
@@ -660,7 +665,8 @@
   </main>
 
   <main id="page-petualangan" hidden>
-    <section class="tool">
+    <section class="tool tool-split">
+      <div class="tool-body">
       <div class="tool-top">
         <span class="tool-icon" aria-hidden="true">⚔️</span>
         <div class="tool-main">
@@ -672,12 +678,15 @@
         <span class="bar"><span class="fill" id="melee-fill"></span></span><span class="tool-xp" id="melee-xp"></span></div>
       <div class="skill"><span class="level"><span data-i18n="armorSkill"></span> <span id="armor-level"></span></span>
         <span class="bar"><span class="fill" id="armor-fill"></span></span><span class="tool-xp" id="armor-xp"></span></div>
+      </div>
+      <div class="tool-side">
       <dl class="stats">
         <div><dt data-i18n="attack"></dt><dd id="adv-atk"></dd></div>
         <div><dt data-i18n="interval"></dt><dd id="adv-interval"></dd></div>
         <div><dt data-i18n="defense"></dt><dd id="adv-def"></dd></div>
         <div><dt data-i18n="winChance"></dt><dd id="adv-win"></dd></div>
       </dl>
+      </div>
     </section>
     <section class="equip" id="equip"></section>
     <div class="cards" data-area="petualangan"></div>
