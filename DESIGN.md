@@ -11,7 +11,8 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
   **Pengecualian: Kebun** tumbuh paralel; menanam/panen instan, lalu pemain bebas melakukan kegiatan lain.
   **Menempa bukan kegiatan idle**: klik, animasi + suara tempa 1–2 detik, hasil langsung keluar.
   Menempa **tidak** menghentikan kegiatan yang sedang berjalan. Memasak tetap kegiatan idle.
-- Progres offline dibatasi 24 jam.
+- Progres offline dibatasi 24 jam. **Pengecualian: tanaman Kebun** memakai jam dunia nyata (tanaman 5 hari tetap matang walau pemain offline 5 hari).
+- Dua bahasa wajib: Indonesia dan English, termasuk nama item dan teks jurnal.
 - Game punya suara (mulai dari menempa) dengan tombol bisu di Pengaturan.
 - Setiap skill butuh hasil skill lain. Tidak ada jalur yang bisa dilewati.
 
@@ -38,7 +39,7 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 ### Kebun
 - Punya level (exp dari panen).
 - Benih biasa dibeli di Pasar; benih langka hanya dari petualangan.
-- Tanaman matang menunggu 24 jam lalu layu.
+- Tanaman matang menunggu 24 jam (jam nyata) lalu layu.
 - 2 slot gratis, slot berikutnya dibeli dengan Kepeng, biaya naik tiap slot, maksimal 100.
 - Waktu tumbuh lama: tanaman tier terendah 1–2 jam, makin tinggi tier makin lama.
 - Wajib ada tombol "Tanam semua" dan "Panen semua".
@@ -70,7 +71,7 @@ Draf tier:
 - Alat pancing juga lebih baik = peluang ikan langka naik.
 
 ### Rumah
-- Kapasitas dihitung per item berbeda, bukan jumlah: 10.000 Kayu Ulin = 1 slot. Rumah menampung 50 item berbeda.
+- Kapasitas dihitung per item berbeda, bukan jumlah: 10.000 Kayu Ulin = 1 slot. Kapasitas awal 50 item berbeda, bertambah lewat upgrade Rumah.
 - Item yang sama dengan kualitas berbeda = item berbeda.
 - Inventory bisa disortir berdasarkan kategori (kayu, batu/logam, ikan, sayur, masakan, alat, senjata, ...).
 - Kalau penuh, item jenis baru dibuang dan dicatat (di jurnal/log). Item bisa dijual untuk membebaskan slot.
@@ -82,7 +83,8 @@ Draf tier:
 ### Anvil
 - Menempa alat (kapak, beliung, alat pancing), senjata, dan armor. Instan per klik (lihat Prinsip).
 - Level anvil (upgrade dengan Kepeng + bahan) dibutuhkan untuk menempa barang tier lebih tinggi.
-- Ada peluang **gagal: bahan hilang**. Draf peredam: tier rendah hampir selalu berhasil; peluang gagal hanya terasa di tier atas.
+- Ada peluang **gagal: bahan hilang**. Peluang berhasil ditentukan **selisih tier**: anvil yang levelnya pas dengan tier barang paling berisiko, anvil di atas tier barang makin aman.
+- Exp Menempa dihitung terhadap bahan yang dipakai, bukan per klik.
 - Skill Menempa (exp per tempa) menaikkan peluang kualitas: Biasa / Bagus (+10%) / Istimewa (+25%) / Pusaka (+50% + 1 sifat).
 
 ## Petualangan
@@ -99,12 +101,29 @@ Draf tier:
 - Armor mengurangi HP yang hilang saat kalah.
 - Petualangan punya **HP**. Kalah dalam encounter = HP berkurang. Makan otomatis dari masakan yang dibawa.
   HP habis = pulang; **loot yang sudah didapat tetap dibawa** (tanpa hukuman selain waktu).
+- Tas penuh **tidak** membuat pulang: petualangan jalan terus (loot baru dibuang dan dicatat di jurnal) sampai HP habis.
+- Level petualangan per gaya senjata (mastery): exp dari mengalahkan musuh masuk ke gaya senjata yang dipakai,
+  exp armor dari menerima serangan. Detail gaya (jarak dekat / jarak jauh / magic) belum final.
+- Tas & Rumah:
+  - Selesai petualangan, pemain memilih item tas mana yang masuk Rumah dan mana yang dibuang;
+    yang tidak dibuang boleh tetap di tas (mis. kalau Rumah penuh) lalu lanjut berpetualang.
+  - Rumah → Tas: hanya item **bekal** (makanan, dan item lain yang membantu petualangan).
+  - Tas → Rumah: semua item.
 - **Jurnal** mencatat setiap encounter dan loot, termasuk item yang dibuang karena rumah penuh.
 
 ## Pembukaan area
 
 - Awal: Hutan dan Kebun, plus Pasar, Rumah, Dapur, Anvil.
-- Area lain terbuka bertahap.
+- Goa: Akasia Lv 10 (±2 menit).
+- Sungai: punya alat pancing tier 1 (butuh logam + benang, jadi otomatis setelah Goa dan Kebun).
+- Danau / Laut: alat pancing tier 2 / 3.
+- Petualangan: punya senjata pertama.
+- Migrasi save: pemain lama yang sudah punya progres Goa langsung punya Goa terbuka.
+
+## Keputusan tertunda (putuskan setelah game dicoba)
+
+- Daftar isi konkret: nama & angka item, ikan, tanaman, musuh, masakan.
+- Harga jual, biaya slot Kebun, upgrade bangunan, upgrade tas.
 
 ## Urutan pengerjaan
 
