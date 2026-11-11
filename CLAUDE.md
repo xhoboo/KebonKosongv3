@@ -14,3 +14,7 @@ Game idle sederhana dalam satu file: `index.html`.
 - Exp dari menebang pohon (Akasia 20 Exp per tebang) masuk ke level pohon itu sendiri dan ke kapak sekaligus.
 - Kapak butuh sekitar 15 hari menebang Akasia nonstop untuk mencapai level 100. Tiap level butuh 10% exp lebih banyak dari level sebelumnya (awal cepat, akhir sangat lama). Tiap level memotong waktu ayunan ke pohon 0,75% (75% di level 100).
 - Upgrade Kapak Biasa → Kapak Berkilau (250 Kayu Akasia + 250 Batu) bisa kapan saja, level dan exp kapak tetap, dan memberi 5% peluang dapat 2 kayu.
+
+## Rancangan
+
+Arah game yang disepakati (belum semuanya dibuat) ada di `DESIGN.md`. Saat sebuah fitur dari sana selesai, pindahkan aturannya ke bagian "Aturan game" di atas.
