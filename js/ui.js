@@ -688,9 +688,10 @@ document.addEventListener('click', e => {
 window.addEventListener('scroll', () => openItem && showTip(null), { passive: true });
 window.addEventListener('resize', () => openItem && showTip(null));
 
-let last = performance.now();
+let last = performance.now(), timeScale = 1;
 function loop(now) {
-  const dt = Math.min(now - last, OFFLINE_CAP); // tab yang lama tersembunyi juga dibatasi 24 jam
+  // Tab yang lama tersembunyi juga dibatasi 24 jam; timeScale > 1 hanya dari mode uji
+  const dt = Math.min(now - last, OFFLINE_CAP) * timeScale;
   last = now;
   const key = state.active;
   if (key) {

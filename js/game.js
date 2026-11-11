@@ -95,7 +95,10 @@ try {
   if (saved && typeof saved.sound === 'boolean') settings.sound = saved.sound;
 } catch {}
 
+// skipSave: dipakai mode uji saat memuat save lain, supaya save lama tidak menimpanya waktu halaman dimuat ulang
+let skipSave = false;
 function save() {
+  if (skipSave) return;
   state.lastTick = Date.now();
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
 }

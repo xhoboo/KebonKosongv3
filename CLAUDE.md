@@ -6,6 +6,7 @@ Game idle sederhana, tanpa build step (script biasa, bukan ES module, supaya tet
 - `js/data.js`: data saja (teks id/en, item, harga, sumber daya, alat, rumus exp).
 - `js/game.js`: state, simpan/muat + migrasi, aksi, tempa, jual, progres offline. Tidak menyentuh DOM.
 - `js/ui.js`: tampilan, menu, alat, anvil, rumah, pasar, pengaturan, suara (Web Audio, tanpa file), loop animasi.
+- `js/debug.js`: mode uji tersembunyi, aktif setelah membuka `#debug` (diingat di localStorage `kebon-kosong-debug`, dimatikan dari halaman Debug). Isinya kecepatan waktu ×1–×1000, majukan waktu (+1 jam … +7 hari, tanpa batas 24 jam, Kebun ikut), tambah Kepeng/bahan/masakan/perlengkapan, buka semua area, atur level apa pun, salin/muat save. Teksnya hanya bahasa Indonesia karena bukan bagian game. Saat menambah sistem baru yang punya level, tambahkan juga ke `levelTargets` dan `refreshAll` di sini.
 
 Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perubahan bentuk state wajib dimigrasi di `loadState`, jangan reset progres pemain.
 
