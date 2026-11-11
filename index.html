@@ -229,7 +229,16 @@
 
   .equip { display: grid; gap: 8px; margin-bottom: 12px; }
   .equip-slot { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
-  .equip-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+  .equip-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+  .equip-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; min-height: 24px; }
+  .equip-toggle {
+    display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px; margin-right: -6px;
+    background: none; border: 0; border-radius: 6px;
+    font: inherit; font-size: 12px; font-weight: 600; color: var(--level); cursor: pointer;
+  }
+  .equip-toggle:hover { background: var(--track); }
+  .caret { width: 7px; height: 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
+  .equip-toggle[aria-expanded="true"] .caret { transform: translateY(1px) rotate(-135deg); }
   .equip-cur { display: flex; align-items: center; gap: 10px; min-height: 32px; }
   .equip-icon { font-size: 26px; line-height: 1; }
   .equip-name { flex: 1; font-weight: 600; font-size: 14px; }

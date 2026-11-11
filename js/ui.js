@@ -433,6 +433,7 @@ function journalText(e) {
 
 let armedDiscard = null, discardTimer;
 
+const equipOpen = { weapon: null, armor: null }; // null = ikut bawaan (lipat kalau slot terisi)
 function renderAdventure() {
   const busy = adventuring(), max = maxHp(), hp = busy ? state.hp : max;
   // Status: HP, mastery, statistik
@@ -448,14 +449,18 @@ function renderAdventure() {
   const enemies = [...new Set(ADVENTURES[adventuring() ? state.active : 'edgeForest'].events.filter(e => e.enemy).map(e => e.enemy))];
   $('adv-win').textContent = state.equip.weapon ? enemies.map(e => `${ENEMIES[e].icon} ${num(winChance(e) * 100)}%`).join(' · ') : '—';
 
-  // Perlengkapan: yang dipakai + pilihan dari Rumah
+  // Perlengkapan: yang dipakai + pilihan dari Rumah. Daftar pilihan bisa dilipat; bawaannya terlipat
+  // kalau slot sudah terisi dan terbuka kalau masih kosong, sampai pemain menekan tombolnya sendiri.
   $('equip').innerHTML = ['weapon', 'armor'].map(slot => {
     const cur = state.equip[slot];
     const options = ownedKeys().filter(k => itemDef(k)[slot]);
-    return `<div class="equip-slot"><span class="equip-label">${t(slot)}</span>` +
+    const open = options.length > 0 && (equipOpen[slot] ?? !cur);
+    return `<div class="equip-slot"><div class="equip-head"><span class="equip-label">${t(slot)}</span>` +
+      (options.length ? `<button class="equip-toggle" data-toggle-equip="${slot}" aria-expanded="${open}">` +
+        `${open ? t('equipHide') : t('equipShow')(num(options.length))}<span class="caret" aria-hidden="true"></span></button>` : '') + `</div>` +
       `<div class="equip-cur">${cur ? `<span class="equip-icon">${iconOf(cur)}</span><span class="equip-name q-${parseKey(cur).q}">${nameOf(cur)}<small>${gearStats(cur)}</small></span>` +
         `<button class="chip" data-unequip="${slot}" ${busy ? 'disabled' : ''}>${t('unequip')}</button>` : `<span class="equip-none">${t('none')}</span>`}</div>` +
-      (options.length ? `<div class="equip-options">${options.map(k =>
+      (open ? `<div class="equip-options">${options.map(k =>
         `<button class="chip q-${parseKey(k).q}" data-equip="${slot}" data-key="${k}" ${busy ? 'disabled' : ''}>${iconOf(k)} ${nameOf(k)} ×${num(state.items[k])}</button>`).join('')}</div>` : '') +
       `</div>`;
   }).join('');
@@ -500,7 +505,10 @@ function renderAdventure() {
 $('page-petualangan').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b || b.disabled) return;
-  if (b.dataset.equip) equipItem(b.dataset.equip, b.dataset.key);
+  if (b.dataset.toggleEquip) {
+    const slot = b.dataset.toggleEquip;
+    equipOpen[slot] = b.getAttribute('aria-expanded') !== 'true';
+  } else if (b.dataset.equip) { equipItem(b.dataset.equip, b.dataset.key); equipOpen[b.dataset.equip] = null; }
   else if (b.dataset.unequip) unequip(b.dataset.unequip);
   else if (b.dataset.store) storeFromBag(b.dataset.store);
   else if (b.dataset.discard) {
