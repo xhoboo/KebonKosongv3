@@ -433,7 +433,7 @@ function journalText(e) {
 
 let armedDiscard = null, discardTimer;
 
-const equipOpen = { weapon: null, armor: null }; // null = ikut bawaan (lipat kalau slot terisi)
+const equipOpen = settings.equipOpen; // disimpan di pengaturan; null = ikut bawaan (lipat kalau slot terisi)
 function renderAdventure() {
   const busy = adventuring(), max = maxHp(), hp = busy ? state.hp : max;
   // Status: HP, mastery, statistik
@@ -508,7 +508,8 @@ $('page-petualangan').addEventListener('click', e => {
   if (b.dataset.toggleEquip) {
     const slot = b.dataset.toggleEquip;
     equipOpen[slot] = b.getAttribute('aria-expanded') !== 'true';
-  } else if (b.dataset.equip) { equipItem(b.dataset.equip, b.dataset.key); equipOpen[b.dataset.equip] = null; }
+    saveSettings();
+  } else if (b.dataset.equip) { equipItem(b.dataset.equip, b.dataset.key); equipOpen[b.dataset.equip] = null; saveSettings(); }
   else if (b.dataset.unequip) unequip(b.dataset.unequip);
   else if (b.dataset.store) storeFromBag(b.dataset.store);
   else if (b.dataset.discard) {

@@ -33,7 +33,8 @@ const freshState = () => ({
   version: 11,
 });
 const state = freshState();
-const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true };
+// equipOpen: daftar pilihan perlengkapan per slot dibuka (true), dilipat (false), atau ikut bawaan (null)
+const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true, equipOpen: { weapon: null, armor: null } };
 
 // Tambah exp ke sumber daya atau alat; exp berlebih dibawa ke level berikutnya
 function gainXp(s, amount, need) {
@@ -93,6 +94,9 @@ try {
   if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
   if (saved && ['cat', 'qty', 'name'].includes(saved.sort)) settings.sort = saved.sort;
   if (saved && typeof saved.sound === 'boolean') settings.sound = saved.sound;
+  for (const slot in settings.equipOpen) {
+    if (saved && saved.equipOpen && typeof saved.equipOpen[slot] === 'boolean') settings.equipOpen[slot] = saved.equipOpen[slot];
+  }
 } catch {}
 
 // skipSave: dipakai mode uji saat memuat save lain, supaya save lama tidak menimpanya waktu halaman dimuat ulang
