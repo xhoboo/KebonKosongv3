@@ -12,6 +12,7 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 
 ## Alur kerja
 
+- Setiap commit yang mengubah file di `js/` wajib menaikkan penanda versi `?v=` di keempat tag `<script>` di akhir `index.html` (format `TTTT-BB-HH.n`, misalnya `2026-11-11.1`, lalu `.2` untuk perubahan kedua di hari yang sama). Keempatnya selalu sama. Tanpa ini, browser pemain bisa memakai JS lama dari cache yang tidak cocok dengan `index.html` baru.
 - Setiap perubahan langsung di-commit dan di-push ke `main` supaya langsung live. Tidak perlu PR dan tidak perlu menunggu konfirmasi untuk push ke `main`.
 - Branch kerja boleh tetap dipakai, tapi hasil akhirnya selalu ikut di-push ke `main` (`git push origin HEAD:main`).
 
