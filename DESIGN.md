@@ -138,7 +138,7 @@ Draf tier:
 3. ✅ Hutan & Goa dengan rantai alat silang (tier 1–2), Anvil dasar, Goa terbuka di Akasia Lv. 10, suara tempa.
 4. ✅ Sungai & alat pancing (Joran Biasa, 4 ikan sungai).
 5. ✅ Dapur (6 resep ikan/daun, Dapur Lv. 1–3, skill Memasak).
-6. Petualangan + jurnal (Hutan Tepi, Keris vs Tombak).
+6. ✅ Petualangan + jurnal (Hutan Tepi, Keris/Golok/Tombak, Rompi Kulit, tas, mastery Jarak Dekat & Armor).
 7. Kualitas tempa.
 8. Kebun.
 9. Danau, Laut, kedalaman petualangan lanjutan, tier 3–4.

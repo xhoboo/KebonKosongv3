@@ -2,7 +2,7 @@
 
 const TEXT = {
   id: {
-    forest: 'Hutan', cave: 'Goa', river: 'Sungai', kitchen: 'Dapur', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
+    forest: 'Hutan', cave: 'Goa', river: 'Sungai', kitchen: 'Dapur', adventure: 'Petualangan', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
     acacia: 'Pohon Akasia', teak: 'Pohon Jati', rock: 'Batu', copper: 'Batu Tembaga', seconds: 'detik',
     acaciaWood: 'Kayu Akasia', teakWood: 'Kayu Jati', twig: 'Ranting', leaf: 'Daun',
     stone: 'Batu', pebble: 'Kerikil', copperOre: 'Bijih Tembaga',
@@ -13,6 +13,20 @@ const TEXT = {
     friedCatfish: 'Lele Goreng', pindangSnakehead: 'Pindang Gabus', catFood: 'Masakan',
     cooking: 'Memasak', needKitchen: lv => `Butuh Dapur Lv. ${lv}`, outOfIngredients: 'Bahan habis',
     kitchenRecipes: n => `${n} resep terbuka`, cookSpeed: 'Kecepatan masak', heals: 'Memulihkan',
+    advLocked: 'Butuh senjata (tempa di Anvil)', unlockedAdv: 'Petualangan terbuka!', edgeForest: 'Hutan Tepi',
+    kris: 'Keris', machete: 'Golok', spear: 'Tombak', leatherVest: 'Rompi Kulit',
+    chicken: 'Ayam Hutan', boar: 'Babi Hutan', python: 'Ular Sanca',
+    feather: 'Bulu Ayam', boarHide: 'Kulit Babi Hutan', tusk: 'Taring Babi', pythonScale: 'Sisik Ular',
+    catGear: 'Perlengkapan', catLoot: 'Bahan Monster', melee: 'Jarak Dekat', armorSkill: 'Armor',
+    weapon: 'Senjata', armor: 'Armor', none: 'Kosong', unequip: 'Lepas',
+    attack: 'Serangan', interval: 'Interval', defense: 'Pertahanan', hp: 'HP', winChance: 'Peluang menang',
+    bag: 'Tas', bagSlots: (u, c) => `${u} / ${c} slot`, pack: 'Bawa dari rumah', packHint: 'Hanya masakan yang bisa dibawa.',
+    all: 'Semua', store: 'Simpan', discard: 'Buang', storeAll: 'Simpan semua', bagEmpty: 'Tas kosong.', noFood: 'Belum ada masakan di rumah.',
+    needWeapon: 'Pakai senjata dulu', busyAdv: 'Sedang berpetualang', journal: 'Jurnal', journalEmpty: 'Belum ada catatan.',
+    advSummary: (w, l, k) => `Petualangan ini: ${w} menang, ${l} kalah, ${k} Kepeng`,
+    jStart: area => `Berangkat ke ${area}`, jStop: 'Pulang ke rumah', jHome: 'HP habis, pulang ke rumah',
+    jWin: (e, loot) => `Mengalahkan ${e}` + (loot ? `, dapat ${loot}` : ''), jLose: (e, d) => `Kalah dari ${e}, −${d} HP`,
+    jFind: loot => `Menemukan ${loot}`, jEat: (f, h) => `Makan ${f}, +${h} HP`, jBagFull: item => `${item} ditinggal, tas penuh`,
     miss: 'Zonk', empty: 'Belum ada item.',
     theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa', sound: 'Suara', on: 'Nyala', off: 'Mati',
     openMenu: 'Buka menu', level: 'Level',
@@ -36,7 +50,7 @@ const TEXT = {
     discarded: 'Dibuang karena rumah penuh', dismiss: 'Tutup',
   },
   en: {
-    forest: 'Forest', cave: 'Cave', river: 'River', kitchen: 'Kitchen', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
+    forest: 'Forest', cave: 'Cave', river: 'River', kitchen: 'Kitchen', adventure: 'Adventure', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
     acacia: 'Acacia Tree', teak: 'Teak Tree', rock: 'Rock', copper: 'Copper Rock', seconds: 'sec',
     acaciaWood: 'Acacia Wood', teakWood: 'Teak Wood', twig: 'Twig', leaf: 'Leaf',
     stone: 'Stone', pebble: 'Pebble', copperOre: 'Copper Ore',
@@ -47,6 +61,20 @@ const TEXT = {
     friedCatfish: 'Fried Catfish', pindangSnakehead: 'Snakehead Stew', catFood: 'Food',
     cooking: 'Cooking', needKitchen: lv => `Requires Kitchen Lv. ${lv}`, outOfIngredients: 'Out of ingredients',
     kitchenRecipes: n => `${n} recipes unlocked`, cookSpeed: 'Cooking speed', heals: 'Heals',
+    advLocked: 'Requires a weapon (forge at the Anvil)', unlockedAdv: 'Adventure unlocked!', edgeForest: 'Forest Edge',
+    kris: 'Kris', machete: 'Machete', spear: 'Spear', leatherVest: 'Leather Vest',
+    chicken: 'Junglefowl', boar: 'Wild Boar', python: 'Python',
+    feather: 'Feather', boarHide: 'Boar Hide', tusk: 'Boar Tusk', pythonScale: 'Python Scale',
+    catGear: 'Gear', catLoot: 'Monster Parts', melee: 'Melee', armorSkill: 'Armor',
+    weapon: 'Weapon', armor: 'Armor', none: 'None', unequip: 'Unequip',
+    attack: 'Attack', interval: 'Interval', defense: 'Defense', hp: 'HP', winChance: 'Win chance',
+    bag: 'Bag', bagSlots: (u, c) => `${u} / ${c} slots`, pack: 'Pack from the house', packHint: 'Only food can be packed.',
+    all: 'All', store: 'Store', discard: 'Discard', storeAll: 'Store all', bagEmpty: 'The bag is empty.', noFood: 'No food in the house yet.',
+    needWeapon: 'Equip a weapon first', busyAdv: 'Out adventuring', journal: 'Journal', journalEmpty: 'No entries yet.',
+    advSummary: (w, l, k) => `This adventure: ${w} won, ${l} lost, ${k} Kepeng`,
+    jStart: area => `Set out for ${area}`, jStop: 'Returned home', jHome: 'Out of HP, returned home',
+    jWin: (e, loot) => `Defeated ${e}` + (loot ? `, got ${loot}` : ''), jLose: (e, d) => `Lost to ${e}, −${d} HP`,
+    jFind: loot => `Found ${loot}`, jEat: (f, h) => `Ate ${f}, +${h} HP`, jBagFull: item => `${item} left behind, bag full`,
     miss: 'Miss', empty: 'No items yet.',
     theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language', sound: 'Sound', on: 'On', off: 'Off',
     openMenu: 'Open menu', level: 'Level',
@@ -95,6 +123,8 @@ const CATEGORIES = [
   { key: 'stone', name: 'catStone' },
   { key: 'fish', name: 'catFish' },
   { key: 'food', name: 'catFood' },
+  { key: 'gear', name: 'catGear' },
+  { key: 'loot', name: 'catLoot' },
   { key: 'nature', name: 'catNature' },
 ];
 
@@ -119,7 +149,19 @@ const ITEMS = [
   { key: 'pepesWader', icon: '🫔', cat: 'food', price: 14, heal: 80 },
   { key: 'friedCatfish', icon: '🍤', cat: 'food', price: 20, heal: 80 },
   { key: 'pindangSnakehead', icon: '🍲', cat: 'food', price: 45, heal: 150 },
+  // Perlengkapan petualangan. weapon: interval = waktu per encounter (ms), atk = serangan.
+  // armor: def = pengurang damage, hp = tambahan HP maksimal.
+  { key: 'kris', icon: '🗡️', cat: 'gear', price: 60, weapon: { interval: 5000, atk: 4 } },
+  { key: 'machete', icon: '🔪', cat: 'gear', price: 90, weapon: { interval: 10000, atk: 8 } },
+  { key: 'spear', icon: '🔱', cat: 'gear', price: 90, weapon: { interval: 15000, atk: 14 } },
+  { key: 'leatherVest', icon: '🦺', cat: 'gear', price: 80, armor: { def: 25, hp: 30 } },
+  // Bahan dari musuh
+  { key: 'feather', icon: '🪶', cat: 'loot', price: 2 },
+  { key: 'boarHide', icon: '🟫', cat: 'loot', price: 8 },
+  { key: 'tusk', icon: '🦷', cat: 'loot', price: 20 },
+  { key: 'pythonScale', icon: '🐍', cat: 'loot', price: 15 },
 ];
+const ITEM = Object.fromEntries(ITEMS.map(it => [it.key, it]));
 const heals = Object.fromEntries(ITEMS.filter(it => it.heal).map(it => [it.key, it.heal]));
 const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
 const prices = Object.fromEntries(ITEMS.map(it => [it.key, it.price]));
@@ -209,10 +251,52 @@ const RECIPES = {
   pindangSnakehead: { kitchen: 3, time: 5000, xp: 50, input: { snakehead: 1, leaf: 2, twig: 2 } },
 };
 
+// Perlengkapan yang ditempa di Anvil (hasilnya masuk Rumah). tier menentukan peluang dasar (FORGE_BASE),
+// anvil = level Anvil minimum. Draf, disetel setelah dicoba.
+const GEAR = {
+  kris: { tier: 1, anvil: 1, cost: { teakWood: 40, copperOre: 80 } },
+  machete: { tier: 1, anvil: 1, cost: { teakWood: 80, copperOre: 120 } },
+  spear: { tier: 1, anvil: 1, cost: { teakWood: 150, copperOre: 60 } },
+  leatherVest: { tier: 1, anvil: 1, cost: { boarHide: 10, feather: 15, copperOre: 20 } },
+};
+
+// Petualangan: kegiatan idle. Tiap interval senjata terjadi satu encounter yang diundi dari events.
+// Lawan musuh: peluang menang = A² / (A² + P²), A = serangan pemain, P = kekuatan musuh.
+// Menang → exp Jarak Dekat + loot ke tas. Kalah → HP berkurang (dikurangi pertahanan) + exp Armor.
+// HP ≤ 50% → makan otomatis dari tas. HP habis → pulang (loot di tas tetap aman).
+// Tas penuh tidak membuat pulang: loot jenis baru ditinggal dan dicatat di jurnal.
+const ADV = {
+  baseHp: 100, hpPerArmorLv: 2, atkPerMeleeLv: 0.02, defPerArmorLv: 1, eatBelow: 0.5, journalMax: 80,
+};
+const ENEMIES = {
+  // power = kekuatan, dmg = damage saat pemain kalah, xp = exp Jarak Dekat saat menang
+  // drops: [item, peluang, jumlah min, jumlah maks]
+  chicken: { icon: '🐓', power: 2, dmg: 4, xp: 40, drops: [['feather', 0.8, 1, 3]] },
+  boar: { icon: '🐗', power: 8, dmg: 10, xp: 120, drops: [['boarHide', 0.6, 1, 1], ['tusk', 0.1, 1, 1]] },
+  python: { icon: '🐍', power: 15, dmg: 20, xp: 250, drops: [['pythonScale', 0.6, 1, 2]] },
+};
+const ADVENTURES = {
+  edgeForest: {
+    icon: '🌳',
+    // bobot: musuh, atau temuan (item dengan jumlah, atau Kepeng)
+    events: [
+      { w: 45, enemy: 'chicken' },
+      { w: 25, enemy: 'boar' },
+      { w: 8, enemy: 'python' },
+      { w: 8, find: 'twig', min: 1, max: 3 },
+      { w: 6, find: 'leaf', min: 1, max: 3 },
+      { w: 8, kepeng: [5, 20] },
+    ],
+  },
+};
+// Tas: jumlah item berbeda yang bisa dibawa (seperti Rumah). Draf.
+const BAG = { base: 5, perLevel: 2, maxLevel: 5, cost: level => ({ kepeng: 300 * 2 ** level, boarHide: 5 * (level + 1) }) };
+
 // Area yang terkunci di awal; unlock(state) → true kalau syaratnya terpenuhi
 const AREA_UNLOCKS = {
   goa: { done: 'unlockedCave', unlock: s => s.nodes.acacia.level >= 10 },
   sungai: { done: 'unlockedRiver', unlock: s => s.tools.rod.tier >= 1 },
+  petualangan: { done: 'unlockedAdv', unlock: s => !!s.equip.weapon || ITEMS.some(it => it.weapon && s.items[it.key] >= 1) },
 };
 
 // Memancing: hasil diundi dari daftar ikan berbobot; ikan bagus lebih jarang, makin sering seiring level
@@ -225,18 +309,22 @@ function fishDrops(fish, p, tier) {
   return [...weights.map(([item, w]) => [item, w / total * (1 - miss)]), [null, miss]];
 }
 
+// Pohon: kayu naik lurus dari 40% di level 0 ke 90% di level 100; sisanya Ranting & Daun sama rata,
+// jadi Ranting & Daun (bahan bakar dan bahan Dapur) tidak pernah hilang: 30% → 5% masing-masing.
+const treeDrops = (wood, p) => { const main = 0.4 + 0.5 * p; return [[wood, main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; };
+
 // Sumber daya yang bisa dikerjakan. drops(p, tier) → [item, peluang]; p = level / 100, tier = tingkat alat.
-// Item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
+// Batu/bijih: item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
 // tool + tier = alat yang dipakai dan tingkat minimumnya (di bawah itu node terkunci).
 // main = item yang bisa jadi ganda karena alat. time naik per tingkat, xp ikut naik supaya exp per detik tetap.
 const NODES = {
   acacia: {
     area: 'hutan', icon: '🌳', time: 2000, xp: 20, tool: 'axe', tier: 0, main: 'acaciaWood',
-    drops: p => { const main = 0.4 + 0.6 * p; return [['acaciaWood', main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; },
+    drops: p => treeDrops('acaciaWood', p),
   },
   teak: {
     area: 'hutan', icon: '🌲', time: 3000, xp: 30, tool: 'axe', tier: 1, main: 'teakWood',
-    drops: p => { const main = 0.4 + 0.6 * p; return [['teakWood', main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; },
+    drops: p => treeDrops('teakWood', p),
   },
   rock: {
     area: 'goa', icon: '🪨', time: 2000, xp: 20, tool: 'pickaxe', tier: 0, main: 'stone',

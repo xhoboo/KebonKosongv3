@@ -16,7 +16,7 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 
 ## Aturan game
 
-- Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang, menambang, memancing, atau memasak; tidak bersamaan). Menyalakan satu kartu otomatis mematikan kartu lain.
+- Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang, menambang, memancing, memasak, atau berpetualang; tidak bersamaan). Kegiatan dimulai/dihentikan lewat `setActive`. Menyalakan satu kartu otomatis mematikan kartu lain.
 - Setiap sumber daya butuh sekitar 2 hari aksi aktif untuk mencapai level 100, dihitung dengan alat level 0. Node tingkat lebih tinggi lebih lambat per aksi tapi exp per aksinya naik sebanding (Akasia/Batu 2 detik 20 Exp, Jati/Tembaga 3 detik 30 Exp), jadi exp per detik sama. Alat yang ikut naik level mempercepat aksi, jadi nyatanya lebih cepat dari 2 hari; itu disengaja.
 - Alat: kapak (pohon di Hutan), beliung (batu di Goa), dan joran (memancing di Sungai). Exp aksi masuk ke level node itu sendiri dan ke alatnya sekaligus.
 - Alat butuh sekitar 15 hari aksi nonstop untuk mencapai level 100. Tiap level butuh 10% exp lebih banyak dari level sebelumnya. Tiap level memotong waktu aksi 0,75% (75% di level 100).
@@ -30,6 +30,12 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 - Menempa bukan kegiatan idle dan tidak menghentikan kegiatan yang berjalan: klik, 1,5 detik animasi + tiga dentang palu, lalu hasil keluar. Bahan dipotong dan hasil diundi saat diklik. Gagal = bahan hilang, alat tetap.
 - Anvil mulai Lv. 1. Tiap tingkat alat butuh level Anvil minimum; peluang berhasil = dasar per tingkat (Berkilau 90%) + 10% per level Anvil di atas syarat, maks 100%. Upgrade Anvil ke Lv. 2: 1.000 Kepeng + 200 Kayu Jati + 200 Bijih Tembaga.
 - Suara bisa dimatikan di Pengaturan.
+- Pohon: kayu naik dari 40% (Lv. 0) ke 90% (Lv. 100); sisanya Ranting & Daun sama rata, jadi keduanya tidak pernah hilang (5% masing-masing di Lv. 100). Batu/bijih tetap naik ke 100% hasil utama.
+- Petualangan (`ADVENTURES`, `ENEMIES`, `ADV`, `BAG` di `data.js`): kegiatan idle, terbuka begitu pemain punya senjata pertama (ditempa di Anvil: Keris 5 dtk/serangan 4, Golok 10 dtk/8, Tombak 15 dtk/14; Rompi Kulit dari bahan monster). Tiap interval senjata terjadi satu encounter berbobot (musuh, temuan item, atau Kepeng). Peluang menang = A²/(A²+P²). Menang → exp Jarak Dekat + loot ke tas; kalah → HP berkurang (dmg × 100/(100+pertahanan)) + exp Armor. Makan otomatis dari tas saat HP ≤ 50%. HP habis → pulang, loot di tas aman. Tas penuh tidak membuat pulang; loot jenis baru ditinggal dan dicatat di jurnal. Tiap petualangan mulai dengan HP penuh.
+- Mastery Jarak Dekat (+2% serangan per level) dan Armor (+2 HP maks dan +1 pertahanan per level) memakai kurva exp node.
+- Perlengkapan yang dipakai tidak memakan slot Rumah. Pakai/lepas perlengkapan, isi tas, dan simpan dari tas tidak bisa saat sedang berpetualang.
+- Tas: kapasitas per item berbeda (awal 5, +2 per level). Rumah → Tas hanya masakan; Tas → Rumah semua item, kecuali Rumah penuh untuk item jenis baru (item tetap di tas). Buang dari tas butuh klik kedua.
+- Jurnal menyimpan 80 catatan terakhir (data terstruktur, teks dibuat sesuai bahasa saat ditampilkan) plus ringkasan menang/kalah/Kepeng petualangan terakhir.
 - Dapur: memasak adalah kegiatan idle. Tiap masakan memakai bahan (`RECIPES` di `data.js`, key resep = key item hasil) dan menghasilkan 1 masakan; kegiatan berhenti sendiri begitu bahan tidak cukup untuk masakan berikutnya, juga saat offline. Ranting adalah bahan bakar semua resep. Level Dapur (mulai Lv. 1, maks Lv. 3, upgrade dengan Kepeng + bahan) membuka resep. Skill Memasak memakai kurva exp node (±2 hari ke Lv. 100) dan memotong waktu masak 0,5% per level. Masakan punya `heal` (HP yang dipulihkan saat petualangan nanti).
 
 ## Rancangan

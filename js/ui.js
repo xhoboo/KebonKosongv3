@@ -7,12 +7,12 @@ const num = (n, digits = 0) => n.toLocaleString(settings.lang === 'id' ? 'id-ID'
 let page = 'hutan';
 
 // Halaman tempat kartu sebuah kegiatan berada
-const activityArea = key => RECIPES[key] ? 'dapur' : NODES[key].area;
+const activityArea = key => ADVENTURES[key] ? 'petualangan' : RECIPES[key] ? 'dapur' : NODES[key].area;
 
 // Buat kartu untuk tiap kegiatan: sumber daya (tebang/tambang/mancing) dan resep Dapur
 const cards = {};
-for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES)]) {
-  const node = NODES[key], recipe = RECIPES[key];
+for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES), ...Object.keys(ADVENTURES)]) {
+  const node = NODES[key] || ADVENTURES[key], recipe = RECIPES[key];
   const el = document.createElement('button');
   el.className = 'card';
   el.dataset.node = key;
@@ -29,19 +29,19 @@ for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES)]) {
     if (!nodeOpen(key)) return;
     // Resep yang bahannya kurang tidak bisa dimulai
     if (recipe && state.active !== key && !canAfford(recipe.input)) { popup(key, null, t('outOfIngredients')); return; }
-    state.active = state.active === key ? null : key;
-    state.progress = 0;
-    save();
+    if (ADVENTURES[key] && !state.equip.weapon) { popup(key, null, t('needWeapon')); return; }
+    setActive(state.active === key ? null : key);
     render();
+    renderAdventure();
   });
 }
 
 // Popup hasil di posisi acak di dalam kartu; kalau aksinya cepat, popup menumpuk dan menyebar
 // text = pesan khusus (mis. area baru terbuka) sebagai pengganti hasil aksi
-function popup(key, got, text) {
+function popup(key, got, text, cls) {
   const card = cards[key];
   const el = document.createElement('span');
-  el.className = text ? 'pop' : !got ? 'pop miss' : got.lost ? 'pop full' : 'pop';
+  el.className = text ? 'pop' + (cls ? ' ' + cls : '') : !got ? 'pop miss' : got.lost ? 'pop full' : 'pop';
   el.innerHTML = text || (!got ? t('miss') : got.lost ? icons[got.item] + ' ' + t('houseFull') : '+' + got.qty + ' ' + icons[got.item]);
   card.el.appendChild(el);
   // Tetap di dalam kartu sepanjang animasi (mulai 6px lebih rendah, berakhir 8px lebih tinggi), jarak tepi 6px
@@ -141,6 +141,8 @@ function render() {
     if (RECIPES[key]) {
       // Resep tidak punya level sendiri: tampilkan HP yang dipulihkan
       card.level.textContent = '❤️ ' + heals[key];
+    } else if (ADVENTURES[key]) {
+      card.level.textContent = on ? '❤️ ' + num(state.hp) + ' / ' + num(maxHp()) : '';
     } else {
       const n = state.nodes[key];
       card.level.textContent = t('level') + ' ' + n.level;
@@ -181,6 +183,10 @@ function renderTools() {
   }
   for (const [key, card] of Object.entries(cards)) {
     const node = NODES[key] || RECIPES[key];
+    if (ADVENTURES[key]) {
+      card.duration.innerHTML = Object.values(ADVENTURES[key].events).filter(e => e.enemy).map(e => ENEMIES[e.enemy].icon).join(' ');
+      continue;
+    }
     card.duration.innerHTML = nodeOpen(key) ? num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + ` · ${node.xp} Exp`
       : RECIPES[key] ? '🔒 ' + t('needKitchen')(node.kitchen)
       : '🔒 ' + t('needs')(t(TOOLS[node.tool].tiers[node.tier].key));
@@ -256,8 +262,15 @@ const FORGE_TIME = 1500; // animasi + suara sebelum hasil tempa keluar
 let forging = null; // alat yang sedang ditempa
 const forgeResults = {}; // tool → { ok, key, timer } hasil terakhir yang masih ditampilkan
 
-recipesEl.innerHTML = Object.entries(TOOLS).map(([tool, def]) =>
-  `<li class="recipe" data-recipe="${tool}"><span class="recipe-icon" aria-hidden="true">${def.icon}</span>` +
+// Statistik singkat perlengkapan: serangan & interval untuk senjata, pertahanan & HP untuk armor
+const gearStats = key => {
+  const it = ITEM[key];
+  return it.weapon ? `⚔️ ${num(it.weapon.atk)} · ⏱️ ${num(it.weapon.interval / 1000)} ${t('seconds')}`
+    : `🛡️ ${num(it.armor.def)} · ❤️ +${num(it.armor.hp)}`;
+};
+
+recipesEl.innerHTML = [...Object.entries(TOOLS).map(([key, def]) => [key, def.icon]), ...Object.keys(GEAR).map(key => [key, ITEM[key].icon])].map(([tool, icon]) =>
+  `<li class="recipe" data-recipe="${tool}"><span class="recipe-icon" aria-hidden="true">${icon}</span>` +
   `<span class="recipe-info"><span class="recipe-name"></span><span class="recipe-meta recipe-cost"></span>` +
   `<span class="recipe-meta recipe-chance"></span><span class="recipe-result" role="status"></span></span>` +
   `<button class="forge-btn" data-forge="${tool}"></button></li>`).join('');
@@ -290,6 +303,22 @@ function renderAnvil() {
     btn.disabled = !!forging || !canForge(tool);
     row.classList.toggle('forging', forging === tool);
   }
+  for (const key of Object.keys(GEAR)) {
+    const row = recipesEl.querySelector(`[data-recipe="${key}"]`), g = GEAR[key], result = forgeResults[key];
+    const owned = (state.items[key] || 0) + (state.equip.weapon === key || state.equip.armor === key ? 1 : 0);
+    row.querySelector('.recipe-name').textContent = t(key) + (owned ? ` (${num(owned)})` : '');
+    row.querySelector('.recipe-cost').innerHTML = gearStats(key) + '<br>' + costHtml(g.cost);
+    row.querySelector('.recipe-chance').textContent = lv < g.anvil ? t('needAnvil')(g.anvil)
+      : !canStore(key) ? t('houseFull') : t('chance')(num(gearChance(key) * 100));
+    const res = row.querySelector('.recipe-result');
+    res.textContent = result ? (result.ok ? t('forgeOk')(t(key)) : t('forgeFail')) : '';
+    res.className = 'recipe-result' + (result ? (result.ok ? ' ok' : ' fail') : '');
+    res.hidden = !result;
+    const btn = row.querySelector('.forge-btn');
+    btn.textContent = forging === key ? t('forging') : t('forge');
+    btn.disabled = !!forging || !canForgeGear(key);
+    row.classList.toggle('forging', forging === key);
+  }
 }
 
 anvilUpgradeBtn.addEventListener('click', () => {
@@ -303,7 +332,7 @@ anvilUpgradeBtn.addEventListener('click', () => {
 recipesEl.addEventListener('click', e => {
   const btn = e.target.closest('.forge-btn');
   if (!btn || forging) return;
-  const tool = btn.dataset.forge, result = forgeTool(tool);
+  const tool = btn.dataset.forge, result = TOOLS[tool] ? forgeTool(tool) : forgeGear(tool);
   if (!result) return;
   forging = tool;
   clearTimeout(forgeResults[tool] && forgeResults[tool].timer);
@@ -325,7 +354,115 @@ recipesEl.addEventListener('click', e => {
     renderAnvil();
     renderTools();
     renderNav();
+    renderAdventure();
   }, FORGE_TIME);
+});
+
+// ---------- Petualangan ----------
+
+const skillBar = (prefix, s) => {
+  const maxed = s.level >= MAX_LEVEL;
+  $(prefix + '-level').textContent = 'Lv. ' + s.level;
+  $(prefix + '-fill').style.width = (maxed ? 100 : s.xp / xpNeeded(s.level) * 100) + '%';
+  $(prefix + '-xp').textContent = maxed ? t('max') : num(s.xp) + ' / ' + num(xpNeeded(s.level));
+};
+const lootText = loot => loot.map(([k, n]) => (k === 'kepeng' ? KEPENG_ICON : icons[k]) + ' ' + num(n)).join(', ');
+
+function journalText(e) {
+  switch (e.k) {
+    case 'start': return t('jStart')(t(e.area));
+    case 'stop': return t('jStop');
+    case 'home': return t('jHome');
+    case 'win': return t('jWin')(t(e.e), lootText(e.loot || []));
+    case 'lose': return t('jLose')(t(e.e), e.d);
+    case 'find': return t('jFind')(lootText(e.loot));
+    case 'eat': return t('jEat')(t(e.f), e.h);
+    case 'bagFull': return t('jBagFull')(t(e.item));
+  }
+  return '';
+}
+
+let armedDiscard = null, discardTimer;
+
+function renderAdventure() {
+  const busy = adventuring(), max = maxHp(), hp = busy ? state.hp : max;
+  // Status: HP, mastery, statistik
+  $('adv-hp-fill').style.width = Math.min(100, hp / max * 100) + '%';
+  $('adv-hp-fill').classList.toggle('low', hp <= max * ADV.eatBelow);
+  $('adv-hp').textContent = t('hp') + ' ' + num(hp) + ' / ' + num(max);
+  skillBar('melee', state.mastery.melee);
+  skillBar('armor', state.mastery.armor);
+  $('adv-atk').textContent = num(meleeAtk(), 1);
+  $('adv-interval').textContent = state.equip.weapon ? num(actionTime('edgeForest') / 1000) + ' ' + t('seconds') : '—';
+  $('adv-def').textContent = num(playerDef());
+  const enemies = [...new Set(ADVENTURES.edgeForest.events.filter(e => e.enemy).map(e => e.enemy))];
+  $('adv-win').textContent = state.equip.weapon ? enemies.map(e => `${ENEMIES[e].icon} ${num(winChance(e) * 100)}%`).join(' · ') : '—';
+
+  // Perlengkapan: yang dipakai + pilihan dari Rumah
+  $('equip').innerHTML = ['weapon', 'armor'].map(slot => {
+    const cur = state.equip[slot];
+    const options = ITEMS.filter(it => it[slot] && state.items[it.key] >= 1);
+    return `<div class="equip-slot"><span class="equip-label">${t(slot)}</span>` +
+      `<div class="equip-cur">${cur ? `<span class="equip-icon">${ITEM[cur].icon}</span><span class="equip-name">${t(cur)}<small>${gearStats(cur)}</small></span>` +
+        `<button class="chip" data-unequip="${slot}" ${busy ? 'disabled' : ''}>${t('unequip')}</button>` : `<span class="equip-none">${t('none')}</span>`}</div>` +
+      (options.length ? `<div class="equip-options">${options.map(it =>
+        `<button class="chip" data-equip="${slot}" data-key="${it.key}" ${busy ? 'disabled' : ''}>${it.icon} ${t(it.key)} ×${num(state.items[it.key])}</button>`).join('')}</div>` : '') +
+      `</div>`;
+  }).join('');
+
+  // Tas
+  const bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1);
+  $('bag-level').textContent = 'Lv. ' + state.bag.level;
+  $('bag-slots').textContent = t('bagSlots')(num(bagKeys.length), num(bagCapacity()));
+  const bagCost = state.bag.level < BAG.maxLevel && BAG.cost(state.bag.level);
+  $('bag-upgrade').hidden = !bagCost;
+  if (bagCost) {
+    $('bag-next').textContent = t('houseUpgrade')(state.bag.level + 1, BAG.perLevel);
+    $('bag-cost').innerHTML = costHtml(bagCost);
+    $('bag-upgrade').disabled = !canAfford(bagCost);
+  }
+  $('bag-items').innerHTML = bagKeys.map(k =>
+    `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${icons[k]}</span>` +
+    `<span class="sell-info"><span class="sell-name">${t(k)}</span><span class="sell-meta">${num(state.bag.items[k])}${heals[k] ? ' · ❤️ ' + heals[k] : ''}</span></span>` +
+    `<button class="sell-btn" data-store="${k}" ${busy || !canStore(k) ? 'disabled' : ''}>${canStore(k) ? t('store') : t('houseFull')}</button>` +
+    `<button class="sell-btn ${armedDiscard === k ? 'confirm' : ''}" data-discard="${k}" ${busy ? 'disabled' : ''}>${armedDiscard === k ? t('sure') : t('discard')}</button></li>`).join('');
+  $('bag-empty').hidden = bagKeys.length > 0;
+  $('bag-store-all').hidden = !bagKeys.length;
+  $('bag-store-all').disabled = busy;
+
+  // Bawa masakan dari Rumah
+  const foods = ITEMS.filter(it => it.cat === 'food' && state.items[it.key] >= 1);
+  $('pack').innerHTML = foods.map(it =>
+    `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${it.icon}</span>` +
+    `<span class="sell-info"><span class="sell-name">${t(it.key)}</span><span class="sell-meta">${num(state.items[it.key])} · ❤️ ${it.heal}</span></span>` +
+    [1, 10].map(n => `<button class="sell-btn" data-pack="${it.key}" data-qty="${n}" ${busy ? 'disabled' : ''}>+${n}</button>`).join('') +
+    `<button class="sell-btn" data-pack="${it.key}" data-qty="all" ${busy ? 'disabled' : ''}>${t('all')}</button></li>`).join('');
+  $('pack-empty').hidden = foods.length > 0;
+
+  // Jurnal
+  $('adv-summary').textContent = state.journal.length ? t('advSummary')(num(state.adv.wins), num(state.adv.losses), num(state.adv.kepeng)) : '';
+  const fmt = new Intl.DateTimeFormat(settings.lang === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+  $('journal').innerHTML = state.journal.map(e =>
+    `<li class="j-${e.k}"><time>${fmt.format(e.at)}</time><span>${journalText(e)}</span></li>`).join('');
+  $('journal-empty').hidden = state.journal.length > 0;
+}
+
+$('page-petualangan').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.dataset.equip) equipItem(b.dataset.equip, b.dataset.key);
+  else if (b.dataset.unequip) unequip(b.dataset.unequip);
+  else if (b.dataset.store) storeFromBag(b.dataset.store);
+  else if (b.dataset.discard) {
+    clearTimeout(discardTimer);
+    if (armedDiscard === b.dataset.discard) { discardFromBag(b.dataset.discard); armedDiscard = null; }
+    else { armedDiscard = b.dataset.discard; discardTimer = setTimeout(() => { armedDiscard = null; renderAdventure(); }, 3000); }
+  } else if (b.dataset.pack) packFood(b.dataset.pack, b.dataset.qty === 'all' ? Infinity : +b.dataset.qty);
+  else if (b.id === 'bag-store-all') storeAllFromBag();
+  else if (b.id === 'bag-upgrade') { if (upgradeBag()) renderKepeng(); }
+  else return;
+  renderAdventure();
+  render();
 });
 
 function applySettings() {
@@ -344,6 +481,7 @@ function applySettings() {
   renderHouse();
   renderMarket();
   renderKepeng();
+  renderAdventure();
 }
 
 const kepengEl = $('kepeng');
@@ -452,10 +590,17 @@ function loop(now) {
         if (page === activityArea(key)) popup(key, null, t(AREA_UNLOCKS[opened[0]].done));
       }
       renderTools();
-      if (page === activityArea(key)) {
+      if (page === activityArea(key) && ADVENTURES[key]) {
+        const loot = got.loot.map(([k, n]) => '+' + num(n) + ' ' + (k === 'kepeng' ? KEPENG_ICON : icons[k])).join(' ');
+        if (got.enemy && !got.win) popup(key, null, ENEMIES[got.enemy].icon + ' −' + got.dmg + ' ❤️', 'full');
+        else if (got.enemy || loot) popup(key, null, (got.enemy ? ENEMIES[got.enemy].icon + ' ⚔️ ' : '') + loot);
+        if (got.home) popup(key, null, t('jHome'), 'full');
+      } else if (page === activityArea(key)) {
         if (!got || got.item) popup(key, got);
         if (got && got.stopped) popup(key, null, t('outOfIngredients'));
       }
+      if (ADVENTURES[key]) renderKepeng();
+      if (ADVENTURES[key] && (page === 'petualangan' || got.home)) renderAdventure();
       else if (page === 'anvil') renderAnvil();
       else if (page === 'rumah') renderHouse();
       else if (page === 'pasar') renderMarket();
@@ -467,7 +612,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['hutan', 'goa', 'sungai', 'dapur', 'rumah', 'pasar', 'anvil', 'settings'];
+const PAGES = ['hutan', 'goa', 'sungai', 'dapur', 'petualangan', 'rumah', 'pasar', 'anvil', 'settings'];
 const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
 function setMenu(open) {
@@ -488,6 +633,7 @@ function showPage(name) {
   if (page === 'rumah') renderHouse();
   if (page === 'pasar') renderMarket();
   if (page === 'anvil') renderAnvil();
+  if (page === 'petualangan') renderAdventure();
 }
 
 menuBtn.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
