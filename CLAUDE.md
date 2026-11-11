@@ -16,14 +16,17 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 
 ## Aturan game
 
-- Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang, menambang, memancing, memasak, atau berpetualang; tidak bersamaan). Kegiatan dimulai/dihentikan lewat `setActive`. Menyalakan satu kartu otomatis mematikan kartu lain.
+- Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang, menambang, memancing, memasak, atau berpetualang; tidak bersamaan). Kegiatan dimulai/dihentikan lewat `setActive`. Pengecualian: Kebun tumbuh paralel, dan menempa instan. Menyalakan satu kartu otomatis mematikan kartu lain.
 - Setiap sumber daya butuh sekitar 2 hari aksi aktif untuk mencapai level 100, dihitung dengan alat level 0. Node tingkat lebih tinggi lebih lambat per aksi tapi exp per aksinya naik sebanding (Akasia/Batu 2 detik 20 Exp, Jati/Tembaga 3 detik 30 Exp), jadi exp per detik sama. Alat yang ikut naik level mempercepat aksi, jadi nyatanya lebih cepat dari 2 hari; itu disengaja.
 - Alat: kapak (pohon di Hutan), beliung (batu di Goa), dan joran (memancing di Sungai). Exp aksi masuk ke level node itu sendiri dan ke alatnya sekaligus.
 - Alat butuh sekitar 15 hari aksi nonstop untuk mencapai level 100. Tiap level butuh 10% exp lebih banyak dari level sebelumnya. Tiap level memotong waktu aksi 0,75% (75% di level 100).
 - Node kayu/bijih yang lebih bagus terkunci sampai alatnya mencapai tingkat yang cukup (Jati butuh Kapak Berkilau, Tembaga butuh Beliung Berkilau).
 - Sungai terkunci sampai pemain menempa Joran Biasa (150 Kayu Jati + 150 Bijih Tembaga, belum butuh benang; benang dari Kebun baru wajib mulai joran tingkat 2). Memancing: 3 detik, 30 Exp per lemparan; ikan diundi berbobot (Wader, Nila, Lele, Gabus), ikan langka makin sering seiring level, dan joran tingkat lebih tinggi menambah bobot ikan langka (+50% per tingkat di atas 1). Peluang zonk 40% di level 0, 5% di level 100.
 - Goa terkunci sampai Pohon Akasia Lv. 10. Pemain dari simpanan sebelum versi 5 yang sudah pernah menambang langsung punya Goa terbuka.
-- Progres offline (dan tab yang lama tersembunyi) dihitung paling lama 24 jam.
+- Progres offline (dan tab yang lama tersembunyi) dihitung paling lama 24 jam. Pengecualian: tanaman Kebun memakai jam dunia nyata tanpa batas.
+- Kebun (`CROPS`, `FARM` di `data.js`): 2 petak gratis, petak berikutnya dibeli dengan Kepeng (50 × 1,07^(n−3)) sampai 100. Tanam memakai 1 benih; matang setelah waktu tumbuh (Kangkung 1 jam … Durian 5 hari), lalu layu 24 jam setelah matang (petak dibersihkan tanpa hasil). Panen ditahan kalau hasilnya jenis baru dan Rumah penuh. Skill Berkebun: exp tiap panen, membuka tanaman per level, peluang +1 hasil = level/100. Ada Tanam semua (benih terpilih ke semua petak kosong) dan Panen semua (juga membersihkan yang layu).
+- Benih biasa (Kangkung, Cabai, Kapas, Jagung) dibeli di Pasar; benih langka (Pisang, Mangga, Durian) hanya dari loot petualangan Hutan Tepi.
+- Kapas dipakai untuk Joran Lentur (joran tingkat 2, Anvil Lv. 2). Sayur/buah dipakai resep Dapur (Tumis Kangkung, Jagung Bakar, Pisang Goreng, Rujak Mangga).
 - Mata uang: Kepeng. Item dijual di Pasar dengan harga tetap per item (`price` di `ITEMS`); "Jual semua" butuh klik kedua dalam 3 detik.
 - Rumah menyimpan item berdasarkan jumlah item **berbeda** (jumlah per item tidak dibatasi): awal 50, +10 per level, maks level 10, upgrade dengan Kepeng + Kayu Akasia + Batu (`HOUSE` di `data.js`). Semua item masuk lewat `addItem`; item jenis baru saat rumah penuh dibuang dan dicatat di Rumah sampai catatannya ditutup. Isi Rumah bisa diurutkan per kategori, jumlah, atau nama.
 - Alat di-upgrade dengan menempa di Anvil (`TOOLS` di `data.js`). Bahan tiap tingkat selalu kayu + batu/logam dari tingkat di bawahnya, untuk kapak maupun beliung (Berkilau: 250 Kayu Akasia + 250 Batu). Level dan exp alat tetap. Tingkat Berkilau memberi 5% peluang hasil utama ganda.

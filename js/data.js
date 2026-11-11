@@ -2,7 +2,7 @@
 
 const TEXT = {
   id: {
-    forest: 'Hutan', cave: 'Goa', river: 'Sungai', kitchen: 'Dapur', adventure: 'Petualangan', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
+    farm: 'Kebun', forest: 'Hutan', cave: 'Goa', river: 'Sungai', kitchen: 'Dapur', adventure: 'Petualangan', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
     acacia: 'Pohon Akasia', teak: 'Pohon Jati', rock: 'Batu', copper: 'Batu Tembaga', seconds: 'detik',
     acaciaWood: 'Kayu Akasia', teakWood: 'Kayu Jati', twig: 'Ranting', leaf: 'Daun',
     stone: 'Batu', pebble: 'Kerikil', copperOre: 'Bijih Tembaga',
@@ -21,6 +21,15 @@ const TEXT = {
     weapon: 'Senjata', armor: 'Armor', none: 'Kosong', unequip: 'Lepas',
     attack: 'Serangan', interval: 'Interval', defense: 'Pertahanan', hp: 'HP', winChance: 'Peluang menang',
     bag: 'Tas', bagSlots: (u, c) => `${u} / ${c} slot`, pack: 'Bawa dari rumah', packHint: 'Hanya masakan yang bisa dibawa.',
+    kangkung: 'Kangkung', chili: 'Cabai', cotton: 'Kapas', corn: 'Jagung', banana: 'Pisang', mango: 'Mangga', durian: 'Durian',
+    seedOf: name => `Benih ${name}`, catSeed: 'Benih', catCrop: 'Sayur & Buah',
+    stirFriedKangkung: 'Tumis Kangkung', grilledCorn: 'Jagung Bakar', friedBanana: 'Pisang Goreng', mangoRujak: 'Rujak Mangga',
+    rodFlex: 'Joran Lentur', farming: 'Berkebun', plots: (u, c) => `${u} / ${c} petak terisi`,
+    buySlot: (n, max) => `Beli petak ke-${n} (maks ${max})`, plantAll: 'Tanam semua', harvestAll: 'Panen semua',
+    chooseSeed: 'Pilih benih untuk ditanam', noSeeds: 'Belum punya benih. Beli di Pasar.', ready: 'Siap panen', wilted: 'Layu',
+    wiltsIn: d => `layu dalam ${d}`, needFarm: lv => `Butuh Berkebun Lv. ${lv}`, grows: d => `Tumbuh ${d}`,
+    buySeeds: 'Beli benih', buy: n => `Beli ${n}`, rareSeedHint: 'Benih langka hanya didapat dari petualangan.',
+    hours: 'j', minutes: 'm', days: 'h',
     qCommon: 'Biasa', qGood: 'Bagus', qGreat: 'Istimewa', qLegend: 'Pusaka',
     trSharp: 'Tajam', trLight: 'Ringan', trLucky: 'Beruntung', trSturdy: 'Kokoh', trVital: 'Perkasa',
     trSharpDesc: '+15% serangan', trLightDesc: '−15% interval', trLuckyDesc: '+25% peluang loot musuh',
@@ -55,7 +64,7 @@ const TEXT = {
     discarded: 'Dibuang karena rumah penuh', dismiss: 'Tutup',
   },
   en: {
-    forest: 'Forest', cave: 'Cave', river: 'River', kitchen: 'Kitchen', adventure: 'Adventure', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
+    farm: 'Farm', forest: 'Forest', cave: 'Cave', river: 'River', kitchen: 'Kitchen', adventure: 'Adventure', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
     acacia: 'Acacia Tree', teak: 'Teak Tree', rock: 'Rock', copper: 'Copper Rock', seconds: 'sec',
     acaciaWood: 'Acacia Wood', teakWood: 'Teak Wood', twig: 'Twig', leaf: 'Leaf',
     stone: 'Stone', pebble: 'Pebble', copperOre: 'Copper Ore',
@@ -74,6 +83,15 @@ const TEXT = {
     weapon: 'Weapon', armor: 'Armor', none: 'None', unequip: 'Unequip',
     attack: 'Attack', interval: 'Interval', defense: 'Defense', hp: 'HP', winChance: 'Win chance',
     bag: 'Bag', bagSlots: (u, c) => `${u} / ${c} slots`, pack: 'Pack from the house', packHint: 'Only food can be packed.',
+    kangkung: 'Water Spinach', chili: 'Chili', cotton: 'Cotton', corn: 'Corn', banana: 'Banana', mango: 'Mango', durian: 'Durian',
+    seedOf: name => `${name} Seed`, catSeed: 'Seeds', catCrop: 'Crops',
+    stirFriedKangkung: 'Stir-fried Spinach', grilledCorn: 'Grilled Corn', friedBanana: 'Banana Fritters', mangoRujak: 'Mango Rujak',
+    rodFlex: 'Flexible Rod', farming: 'Farming', plots: (u, c) => `${u} / ${c} plots in use`,
+    buySlot: (n, max) => `Buy plot #${n} (max ${max})`, plantAll: 'Plant all', harvestAll: 'Harvest all',
+    chooseSeed: 'Choose a seed to plant', noSeeds: 'No seeds yet. Buy some at the Market.', ready: 'Ready', wilted: 'Wilted',
+    wiltsIn: d => `wilts in ${d}`, needFarm: lv => `Requires Farming Lv. ${lv}`, grows: d => `Grows in ${d}`,
+    buySeeds: 'Buy seeds', buy: n => `Buy ${n}`, rareSeedHint: 'Rare seeds only come from adventures.',
+    hours: 'h', minutes: 'm', days: 'd',
     qCommon: 'Common', qGood: 'Fine', qGreat: 'Superior', qLegend: 'Heirloom',
     trSharp: 'Sharp', trLight: 'Light', trLucky: 'Lucky', trSturdy: 'Sturdy', trVital: 'Vigorous',
     trSharpDesc: '+15% attack', trLightDesc: '−15% interval', trLuckyDesc: '+25% enemy loot chance',
@@ -123,6 +141,17 @@ const COPPER_ROCK_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="tr
 // Kayu Jati: emoji kayu yang digelapkan; ikan dibedakan dengan warna
 const TEAK_WOOD_ICON = '<span class="emoji-teak">🪵</span>';
 const fishIcon = cls => `<span class="emoji-fish ${cls}">🐟</span>`;
+// Masakan yang dibakar/digoreng: emoji bahannya dibuat kecokelatan
+const cookedIcon = emoji => `<span class="emoji-cooked">${emoji}</span>`;
+const COTTON_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path d="M12 22v-7" stroke="#8a6a3e" stroke-width="2"/><path d="m7 16 5-2 5 2-5 3Z" fill="#8a6a3e"/>' +
+  '<circle cx="8" cy="10" r="4.2" fill="#f4f1ea"/><circle cx="16" cy="10" r="4.2" fill="#f4f1ea"/>' +
+  '<circle cx="12" cy="7" r="4.5" fill="#fff"/><circle cx="12" cy="12" r="4" fill="#ece7dc"/></svg>';
+const DURIAN_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path d="M12 3c.6 1.2 1 1.6 2 1.6l.5 1.7 1.8-.2.2 1.8 1.7.5-.3 1.8 1.5 1-.9 1.6 1 1.5-1.6.9.3 1.8-1.8.3-.4 1.8-1.8-.3-1 1.5-1.4-1.1-1.4 1.1-1-1.5-1.8.3-.4-1.8-1.8-.3.3-1.8-1.6-.9 1-1.5-.9-1.6 1.5-1 -.3-1.8 1.7-.5.2-1.8 1.8.2.5-1.7C11 4.6 11.4 4.2 12 3Z" fill="#8fae3c"/>' +
+  '<ellipse cx="12" cy="13" rx="5" ry="5.6" fill="#a9c552"/><path d="M12 3v2.5" stroke="#6b5530" stroke-width="1.6"/></svg>';
+// Benih: ikon tunas dengan ikon tanamannya kecil di pojok
+const seedIcon = crop => `<span class="emoji-seed">🌱<span class="seed-of">${crop}</span></span>`;
 
 // Mata uang
 const KEPENG_ICON = '🪙';
@@ -132,6 +161,8 @@ const CATEGORIES = [
   { key: 'wood', name: 'catWood' },
   { key: 'stone', name: 'catStone' },
   { key: 'fish', name: 'catFish' },
+  { key: 'crop', name: 'catCrop' },
+  { key: 'seed', name: 'catSeed' },
   { key: 'food', name: 'catFood' },
   { key: 'gear', name: 'catGear' },
   { key: 'loot', name: 'catLoot' },
@@ -159,6 +190,26 @@ const ITEMS = [
   { key: 'pepesWader', icon: '🫔', cat: 'food', price: 14, heal: 80 },
   { key: 'friedCatfish', icon: '🍤', cat: 'food', price: 20, heal: 80 },
   { key: 'pindangSnakehead', icon: '🍲', cat: 'food', price: 45, heal: 150 },
+  { key: 'stirFriedKangkung', icon: '🥗', cat: 'food', price: 12, heal: 45 },
+  { key: 'grilledCorn', icon: cookedIcon('🌽'), cat: 'food', price: 22, heal: 60 },
+  { key: 'friedBanana', icon: cookedIcon('🍌'), cat: 'food', price: 30, heal: 90 },
+  { key: 'mangoRujak', icon: '🍧', cat: 'food', price: 70, heal: 160 },
+  // Hasil kebun
+  { key: 'kangkung', icon: '🥬', cat: 'crop', price: 2 },
+  { key: 'chili', icon: '🌶️', cat: 'crop', price: 3 },
+  { key: 'cotton', icon: COTTON_ICON, cat: 'crop', price: 6 },
+  { key: 'corn', icon: '🌽', cat: 'crop', price: 8 },
+  { key: 'banana', icon: '🍌', cat: 'crop', price: 10 },
+  { key: 'mango', icon: '🥭', cat: 'crop', price: 25 },
+  { key: 'durian', icon: DURIAN_ICON, cat: 'crop', price: 250 },
+  // Benih (price = harga jual; harga beli di Pasar ada di CROPS)
+  { key: 'kangkungSeed', icon: seedIcon('🥬'), cat: 'seed', price: 1 },
+  { key: 'chiliSeed', icon: seedIcon('🌶️'), cat: 'seed', price: 2 },
+  { key: 'cottonSeed', icon: seedIcon(COTTON_ICON), cat: 'seed', price: 4 },
+  { key: 'cornSeed', icon: seedIcon('🌽'), cat: 'seed', price: 6 },
+  { key: 'bananaSeed', icon: seedIcon('🍌'), cat: 'seed', price: 15 },
+  { key: 'mangoSeed', icon: seedIcon('🥭'), cat: 'seed', price: 40 },
+  { key: 'durianSeed', icon: seedIcon(DURIAN_ICON), cat: 'seed', price: 150 },
   // Perlengkapan petualangan. weapon: interval = waktu per encounter (ms), atk = serangan.
   // armor: def = pengurang damage, hp = tambahan HP maksimal.
   { key: 'kris', icon: '🗡️', cat: 'gear', price: 60, weapon: { interval: 5000, atk: 4 } },
@@ -270,6 +321,7 @@ const TOOLS = {
     tiers: [
       { key: 'rodNone', double: 0, none: true },
       { key: 'rodBasic', double: 0, anvil: 1, cost: { teakWood: 150, copperOre: 150 } },
+      { key: 'rodFlex', double: 0, anvil: 2, cost: { teakWood: 300, copperOre: 300, cotton: 40 } },
     ],
   },
 };
@@ -305,6 +357,10 @@ const RECIPES = {
   pepesWader: { kitchen: 2, time: 4000, xp: 40, input: { wader: 2, leaf: 2, twig: 1 } },
   friedCatfish: { kitchen: 3, time: 4000, xp: 40, input: { catfish: 1, twig: 2 } },
   pindangSnakehead: { kitchen: 3, time: 5000, xp: 50, input: { snakehead: 1, leaf: 2, twig: 2 } },
+  stirFriedKangkung: { kitchen: 1, time: 3000, xp: 30, input: { kangkung: 3, chili: 1, twig: 1 } },
+  grilledCorn: { kitchen: 2, time: 3000, xp: 30, input: { corn: 2, twig: 1 } },
+  friedBanana: { kitchen: 2, time: 4000, xp: 40, input: { banana: 2, twig: 1 } },
+  mangoRujak: { kitchen: 3, time: 4000, xp: 40, input: { mango: 2, chili: 2 } },
 };
 
 // Skill Menempa: exp per tempa = nilai bahan yang dipakai (jumlah × harga jual), juga saat gagal.
@@ -345,11 +401,32 @@ const ADVENTURES = {
       { w: 8, find: 'twig', min: 1, max: 3 },
       { w: 6, find: 'leaf', min: 1, max: 3 },
       { w: 8, kepeng: [5, 20] },
+      // Benih langka: hanya dari petualangan
+      { w: 2, find: 'bananaSeed', min: 1, max: 2 },
+      { w: 1, find: 'mangoSeed', min: 1, max: 1 },
+      { w: 0.3, find: 'durianSeed', min: 1, max: 1 },
     ],
   },
 };
 // Tas: jumlah item berbeda yang bisa dibawa (seperti Rumah). Draf.
 const BAG = { base: 5, perLevel: 2, maxLevel: 5, cost: level => ({ kepeng: 300 * 2 ** level, boarHide: 5 * (level + 1) }) };
+
+// Kebun: tanaman tumbuh paralel dengan kegiatan lain, memakai jam dunia nyata (tidak dibatasi 24 jam offline).
+// Matang setelah grow, lalu layu kalau tidak dipanen dalam FARM.wilt. Petak: 2 gratis, sisanya dibeli dengan
+// Kepeng (makin mahal) sampai FARM.maxSlots. Skill Berkebun: exp tiap panen, membuka tanaman, dan memberi
+// peluang +1 hasil (level / 100). Benih biasa dibeli di Pasar (shop = harga), benih langka (shop: 0) dari petualangan.
+const HOUR = 60 * 60 * 1000;
+const FARM = { freeSlots: 2, maxSlots: 100, wilt: 24 * HOUR, slotCost: n => Math.round(50 * 1.07 ** (n - 3)) };
+const CROPS = {
+  kangkung: { seed: 'kangkungSeed', grow: 1 * HOUR, level: 0, yield: [3, 5], xp: 60, shop: 5 },
+  chili: { seed: 'chiliSeed', grow: 2 * HOUR, level: 5, yield: [4, 8], xp: 120, shop: 10 },
+  cotton: { seed: 'cottonSeed', grow: 3 * HOUR, level: 10, yield: [2, 4], xp: 180, shop: 20 },
+  corn: { seed: 'cornSeed', grow: 4 * HOUR, level: 20, yield: [3, 5], xp: 240, shop: 30 },
+  banana: { seed: 'bananaSeed', grow: 8 * HOUR, level: 15, yield: [4, 8], xp: 480, shop: 0 },
+  mango: { seed: 'mangoSeed', grow: 24 * HOUR, level: 30, yield: [5, 10], xp: 1400, shop: 0 },
+  durian: { seed: 'durianSeed', grow: 5 * 24 * HOUR, level: 50, yield: [1, 3], xp: 6000, shop: 0 },
+};
+const SEED_CROP = Object.fromEntries(Object.entries(CROPS).map(([k, c]) => [c.seed, k]));
 
 // Area yang terkunci di awal; unlock(state) → true kalau syaratnya terpenuhi
 const AREA_UNLOCKS = {

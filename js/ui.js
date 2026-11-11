@@ -10,6 +10,7 @@ let page = 'hutan';
 const iconOf = key => key === 'kepeng' ? KEPENG_ICON : itemDef(key).icon;
 function nameOf(key) {
   const { base, q, trait } = parseKey(key);
+  if (SEED_CROP[base]) return t('seedOf')(t(SEED_CROP[base]));
   return t(base) + (q !== 'common' ? ' ' + t(QUALITY[q].name) : '') + (trait ? ` (${t(TRAITS[trait].name)})` : '');
 }
 
@@ -389,7 +390,7 @@ function journalText(e) {
     case 'lose': return t('jLose')(t(e.e), e.d);
     case 'find': return t('jFind')(lootText(e.loot));
     case 'eat': return t('jEat')(t(e.f), e.h);
-    case 'bagFull': return t('jBagFull')(t(e.item));
+    case 'bagFull': return t('jBagFull')(nameOf(e.item));
   }
   return '';
 }
@@ -477,6 +478,98 @@ $('page-petualangan').addEventListener('click', e => {
   render();
 });
 
+// ---------- Kebun ----------
+
+// Lama waktu singkat: "45m", "2j 10m", "4h 3j"
+function fmtDur(ms) {
+  const m = Math.max(1, Math.ceil(ms / 60000)), h = Math.floor(m / 60), d = Math.floor(h / 24);
+  if (d) return `${d}${t('days')} ${h % 24}${t('hours')}`;
+  if (h) return `${h}${t('hours')} ${m % 60}${t('minutes')}`;
+  return `${m}${t('minutes')}`;
+}
+
+let selectedCrop = null; // benih yang dipilih untuk ditanam
+const harvestFx = {}; // petak → { text, until } hasil panen yang sedang ditampilkan
+
+function renderFarm() {
+  const f = state.farm, now = Date.now();
+  skillBar('farm', f);
+  const used = f.plots.filter(Boolean).length;
+  $('farm-plots').textContent = t('plots')(num(used), num(f.plots.length));
+  const cost = nextSlotCost();
+  $('farm-buy').hidden = cost == null;
+  if (cost != null) {
+    $('farm-buy-text').textContent = t('buySlot')(f.plots.length + 1, FARM.maxSlots);
+    $('farm-buy-cost').textContent = `${KEPENG_ICON} ${num(state.kepeng)}/${num(cost)}`;
+    $('farm-buy').disabled = state.kepeng < cost;
+  }
+  // Pilihan benih: semua benih yang dimiliki
+  const seeds = Object.entries(CROPS).filter(([, c]) => state.items[c.seed] >= 1);
+  if (!seeds.some(([k]) => k === selectedCrop)) selectedCrop = (seeds.find(([k]) => cropOpen(k)) || [])[0] || null;
+  $('farm-seeds').innerHTML = seeds.map(([k, c]) =>
+    `<button class="chip${k === selectedCrop ? ' selected' : ''}" data-crop="${k}" ${cropOpen(k) ? '' : 'disabled'} ` +
+    `title="${cropOpen(k) ? t('grows')(fmtDur(c.grow)) : t('needFarm')(c.level)}">${iconOf(c.seed)} ${t(k)} ×${num(state.items[c.seed])}` +
+    `<small>${cropOpen(k) ? fmtDur(c.grow) : '🔒 Lv. ' + c.level}</small></button>`).join('');
+  $('farm-no-seeds').hidden = seeds.length > 0;
+  $('farm-plant-all').disabled = !selectedCrop || !f.plots.some(p => !p);
+  $('farm-harvest-all').disabled = !f.plots.some(p => ['ready', 'wilted'].includes(plotStatus(p, now)));
+
+  // Petak
+  $('plots').innerHTML = f.plots.map((p, i) => {
+    const status = plotStatus(p, now), fx = harvestFx[i] && harvestFx[i].until > now ? harvestFx[i].text : '';
+    let body;
+    if (status === 'empty') body = `<span class="plot-icon empty-icon">${selectedCrop ? iconOf(CROPS[selectedCrop].seed) : '＋'}</span>`;
+    else if (status === 'growing') {
+      const grow = CROPS[p.crop].grow, left = p.at + grow - now;
+      body = `<span class="plot-icon">${iconOf(p.crop)}</span><span class="plot-bar"><span style="width:${(1 - left / grow) * 100}%"></span></span><span class="plot-time">${fmtDur(left)}</span>`;
+    } else if (status === 'ready') {
+      const left = p.at + CROPS[p.crop].grow + FARM.wilt - now;
+      body = `<span class="plot-icon">${iconOf(p.crop)}</span><span class="plot-time">${left < 6 * HOUR ? t('wiltsIn')(fmtDur(left)) : t('ready')}</span>`;
+    } else body = `<span class="plot-icon">🥀</span><span class="plot-time">${t('wilted')}</span>`;
+    return `<li><button class="plot ${status}" data-plot="${i}" aria-label="${p ? t(p.crop) : ''}">${body}${fx ? `<span class="plot-fx">${fx}</span>` : ''}</button></li>`;
+  }).join('');
+}
+
+$('page-kebun').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.dataset.crop) selectedCrop = b.dataset.crop;
+  else if (b.id === 'farm-buy') { buySlot(); renderKepeng(); }
+  else if (b.id === 'farm-plant-all') plantAll(selectedCrop);
+  else if (b.id === 'farm-harvest-all') harvestAll();
+  else if (b.dataset.plot) {
+    const i = +b.dataset.plot, status = plotStatus(state.farm.plots[i]);
+    if (status === 'empty' && selectedCrop) { plant(i, selectedCrop); save(); }
+    else if (status === 'ready' || status === 'wilted') {
+      const r = harvest(i);
+      save();
+      if (r && r.item) harvestFx[i] = { text: `+${r.qty} ${iconOf(r.item)}`, until: Date.now() + 1500 };
+      else if (!r) harvestFx[i] = { text: t('houseFull'), until: Date.now() + 1500 };
+    } else return;
+  } else return;
+  renderFarm();
+});
+// Petak dihitung dari jam nyata: perbarui tiap detik selama halaman Kebun terbuka
+setInterval(() => { if (page === 'kebun') renderFarm(); }, 1000);
+
+// Pasar: beli benih biasa
+function renderSeedShop() {
+  $('seed-shop').innerHTML = Object.entries(CROPS).filter(([, c]) => c.shop).map(([k, c]) =>
+    `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(c.seed)}</span>` +
+    `<span class="sell-info"><span class="sell-name">${nameOf(c.seed)}</span>` +
+    `<span class="sell-meta">${KEPENG_ICON} ${num(c.shop)} · ${fmtDur(c.grow)}${cropOpen(k) ? '' : ' · 🔒 ' + t('needFarm')(c.level)}${state.items[c.seed] >= 1 ? ' · ×' + num(state.items[c.seed]) : ''}</span></span>` +
+    [1, 10].map(n => `<button class="sell-btn" data-buy="${k}" data-qty="${n}" ${state.kepeng < c.shop * n || !canStore(c.seed) ? 'disabled' : ''}>${t('buy')(n)}</button>`).join('') +
+    `</li>`).join('');
+}
+$('seed-shop').addEventListener('click', e => {
+  const b = e.target.closest('[data-buy]');
+  if (!b || b.disabled) return;
+  buySeed(b.dataset.buy, +b.dataset.qty);
+  renderSeedShop();
+  renderMarket();
+  renderKepeng();
+});
+
 function applySettings() {
   const root = document.documentElement;
   root.dataset.theme = settings.theme;
@@ -494,6 +587,7 @@ function applySettings() {
   renderMarket();
   renderKepeng();
   renderAdventure();
+  renderFarm();
 }
 
 const kepengEl = $('kepeng');
@@ -547,6 +641,7 @@ marketEl.addEventListener('click', e => {
   } else {
     if (btn.dataset.qty === 'all') disarmSell();
     sell(key, btn.dataset.qty === 'all' ? Infinity : 1);
+    renderSeedShop();
     renderTools();
     renderKepeng();
   }
@@ -625,7 +720,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['hutan', 'goa', 'sungai', 'dapur', 'petualangan', 'rumah', 'pasar', 'anvil', 'settings'];
+const PAGES = ['kebun', 'hutan', 'goa', 'sungai', 'dapur', 'petualangan', 'rumah', 'pasar', 'anvil', 'settings'];
 const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
 function setMenu(open) {
@@ -644,8 +739,9 @@ function showPage(name) {
     else n.removeAttribute('aria-current');
   });
   if (page === 'rumah') renderHouse();
-  if (page === 'pasar') renderMarket();
+  if (page === 'pasar') { renderMarket(); renderSeedShop(); }
   if (page === 'anvil') renderAnvil();
+  if (page === 'kebun') renderFarm();
   if (page === 'petualangan') renderAdventure();
 }
 

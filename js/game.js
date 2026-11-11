@@ -13,6 +13,7 @@ const freshState = () => ({
   kitchen: { level: KITCHEN.start },
   cooking: { level: 0, xp: 0 }, // skill Memasak
   smithing: { level: 0, xp: 0 }, // skill Menempa
+  farm: { level: 0, xp: 0, plots: Array(FARM.freeSlots).fill(null) }, // petak: null atau { crop, at: waktu tanam }
   equip: { weapon: null, armor: null }, // perlengkapan yang dipakai tidak memakan slot Rumah
   mastery: { melee: { level: 0, xp: 0 }, armor: { level: 0, xp: 0 } },
   bag: { level: 0, items: {} },
@@ -28,8 +29,8 @@ const freshState = () => ({
   lastTick: Date.now(),
   // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci;
   // 6: joran + Sungai; 7: Dapur + Memasak; 8: Petualangan; 9: kualitas tempa + Menempa (semuanya cukup diisi bawaan;
-  // item lama otomatis berkualitas Biasa karena key-nya tidak berubah)
-  version: 9,
+  // item lama otomatis berkualitas Biasa karena key-nya tidak berubah); 10: Kebun
+  version: 10,
 });
 const state = freshState();
 const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true };
@@ -61,6 +62,7 @@ function loadState(saved) {
     Object.assign(state.kitchen, saved.kitchen);
     Object.assign(state.cooking, saved.cooking);
     Object.assign(state.smithing, saved.smithing);
+    if (saved.farm) Object.assign(state.farm, saved.farm);
     Object.assign(state.equip, saved.equip);
     for (const k in state.mastery) Object.assign(state.mastery[k], saved.mastery && saved.mastery[k]);
     Object.assign(state.bag, saved.bag);
@@ -202,6 +204,71 @@ function rollQuality(slot) {
   if (q !== 'legend') return { q };
   const traits = Object.keys(TRAITS).filter(k => TRAITS[k].slot === slot || TRAITS[k].slot === 'any');
   return { q, trait: traits[Math.floor(Math.random() * traits.length)] };
+}
+
+// ---------- Kebun ----------
+// Tanaman memakai jam dunia nyata, jadi status petak dihitung dari waktu sekarang.
+
+function plotStatus(plot, now = Date.now()) {
+  if (!plot) return 'empty';
+  const ready = plot.at + CROPS[plot.crop].grow;
+  return now < ready ? 'growing' : now < ready + FARM.wilt ? 'ready' : 'wilted';
+}
+const cropOpen = crop => state.farm.level >= CROPS[crop].level;
+const nextSlotCost = () => state.farm.plots.length < FARM.maxSlots ? FARM.slotCost(state.farm.plots.length + 1) : null;
+
+function buySlot() {
+  const cost = nextSlotCost();
+  if (cost == null || state.kepeng < cost) return false;
+  state.kepeng -= cost;
+  state.farm.plots.push(null);
+  save();
+  return true;
+}
+
+// Beli benih biasa di Pasar
+function buySeed(crop, qty) {
+  const c = CROPS[crop];
+  if (!c.shop || state.kepeng < c.shop * qty || !canStore(c.seed)) return false;
+  state.kepeng -= c.shop * qty;
+  addItem(c.seed, qty);
+  save();
+  return true;
+}
+
+function plant(i, crop) {
+  const c = CROPS[crop];
+  if (state.farm.plots[i] || !cropOpen(crop) || !(state.items[c.seed] >= 1)) return false;
+  state.items[c.seed]--;
+  state.farm.plots[i] = { crop, at: Date.now() };
+  return true;
+}
+// Tanam benih yang sama di semua petak kosong (sebanyak benih yang ada)
+function plantAll(crop) {
+  let n = 0;
+  state.farm.plots.forEach((p, i) => { if (!p && plant(i, crop)) n++; });
+  if (n) save();
+  return n;
+}
+
+// Panen petak yang matang (atau bersihkan yang layu). Mengembalikan { item, qty } / { wilted } / null.
+// Kalau hasilnya jenis baru dan Rumah penuh, petak dibiarkan supaya hasilnya tidak hilang.
+function harvest(i) {
+  const plot = state.farm.plots[i], status = plotStatus(plot);
+  if (status === 'wilted') { state.farm.plots[i] = null; return { wilted: true }; }
+  if (status !== 'ready' || !canStore(plot.crop)) return null;
+  const c = CROPS[plot.crop];
+  const qty = randInt(...c.yield) + (Math.random() < state.farm.level / MAX_LEVEL ? 1 : 0);
+  addItem(plot.crop, qty);
+  gainXp(state.farm, c.xp, xpNeeded);
+  state.farm.plots[i] = null;
+  return { item: plot.crop, qty };
+}
+function harvestAll() {
+  const got = {};
+  state.farm.plots.forEach((p, i) => { const r = harvest(i); if (r && r.item) got[r.item] = (got[r.item] || 0) + r.qty; });
+  save();
+  return got;
 }
 
 // Tingkat berikutnya dari sebuah alat, atau undefined kalau sudah tertinggi

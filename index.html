@@ -172,6 +172,35 @@
   .card.locked .level { visibility: hidden; }
   .tool-hint { display: block; margin-top: 10px; font-size: 12px; color: var(--muted); }
   .skill { margin-top: 12px; }
+  .emoji-cooked { display: inline-block; filter: sepia(.6) saturate(1.4) brightness(.8); }
+  .emoji-seed { position: relative; display: inline-block; }
+  .seed-of { position: absolute; right: -.25em; bottom: -.15em; font-size: .5em; line-height: 1; }
+
+  /* Kebun */
+  .chip small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); }
+  .chip.selected { background: var(--on-bg); color: var(--on-ink); }
+  .chip.selected small { color: inherit; opacity: .8; }
+  .farm-actions { display: flex; gap: 8px; margin-top: 12px; }
+  .farm-actions .notice-btn { flex: 1; margin: 0; min-height: 40px; }
+  .plots { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+  .plot {
+    position: relative; width: 100%; aspect-ratio: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    padding: 4px; background: #e9dcc4; border: 1px solid #d6c4a3; border-radius: 10px;
+    font: inherit; color: var(--ink); cursor: pointer;
+  }
+  :root[data-theme="dark"] .plot { background: #3a3126; border-color: #4a3f31; }
+  .plot-icon { font-size: 24px; line-height: 1; }
+  .plot.empty .plot-icon { opacity: .35; }
+  .plot.growing .plot-icon { opacity: .55; transform: scale(.8); }
+  .plot.ready { border: 2px solid var(--on-bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--on-bg) 25%, transparent); }
+  .plot.wilted { filter: grayscale(.7); }
+  .plot-time { font-size: 10px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .plot.ready .plot-time { color: var(--on-bg); }
+  .plot-bar { width: 80%; height: 4px; background: rgba(0, 0, 0, .12); border-radius: 99px; overflow: hidden; }
+  .plot-bar span { display: block; height: 100%; background: var(--on-bg); }
+  .plot-fx { position: absolute; inset: auto 0 50% 0; font-size: 12px; font-weight: 700; animation: rise 1.5s ease-out forwards; }
+  .shop { margin: 0 0 16px; }
   /* Kualitas tempa: warna nama + bingkai kotak item */
   .q-good { --q: #3c9a52; } .q-great { --q: #3a7fd5; } .q-legend { --q: #c98a12; }
   :root[data-theme="dark"] .q-good { --q: #62c47a; } :root[data-theme="dark"] .q-great { --q: #6aa8ff; } :root[data-theme="dark"] .q-legend { --q: #f0b43c; }
@@ -410,6 +439,7 @@
 <div class="scrim" id="scrim"></div>
 <nav class="drawer" id="drawer" aria-label="Menu">
   <div class="brand">Kebon Kosong</div>
+  <button class="nav-item" data-page="kebun"><span>🌾</span><span data-i18n="farm"></span></button>
   <button class="nav-item" data-page="hutan"><span>🌳</span><span data-i18n="forest"></span></button>
   <button class="nav-item" data-page="goa"><span>⛰️</span><span class="nav-text"><span data-i18n="cave"></span><small class="nav-lock" data-i18n="caveLocked"></small></span></button>
   <button class="nav-item" data-page="sungai"><span>🏞️</span><span class="nav-text"><span data-i18n="river"></span><small class="nav-lock" data-i18n="riverLocked"></small></span></button>
@@ -429,6 +459,31 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
   </header>
+
+  <main id="page-kebun" hidden>
+    <section class="tool">
+      <div class="tool-top">
+        <span class="tool-icon" aria-hidden="true">🧑‍🌾</span>
+        <div class="tool-main">
+          <div class="tool-title"><span class="level" id="farm-level"></span><span class="name" data-i18n="farming"></span></div>
+          <span class="bar"><span class="fill" id="farm-fill"></span></span>
+          <span class="tool-xp" id="farm-xp"></span>
+        </div>
+      </div>
+      <dl class="stats"><div><dt id="farm-plots"></dt></div></dl>
+      <button class="upgrade-btn" id="farm-buy"><span id="farm-buy-text"></span><span class="cost" id="farm-buy-cost"></span></button>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><span class="panel-title" data-i18n="chooseSeed"></span></div>
+      <div class="equip-options" id="farm-seeds"></div>
+      <p class="empty" id="farm-no-seeds" data-i18n="noSeeds"></p>
+      <div class="farm-actions">
+        <button class="notice-btn" id="farm-plant-all" data-i18n="plantAll"></button>
+        <button class="notice-btn" id="farm-harvest-all" data-i18n="harvestAll"></button>
+      </div>
+    </section>
+    <ul class="plots" id="plots"></ul>
+  </main>
 
   <main id="page-hutan">
     <section class="tool" data-tool="axe"></section>
@@ -539,6 +594,11 @@
   </main>
 
   <main id="page-pasar" hidden>
+    <section class="panel shop">
+      <div class="panel-head"><span class="panel-title">🌱 <span data-i18n="buySeeds"></span></span></div>
+      <p class="panel-hint" data-i18n="rareSeedHint"></p>
+      <ul class="market" id="seed-shop"></ul>
+    </section>
     <h2 data-i18n="market"></h2>
     <ul class="market" id="market"></ul>
     <p class="empty" id="market-empty" data-i18n="marketEmpty"></p>
