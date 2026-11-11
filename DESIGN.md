@@ -15,6 +15,9 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 - Dua bahasa wajib: Indonesia dan English, termasuk nama item dan teks jurnal.
 - Game punya suara (mulai dari menempa) dengan tombol bisu di Pengaturan.
 - Setiap skill butuh hasil skill lain. Tidak ada jalur yang bisa dilewati.
+- Target menamatkan semua: **2–3 bulan**. Tiap sumber daya/skill tetap ±2 hari aksi aktif ke Lv 100 (semua tier sama).
+  Panjangnya datang dari jumlah jalur yang tidak bisa jalan bersamaan, plus hal langka (Pusaka, benih langka, drop boss).
+  Tidak ada pembukaan yang butuh Lv 100.
 
 ## Mata uang: Kepeng
 
@@ -102,13 +105,16 @@ Draf tier:
 - Petualangan punya **HP**. Kalah dalam encounter = HP berkurang. Makan otomatis dari masakan yang dibawa.
   HP habis = pulang; **loot yang sudah didapat tetap dibawa** (tanpa hukuman selain waktu).
 - Tas penuh **tidak** membuat pulang: petualangan jalan terus (loot baru dibuang dan dicatat di jurnal) sampai HP habis.
-- Level petualangan per gaya senjata (mastery): exp dari mengalahkan musuh masuk ke gaya senjata yang dipakai,
-  exp armor dari menerima serangan. Detail gaya (jarak dekat / jarak jauh / magic) belum final.
+- Level petualangan per gaya (mastery). Awal hanya dua:
+  - **Jarak Dekat**: exp dari mengalahkan musuh, menaikkan serangan.
+  - **Armor**: exp dari menerima serangan, menaikkan HP maksimal dan mengurangi damage.
+  - Jarak jauh dan magic menyusul di fase akhir. Musuh tidak punya kelemahan terhadap gaya tertentu.
 - Tas & Rumah:
   - Selesai petualangan, pemain memilih item tas mana yang masuk Rumah dan mana yang dibuang;
     yang tidak dibuang boleh tetap di tas (mis. kalau Rumah penuh) lalu lanjut berpetualang.
   - Rumah → Tas: hanya item **bekal** (makanan, dan item lain yang membantu petualangan).
   - Tas → Rumah: semua item.
+  - Kapasitas tas dihitung per item berbeda (seperti Rumah), jumlah per item tidak dibatasi.
 - **Jurnal** mencatat setiap encounter dan loot, termasuk item yang dibuang karena rumah penuh.
 
 ## Pembukaan area
