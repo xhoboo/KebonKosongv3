@@ -5,11 +5,17 @@
   const FLAG = 'kebon-kosong-debug';
   let on = false;
   try { on = localStorage.getItem(FLAG) === '1'; } catch {}
-  if (location.hash === '#debug') {
-    on = true;
+  // #debug bisa diketik di alamat halaman yang sudah terbuka (tanpa muat ulang), jadi dengarkan juga hashchange
+  const turnOn = () => {
     try { localStorage.setItem(FLAG, '1'); } catch {}
-  }
-  if (!on) return;
+    if (!on) { on = true; enable(); }
+    showPage('debug');
+  };
+  if (location.hash === '#debug') turnOn();
+  else if (on) enable();
+  window.addEventListener('hashchange', () => { if (location.hash === '#debug') turnOn(); });
+
+  function enable() {
 
   // Semua tampilan digambar ulang setelah state diubah dari sini
   function refreshAll() {
@@ -177,6 +183,7 @@
       return;
     } else if (b.id === 'dbg-off') {
       try { localStorage.removeItem(FLAG); } catch {}
+      on = false;
       timeScale = 1;
       nav.remove();
       main.remove();
@@ -189,6 +196,6 @@
 
   window.renderDebug = renderDebug;
   renderDebug();
-  if (location.hash === '#debug') showPage('debug');
   window.addEventListener('hashchange', () => { if (location.hash === '#debug') renderDebug(); });
+  }
 })();
