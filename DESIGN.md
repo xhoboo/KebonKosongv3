@@ -7,8 +7,9 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 
 - Game idle: dicek beberapa kali sehari, progres offline wajib jalan.
 - Gameplay simpel (sedikit tombol, sedikit skill), kerumitan ada di item, resep, dan petualangan.
-- Satu kegiatan dalam satu waktu (menebang, menambang, memancing, memasak, menempa, berpetualang).
+- Satu kegiatan dalam satu waktu (menebang, menambang, memancing, memasak, berpetualang).
   **Pengecualian: Kebun** tumbuh paralel; menanam/panen instan, lalu pemain bebas melakukan kegiatan lain.
+  **Menempa bukan kegiatan idle**: klik, animasi + suara tempa 1–2 detik, hasil langsung keluar.
 - Setiap skill butuh hasil skill lain. Tidak ada jalur yang bisa dilewati.
 
 ## Mata uang: Kepeng
@@ -31,7 +32,7 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 
 ### Kebun
 - 2 slot gratis, slot berikutnya dibeli dengan Kepeng, biaya naik tiap slot, maksimal 100.
-- Waktu tumbuh lama (jam), supaya pemain mengerjakan hal lain sambil menunggu.
+- Waktu tumbuh lama: tanaman tier terendah 1–2 jam, makin tinggi tier makin lama.
 - Wajib ada tombol "Tanam semua" dan "Panen semua".
 - Hasil kebun harus terserap: bahan dapur, dijual, bahan resep lain.
 
@@ -41,6 +42,7 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 - Alat tier N didapat dengan meng-upgrade alat tier N−1 di Anvil.
 - Bahan upgrade **selalu kayu + batu/logam dari tier di bawahnya**, untuk kapak maupun beliung,
   sehingga Hutan dan Goa harus naik bergantian. Tidak boleh ada resep yang butuh bahan dari tier yang dikunci olehnya.
+- Kapak Berkilau (sudah ada di game) = kapak tier 2, pembuka Jati.
 - Level & exp alat tetap saat di-upgrade. Alat membuka node; level node menambah drop dan kecepatan.
 
 Draf tier:
@@ -67,7 +69,7 @@ Draf tier:
 - Masakan = HP untuk petualangan. Bahan: sayur/buah kebun, ikan, bahan dari petualangan, Ranting sebagai bahan bakar.
 
 ### Anvil
-- Menempa alat (kapak, beliung, alat pancing), senjata, dan armor.
+- Menempa alat (kapak, beliung, alat pancing), senjata, dan armor. Instan per klik (lihat Prinsip).
 - Ada peluang **gagal: bahan hilang**. Level anvil menaikkan peluang berhasil.
 - Draf peredam: tier rendah hampir selalu berhasil; peluang gagal hanya terasa di tier atas.
 - Kalau berhasil, skill Menempa menentukan kualitas: Biasa / Bagus (+10%) / Istimewa (+25%) / Pusaka (+50% + 1 sifat).
