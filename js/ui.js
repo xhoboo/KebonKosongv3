@@ -14,6 +14,9 @@ function nameOf(key) {
   return t(base) + (q !== 'common' ? ' ' + t(QUALITY[q].name) : '') + (trait ? ` (${t(TRAITS[trait].name)})` : '');
 }
 
+// Nama tampilan area (untuk syarat petualangan)
+const AREA_NAMES = { goa: 'cave', sungai: 'river', danau: 'lake', laut: 'sea' };
+
 // Halaman tempat kartu sebuah kegiatan berada
 const activityArea = key => ADVENTURES[key] ? 'petualangan' : RECIPES[key] ? 'dapur' : NODES[key].area;
 
@@ -192,7 +195,11 @@ function renderTools() {
   for (const [key, card] of Object.entries(cards)) {
     const node = NODES[key] || RECIPES[key];
     if (ADVENTURES[key]) {
-      card.duration.innerHTML = Object.values(ADVENTURES[key].events).filter(e => e.enemy).map(e => ENEMIES[e.enemy].icon).join(' ');
+      // Petualangan: musuhnya beserta peluang menang dengan senjata sekarang, atau syarat yang belum terpenuhi
+      const req = ADVENTURES[key].req || {}, enemies = ADVENTURES[key].events.filter(e => e.enemy).map(e => e.enemy);
+      card.duration.innerHTML = nodeOpen(key)
+        ? enemies.map(e => ENEMIES[e].icon + (state.equip.weapon ? ' ' + num(winChance(e) * 100) + '%' : '')).join(' · ')
+        : '🔒 ' + (state.mastery.melee.level < (req.melee || 0) ? t('needMelee')(req.melee) : t('needArea')(t(AREA_NAMES[req.area])));
       continue;
     }
     card.duration.innerHTML = nodeOpen(key) ? num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + ` · ${node.xp} Exp`
@@ -408,7 +415,8 @@ function renderAdventure() {
   $('adv-atk').textContent = num(meleeAtk(), 1);
   $('adv-interval').textContent = state.equip.weapon ? num(actionTime('edgeForest') / 1000) + ' ' + t('seconds') : '—';
   $('adv-def').textContent = num(playerDef());
-  const enemies = [...new Set(ADVENTURES.edgeForest.events.filter(e => e.enemy).map(e => e.enemy))];
+  // Peluang menang untuk petualangan yang sedang berjalan (atau Hutan Tepi)
+  const enemies = [...new Set(ADVENTURES[adventuring() ? state.active : 'edgeForest'].events.filter(e => e.enemy).map(e => e.enemy))];
   $('adv-win').textContent = state.equip.weapon ? enemies.map(e => `${ENEMIES[e].icon} ${num(winChance(e) * 100)}%`).join(' · ') : '—';
 
   // Perlengkapan: yang dipakai + pilihan dari Rumah
@@ -720,7 +728,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['kebun', 'hutan', 'goa', 'sungai', 'dapur', 'petualangan', 'rumah', 'pasar', 'anvil', 'settings'];
+const PAGES = ['kebun', 'hutan', 'goa', 'sungai', 'danau', 'laut', 'dapur', 'petualangan', 'rumah', 'pasar', 'anvil', 'settings'];
 const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
 function setMenu(open) {

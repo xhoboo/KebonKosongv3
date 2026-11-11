@@ -141,4 +141,4 @@ Draf tier:
 6. ✅ Petualangan + jurnal (Hutan Tepi, Keris/Golok/Tombak, Rompi Kulit, tas, mastery Jarak Dekat & Armor).
 7. ✅ Kualitas tempa (Biasa/Bagus/Istimewa/Pusaka + sifat, skill Menempa).
 8. ✅ Kebun (petak berbayar sampai 100, 7 tanaman, benih langka dari Hutan Tepi, Joran Lentur dari Kapas).
-9. Danau, Laut, kedalaman petualangan lanjutan, tier 3–4.
+9. ✅ Danau, Laut, kedalaman petualangan lanjutan (Hutan Dalam, Tepi Sungai, Goa Gelap), tingkat 3–4 (Mahoni/Besi, Ulin/Emas), perlengkapan tingkat 2–3, Anvil & Dapur Lv. 4.

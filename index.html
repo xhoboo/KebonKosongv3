@@ -154,6 +154,19 @@
   .pop.full { color: var(--danger); }
   .emoji-teak { display: inline-block; filter: brightness(.68) saturate(1.5) hue-rotate(-8deg); }
   .emoji-fish { display: inline-block; }
+  .tint { display: inline-block; }
+  .tint.mahogany { filter: hue-rotate(-20deg) saturate(1.6) brightness(.8); }
+  .tint.ulin { filter: brightness(.45) saturate(.8); }
+  .tint.iron { filter: grayscale(.6) brightness(.9); }
+  .tint.gold { filter: sepia(1) saturate(3) hue-rotate(5deg) brightness(1.05); }
+  .tint.scale { filter: hue-rotate(60deg) saturate(.8); }
+  .tint.eel { filter: sepia(.8) brightness(.6); }
+  .tint.grouper { filter: sepia(.7) hue-rotate(-20deg) saturate(1.4) brightness(.8); }
+  .emoji-fish.carp { filter: sepia(1) saturate(3) hue-rotate(-15deg); }
+  .emoji-fish.pangasius { filter: grayscale(.8) brightness(1.1); }
+  .emoji-fish.giantSnakehead { filter: hue-rotate(70deg) brightness(.6); }
+  .emoji-fish.mackerel { filter: hue-rotate(20deg) saturate(1.4); }
+  .emoji-fish.tuna { filter: brightness(.55) saturate(1.3); }
   .emoji-fish.wader { transform: scale(.8); }
   .emoji-fish.tilapia { filter: hue-rotate(150deg) saturate(.7); }
   .emoji-fish.catfish { filter: grayscale(1) brightness(.65); }
@@ -443,6 +456,8 @@
   <button class="nav-item" data-page="hutan"><span>🌳</span><span data-i18n="forest"></span></button>
   <button class="nav-item" data-page="goa"><span>⛰️</span><span class="nav-text"><span data-i18n="cave"></span><small class="nav-lock" data-i18n="caveLocked"></small></span></button>
   <button class="nav-item" data-page="sungai"><span>🏞️</span><span class="nav-text"><span data-i18n="river"></span><small class="nav-lock" data-i18n="riverLocked"></small></span></button>
+  <button class="nav-item" data-page="danau"><span>🌊</span><span class="nav-text"><span data-i18n="lake"></span><small class="nav-lock" data-i18n="lakeLocked"></small></span></button>
+  <button class="nav-item" data-page="laut"><span>⛵</span><span class="nav-text"><span data-i18n="sea"></span><small class="nav-lock" data-i18n="seaLocked"></small></span></button>
   <button class="nav-item" data-page="dapur"><span>🍳</span><span data-i18n="kitchen"></span></button>
   <button class="nav-item" data-page="petualangan"><span>⚔️</span><span class="nav-text"><span data-i18n="adventure"></span><small class="nav-lock" data-i18n="advLocked"></small></span></button>
   <button class="nav-item" data-page="rumah"><span>🏠</span><span data-i18n="house"></span></button>
@@ -498,6 +513,14 @@
   <main id="page-sungai" hidden>
     <section class="tool" data-tool="rod"></section>
     <div class="cards" data-area="sungai"></div>
+  </main>
+
+  <main id="page-danau" hidden>
+    <div class="cards" data-area="danau"></div>
+  </main>
+
+  <main id="page-laut" hidden>
+    <div class="cards" data-area="laut"></div>
   </main>
 
   <main id="page-dapur" hidden>

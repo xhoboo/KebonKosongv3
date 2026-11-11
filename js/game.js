@@ -29,8 +29,8 @@ const freshState = () => ({
   lastTick: Date.now(),
   // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci;
   // 6: joran + Sungai; 7: Dapur + Memasak; 8: Petualangan; 9: kualitas tempa + Menempa (semuanya cukup diisi bawaan;
-  // item lama otomatis berkualitas Biasa karena key-nya tidak berubah); 10: Kebun
-  version: 10,
+  // item lama otomatis berkualitas Biasa karena key-nya tidak berubah); 10: Kebun; 11: tingkat 3–4, Danau, Laut, petualangan lanjutan
+  version: 11,
 });
 const state = freshState();
 const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true };
@@ -119,7 +119,11 @@ const areaOpen = area => !(area in AREA_UNLOCKS) || state.unlocked[area];
 
 // Kegiatan terkunci kalau: node → areanya belum terbuka atau tingkat alatnya kurang; resep → level Dapur kurang;
 // petualangan → area Petualangan belum terbuka
-const nodeOpen = key => ADVENTURES[key] ? areaOpen('petualangan')
+const advOpen = key => {
+  const req = ADVENTURES[key].req || {};
+  return areaOpen('petualangan') && state.mastery.melee.level >= (req.melee || 0) && (!req.area || areaOpen(req.area));
+};
+const nodeOpen = key => ADVENTURES[key] ? advOpen(key)
   : RECIPES[key] ? state.kitchen.level >= RECIPES[key].kitchen
   : areaOpen(NODES[key].area) && state.tools[NODES[key].tool].tier >= NODES[key].tier;
 
