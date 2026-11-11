@@ -60,6 +60,7 @@
 
   header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 16px; }
   h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .kepeng { margin-left: auto; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
   h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 12px; }
   .menu-btn {
     width: 40px; height: 40px; margin-right: -8px;
@@ -145,6 +146,25 @@
     font-variant-numeric: tabular-nums; white-space: nowrap;
   }
   .empty { color: var(--muted); font-size: 14px; margin: 0; }
+
+  .market { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .sell-row {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .sell-icon { flex: none; font-size: 28px; line-height: 1; }
+  .sell-info { flex: 1; min-width: 0; }
+  .sell-name { display: block; font-weight: 600; font-size: 14px; }
+  .sell-meta { display: block; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .sell-btn {
+    flex: none; min-height: 36px; padding: 0 10px;
+    background: var(--track); border: 0; border-radius: 8px;
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--ink);
+    cursor: pointer; white-space: nowrap;
+  }
+  .sell-btn:active { transform: scale(.97); }
+  .sell-btn.confirm { background: var(--danger); color: var(--card); }
 
   .setting {
     background: var(--card);
@@ -283,12 +303,14 @@
   <button class="nav-item" data-page="pohon"><span>🌳</span><span data-i18n="trees"></span></button>
   <button class="nav-item" data-page="goa"><span>⛰️</span><span data-i18n="cave"></span></button>
   <button class="nav-item" data-page="inventory"><span>🎒</span><span data-i18n="inventory"></span></button>
+  <button class="nav-item" data-page="pasar"><span>🏪</span><span data-i18n="market"></span></button>
   <button class="nav-item" data-page="settings"><span>⚙️</span><span data-i18n="settings"></span></button>
 </nav>
 
 <div class="app">
   <header>
     <h1>Kebon Kosong</h1>
+    <span class="kepeng" id="kepeng"></span>
     <button class="menu-btn" id="menu-btn" aria-controls="drawer" aria-expanded="false">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
     </button>
@@ -324,6 +346,12 @@
     <p class="empty" id="empty" data-i18n="empty"></p>
   </main>
 
+  <main id="page-pasar" hidden>
+    <h2 data-i18n="market"></h2>
+    <ul class="market" id="market"></ul>
+    <p class="empty" id="market-empty" data-i18n="marketEmpty"></p>
+  </main>
+
   <main id="page-settings" hidden>
     <h2 data-i18n="settings"></h2>
     <div class="setting">
@@ -347,424 +375,8 @@
   </main>
 </div>
 
-<script>
-  const SAVE_KEY = 'kebon-kosong-v2';
-  const SETTINGS_KEY = 'kebon-kosong-settings';
-  // Buang simpanan versi lama (progres sengaja dimulai ulang)
-  try { ['idle-penebang-v1', 'kebon-kosong'].forEach(k => localStorage.removeItem(k)); } catch {}
-
-  const TEXT = {
-    id: {
-      trees: 'Pohon', cave: 'Goa', inventory: 'Inventory', settings: 'Pengaturan',
-      acacia: 'Pohon Akasia', rock: 'Batu', seconds: 'detik',
-      acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', stone: 'Batu', pebble: 'Kerikil',
-      miss: 'Zonk', empty: 'Belum ada item.',
-      theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
-      openMenu: 'Buka menu', level: 'Level',
-      axeBasic: 'Kapak Biasa', axeShiny: 'Kapak Berkilau', axeInterval: 'Interval kapak', doubleWood: 'Peluang 2 kayu',
-      max: 'Maks', upgradeTo: name => `Upgrade ke ${name}`,
-      progress: 'Progres', reset: 'Klik 3 kali untuk reset progress', resetLeft: n => `Klik ${n} kali lagi`,
-    },
-    en: {
-      trees: 'Trees', cave: 'Cave', inventory: 'Inventory', settings: 'Settings',
-      acacia: 'Acacia Tree', rock: 'Rock', seconds: 'sec',
-      acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', stone: 'Stone', pebble: 'Pebble',
-      miss: 'Miss', empty: 'No items yet.',
-      theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
-      openMenu: 'Open menu', level: 'Level',
-      axeBasic: 'Basic Axe', axeShiny: 'Shiny Axe', axeInterval: 'Axe interval', doubleWood: 'Chance of 2 wood',
-      max: 'Max', upgradeTo: name => `Upgrade to ${name}`,
-      progress: 'Progress', reset: 'Click 3 times to reset progress', resetLeft: n => `Click ${n} more ${n === 1 ? 'time' : 'times'}`,
-    },
-  };
-
-  // Tidak ada emoji kerikil, jadi digambar sendiri
-  const PEBBLE_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
-    '<ellipse cx="7" cy="16" rx="5" ry="4" fill="#9a958c"/><ellipse cx="16.5" cy="17" rx="4.5" ry="3.5" fill="#7f7a72"/>' +
-    '<ellipse cx="12" cy="9.5" rx="4" ry="3.2" fill="#b8b2a8"/></svg>';
-
-  // Semua item yang bisa didapat, sesuai urutan tampil di inventory
-  const ITEMS = [
-    { key: 'acaciaWood', icon: '🪵' },
-    { key: 'twig', icon: '🌿' },
-    { key: 'leaf', icon: '🍃' },
-    { key: 'stone', icon: '🪨' },
-    { key: 'pebble', icon: PEBBLE_ICON },
-  ];
-  const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
-
-  // Level sumber daya: tiap aksi memberi exp sebesar xp node-nya (20). Bagian eksponensial menjaga awal tetap cepat,
-  // bagian kubik membuat level atas makin berat.
-  // Dengan aksi 2 detik, kira-kira: Lv 10 ≈ 2 menit, Lv 50 ≈ 2 jam, Lv 75 ≈ 11,5 jam, Lv 100 ≈ 2 hari.
-  const MAX_LEVEL = 100;
-  const xpNeeded = level => 20 * Math.floor(4 * 1.07 ** level + 0.0015 * level ** 3);
-
-  // Kapak: dapat exp yang sama dari menebang pohon, tiap level memotong waktu ayunan 0,75% (75% di level 100).
-  // Tiap level butuh 10% exp lebih banyak dari level sebelumnya: awal cepat, akhir sangat lama.
-  // Menebang Akasia nonstop (20 Exp, ayunan makin cepat):
-  // Lv 10 ≈ 7 menit, Lv 25 ≈ 40 menit, Lv 50 ≈ 6,5 jam, Lv 75 ≈ 2 hari, Lv 90 ≈ 7 hari, Lv 100 ≈ 15 hari.
-  const AXE_CUT = 0.0075;
-  const axeXpNeeded = level => Math.round(283 * 1.1 ** level);
-  // Tingkat kapak; cost = bahan untuk upgrade ke tingkat itu, double = peluang dapat 2 kayu sekali tebang
-  const AXES = [
-    { key: 'axeBasic', double: 0 },
-    { key: 'axeShiny', double: 0.05, cost: { acaciaWood: 250, stone: 250 } },
-  ];
-
-  // Sumber daya yang bisa dikerjakan. drops(p) → [item, peluang]; p = level / 100.
-  // Item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
-  // xp = exp per aksi untuk level sumber daya itu. Pohon (tool: 'axe') memberi exp yang sama ke kapak
-  // dan ayunannya dipercepat oleh level kapak.
-  const NODES = {
-    acacia: {
-      area: 'pohon', icon: '🌳', time: 2000, xp: 20, tool: 'axe', wood: 'acaciaWood',
-      drops: p => { const main = 0.4 + 0.6 * p; return [['acaciaWood', main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; },
-    },
-    rock: {
-      area: 'goa', icon: '🪨', time: 2000, xp: 20,
-      drops: p => { const main = 0.4 + 0.6 * p; return [['stone', main], ['pebble', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
-    },
-  };
-
-  const freshState = () => ({
-    items: Object.fromEntries(ITEMS.map(it => [it.key, 0])),
-    nodes: Object.fromEntries(Object.keys(NODES).map(k => [k, { level: 0, xp: 0 }])),
-    axe: { tier: 0, level: 0, xp: 0 },
-    active: null, // hanya satu aksi yang berjalan dalam satu waktu
-    progress: 0,
-    lastTick: Date.now(),
-    version: 2, // 2: exp sumber daya dihitung per exp, bukan per aksi
-  });
-  const state = freshState();
-  const settings = { theme: document.documentElement.dataset.theme, lang: 'id' };
-
-  // Tambah exp ke sumber daya atau kapak; exp berlebih dibawa ke level berikutnya
-  function gainXp(s, amount, need) {
-    s.xp += amount;
-    while (s.level < MAX_LEVEL && s.xp >= need(s.level)) {
-      s.xp -= need(s.level);
-      s.level++;
-    }
-    if (s.level >= MAX_LEVEL) s.xp = 0;
-  }
-
-  function loadState(saved) {
-    if (!saved) return;
-    if ('acaciaLevel' in saved) { // simpanan sebelum ada Goa
-      ['acaciaWood', 'twig', 'leaf'].forEach(k => { state.items[k] = saved[k] || 0; });
-      state.nodes.acacia = { level: saved.acaciaLevel || 0, xp: saved.acaciaXp || 0 };
-      state.active = saved.running ? 'acacia' : null;
-      state.progress = saved.progress || 0;
-      state.lastTick = saved.lastTick || Date.now();
-    } else {
-      Object.assign(state.items, saved.items);
-      for (const k in NODES) Object.assign(state.nodes[k], saved.nodes && saved.nodes[k]);
-      Object.assign(state.axe, saved.axe);
-      state.active = NODES[saved.active] ? saved.active : null;
-      state.progress = saved.progress || 0;
-      state.lastTick = saved.lastTick || Date.now();
-    }
-    // Simpanan lama menghitung 1 exp per aksi
-    if (!saved.version) for (const k in NODES) state.nodes[k].xp *= NODES[k].xp;
-    // Kurva exp kapak pernah berubah; exp yang sudah melebihi kebutuhan langsung jadi level
-    gainXp(state.axe, 0, axeXpNeeded);
-  }
-  try { loadState(JSON.parse(localStorage.getItem(SAVE_KEY))); } catch {}
-  try {
-    const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
-    if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
-  } catch {}
-
-  const $ = id => document.getElementById(id);
-  const itemsEl = $('items'), emptyEl = $('empty');
-  const t = key => TEXT[settings.lang][key];
-  const num = (n, digits = 0) => n.toLocaleString(settings.lang === 'id' ? 'id-ID' : 'en-US', { maximumFractionDigits: digits });
-  let page = 'pohon';
-
-  // Buat kartu untuk tiap sumber daya
-  const cards = {};
-  for (const [key, node] of Object.entries(NODES)) {
-    const el = document.createElement('button');
-    el.className = 'card';
-    el.dataset.node = key;
-    el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${key}"></span>` +
-      `<span class="duration"></span><span class="icon">${node.icon}</span>` +
-      `<span class="bar"><span class="fill"></span></span>`;
-    document.querySelector(`.cards[data-area="${node.area}"]`).appendChild(el);
-    cards[key] = { el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), fill: el.querySelector('.fill'), icon: el.querySelector('.icon') };
-    el.addEventListener('click', () => {
-      state.active = state.active === key ? null : key;
-      state.progress = 0;
-      save();
-      render();
-    });
-  }
-
-  function save() {
-    state.lastTick = Date.now();
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
-  }
-
-  function saveSettings() {
-    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {}
-  }
-
-  function rollDrop(key) {
-    let r = Math.random();
-    for (const [item, chance] of NODES[key].drops(state.nodes[key].level / MAX_LEVEL)) {
-      if ((r -= chance) < 0) return item;
-    }
-    return null;
-  }
-
-  // Waktu satu aksi dalam ms; ayunan ke pohon makin cepat seiring level kapak
-  const actionTime = key => NODES[key].time * (NODES[key].tool === 'axe' ? 1 - AXE_CUT * state.axe.level : 1);
-
-  // Satu aksi (tebang/tambang): undi hasil, tambah exp ke sumber daya (dan kapak untuk pohon).
-  // Mengembalikan { item, qty }, atau null kalau zonk.
-  function act(key) {
-    const node = NODES[key], drop = rollDrop(key);
-    let qty = 0;
-    if (drop) {
-      qty = drop === node.wood && Math.random() < AXES[state.axe.tier].double ? 2 : 1;
-      state.items[drop] += qty;
-    }
-    gainXp(state.nodes[key], node.xp, xpNeeded);
-    if (node.tool === 'axe') gainXp(state.axe, node.xp, axeXpNeeded);
-    return drop && { item: drop, qty };
-  }
-
-  // Progres offline: kalau ada aksi berjalan saat ditutup, hitung aksi yang terlewat
-  if (state.active) {
-    let elapsed = Date.now() - state.lastTick + state.progress;
-    for (let time; elapsed >= (time = actionTime(state.active)); elapsed -= time) act(state.active);
-    state.progress = elapsed;
-  }
-
-  // Popup hasil di posisi acak di dalam kartu; kalau aksinya cepat, popup menumpuk dan menyebar
-  function popup(key, got) {
-    const card = cards[key];
-    const el = document.createElement('span');
-    el.className = got ? 'pop' : 'pop miss';
-    el.innerHTML = got ? '+' + got.qty + ' ' + icons[got.item] : t('miss');
-    card.el.appendChild(el);
-    // Tetap di dalam kartu sepanjang animasi (mulai 6px lebih rendah, berakhir 8px lebih tinggi), jarak tepi 6px
-    const x0 = 6, x1 = card.el.clientWidth - el.offsetWidth - 6;
-    const y0 = 6 + 8, y1 = card.el.clientHeight - el.offsetHeight - 6 - 6;
-    // Dari beberapa posisi acak, ambil yang paling jauh dari popup lain supaya tumpukan menyebar dan tetap terbaca
-    const others = [...card.el.querySelectorAll('.pop')].filter(p => p !== el).map(p => [p.offsetLeft, p.offsetTop]);
-    let best, bestDist = -1;
-    for (let i = 0; i < 8; i++) {
-      const x = x0 + Math.random() * Math.max(0, x1 - x0), y = y0 + Math.random() * Math.max(0, y1 - y0);
-      const dist = Math.min(Infinity, ...others.map(([ox, oy]) => Math.hypot(x - ox, y - oy)));
-      if (dist > bestDist) { best = [x, y]; bestDist = dist; }
-    }
-    el.style.left = best[0] + 'px';
-    el.style.top = best[1] + 'px';
-    el.addEventListener('animationend', () => el.remove());
-    card.icon.classList.remove('bump');
-    void card.icon.offsetWidth; // mulai ulang animasi
-    card.icon.classList.add('bump');
-  }
-
-  let openItem = null; // item yang namanya sedang ditampilkan
-
-  function renderInventory() {
-    const owned = ITEMS.filter(it => state.items[it.key] >= 1);
-    itemsEl.innerHTML = owned.map(it => {
-      const qty = num(Math.floor(state.items[it.key]));
-      const open = it.key === openItem;
-      return `<li><button class="item" data-item="${it.key}" aria-expanded="${open}" aria-label="${t(it.key)}: ${qty}">` +
-        `<span class="item-icon" aria-hidden="true">${it.icon}</span>` +
-        `<span class="item-qty" aria-hidden="true">${qty}</span></button></li>`;
-    }).join('');
-    emptyEl.hidden = owned.length > 0;
-  }
-
-  function render() {
-    for (const [key, card] of Object.entries(cards)) {
-      const n = state.nodes[key], on = state.active === key;
-      card.fill.style.width = (on ? state.progress / actionTime(key) * 100 : 0) + '%';
-      card.level.textContent = t('level') + ' ' + n.level;
-      card.el.style.setProperty('--lv', (n.level >= MAX_LEVEL ? 100 : n.xp / xpNeeded(n.level) * 100) + '%');
-      card.el.classList.toggle('on', on);
-      card.el.setAttribute('aria-pressed', on);
-    }
-  }
-
-  // Kartu kapak, plus teks waktu & exp di kartu pohon (keduanya ikut berubah saat kapak naik level)
-  const axeUpgradeBtn = $('axe-upgrade');
-  function renderAxe() {
-    const axe = state.axe, tier = AXES[axe.tier], next = AXES[axe.tier + 1], maxed = axe.level >= MAX_LEVEL;
-    $('axe-level').textContent = 'Lv. ' + axe.level;
-    $('axe-name').textContent = t(tier.key);
-    $('axe-fill').style.width = (maxed ? 100 : axe.xp / axeXpNeeded(axe.level) * 100) + '%';
-    $('axe-xp').textContent = maxed ? t('max') : num(axe.xp) + ' / ' + num(axeXpNeeded(axe.level));
-    // Baris bonus hanya tampil kalau bonusnya ada
-    $('axe-cut-row').hidden = !axe.level;
-    $('axe-cut').textContent = '−' + num(AXE_CUT * axe.level * 100, 2) + '%';
-    $('axe-double-row').hidden = !tier.double;
-    $('axe-stats').hidden = !axe.level && !tier.double;
-    $('axe-double').textContent = num(tier.double * 100) + '%';
-    axeUpgradeBtn.hidden = !next;
-    if (next) {
-      const costs = Object.entries(next.cost);
-      $('axe-next').textContent = t('upgradeTo')(t(next.key));
-      $('axe-cost').innerHTML = costs.map(([item, n]) => `${icons[item]} ${num(Math.floor(state.items[item]))}/${num(n)}`).join(' · ');
-      axeUpgradeBtn.disabled = costs.some(([item, n]) => state.items[item] < n);
-    }
-    for (const [key, card] of Object.entries(cards)) {
-      const node = NODES[key];
-      card.duration.textContent = num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + (node.tool === 'axe' ? ` · ${node.xp} Exp` : '');
-    }
-  }
-
-  axeUpgradeBtn.addEventListener('click', () => {
-    const next = AXES[state.axe.tier + 1];
-    if (!next || Object.entries(next.cost).some(([item, n]) => state.items[item] < n)) return;
-    for (const [item, n] of Object.entries(next.cost)) state.items[item] -= n;
-    state.axe.tier++;
-    save();
-    renderAxe();
-  });
-
-  function applySettings() {
-    const root = document.documentElement;
-    root.dataset.theme = settings.theme;
-    root.lang = settings.lang;
-    document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim();
-    document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-    renderAxe();
-    $('menu-btn').setAttribute('aria-label', t('openMenu'));
-    document.querySelectorAll('[data-theme-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeChoice === settings.theme));
-    document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
-    renderInventory();
-  }
-
-  const tipEl = $('tip');
-  let tipTimer;
-
-  function showTip(key) {
-    openItem = key;
-    clearTimeout(tipTimer);
-    renderInventory();
-    if (!key) { tipEl.hidden = true; return; }
-    const r = itemsEl.querySelector(`[data-item="${key}"]`).getBoundingClientRect();
-    tipEl.textContent = t(key);
-    tipEl.hidden = false;
-    // Jaga popup tetap di dalam layar walau namanya panjang
-    const half = tipEl.offsetWidth / 2;
-    const x = Math.min(Math.max(r.left + r.width / 2, 8 + half), innerWidth - 8 - half);
-    tipEl.style.left = x + 'px';
-    tipEl.style.top = (r.top - 8) + 'px';
-    tipEl.style.setProperty('--arrow', (r.left + r.width / 2 - x) + 'px');
-    tipTimer = setTimeout(() => showTip(null), 2000);
-  }
-
-  // Klik item: munculkan nama; klik item yang sama atau di luar item: tutup
-  document.addEventListener('click', e => {
-    const item = e.target.closest('.item');
-    if (item) {
-      showTip(openItem === item.dataset.item ? null : item.dataset.item);
-      itemsEl.querySelector(`[data-item="${item.dataset.item}"]`).focus();
-    } else if (openItem) showTip(null);
-  });
-  window.addEventListener('scroll', () => openItem && showTip(null), { passive: true });
-  window.addEventListener('resize', () => openItem && showTip(null));
-
-  let last = performance.now();
-  function loop(now) {
-    const dt = now - last;
-    last = now;
-    const key = state.active;
-    if (key) {
-      state.progress += dt;
-      if (state.progress >= actionTime(key)) {
-        let got;
-        for (let time; state.progress >= (time = actionTime(key)); state.progress -= time) got = act(key);
-        renderAxe();
-        if (page === NODES[key].area) popup(key, got);
-        else if (page === 'inventory') renderInventory();
-      }
-    }
-    render();
-    requestAnimationFrame(loop);
-  }
-  requestAnimationFrame(loop);
-
-  // Menu & halaman
-  const PAGES = ['pohon', 'goa', 'inventory', 'settings'];
-  const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
-
-  function setMenu(open) {
-    document.body.classList.toggle('menu-open', open);
-    menuBtn.setAttribute('aria-expanded', open);
-  }
-
-  function showPage(name) {
-    if (openItem) showTip(null);
-    page = PAGES.includes(name) ? name : 'pohon';
-    PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
-    navItems.forEach(n => {
-      if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
-      else n.removeAttribute('aria-current');
-    });
-    if (page === 'inventory') renderInventory();
-  }
-
-  menuBtn.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
-  $('scrim').addEventListener('click', () => setMenu(false));
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false); });
-  navItems.forEach(n => n.addEventListener('click', () => {
-    location.hash = n.dataset.page;
-    setMenu(false);
-  }));
-  window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
-
-  document.querySelectorAll('[data-theme-choice]').forEach(b => b.addEventListener('click', () => {
-    settings.theme = b.dataset.themeChoice;
-    saveSettings();
-    applySettings();
-  }));
-  document.querySelectorAll('[data-lang-choice]').forEach(b => b.addEventListener('click', () => {
-    settings.lang = b.dataset.langChoice;
-    saveSettings();
-    applySettings();
-    disarmReset();
-  }));
-
-  // Reset progres: butuh 3 klik berturut-turut; jeda lebih dari 3 detik membatalkan hitungan
-  const RESET_CLICKS = 3;
-  const resetBtn = $('reset');
-  let resetTimer, resetCount = 0;
-  function disarmReset() {
-    clearTimeout(resetTimer);
-    resetCount = 0;
-    resetBtn.classList.remove('confirm');
-    resetBtn.textContent = t('reset');
-  }
-  resetBtn.addEventListener('click', () => {
-    clearTimeout(resetTimer);
-    if (++resetCount < RESET_CLICKS) {
-      resetBtn.classList.add('confirm');
-      resetBtn.textContent = t('resetLeft')(RESET_CLICKS - resetCount);
-      resetTimer = setTimeout(disarmReset, 3000);
-      return;
-    }
-    disarmReset();
-    Object.assign(state, freshState());
-    save();
-    render();
-    renderAxe();
-    renderInventory();
-  });
-
-  applySettings();
-  showPage(location.hash.slice(1));
-
-  setInterval(save, 5000);
-  document.addEventListener('visibilitychange', save);
-  window.addEventListener('pagehide', save);
-</script>
+<script src="js/data.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
 </body>
 </html>
