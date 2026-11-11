@@ -2,13 +2,17 @@
 
 const TEXT = {
   id: {
-    forest: 'Hutan', cave: 'Goa', river: 'Sungai', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
+    forest: 'Hutan', cave: 'Goa', river: 'Sungai', kitchen: 'Dapur', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
     acacia: 'Pohon Akasia', teak: 'Pohon Jati', rock: 'Batu', copper: 'Batu Tembaga', seconds: 'detik',
     acaciaWood: 'Kayu Akasia', teakWood: 'Kayu Jati', twig: 'Ranting', leaf: 'Daun',
     stone: 'Batu', pebble: 'Kerikil', copperOre: 'Bijih Tembaga',
     riverFishing: 'Memancing', wader: 'Ikan Wader', tilapia: 'Ikan Nila', catfish: 'Ikan Lele', snakehead: 'Ikan Gabus',
     rodNone: 'Belum punya joran', rodBasic: 'Joran Biasa', rodInterval: 'Interval memancing', doubleFish: 'Peluang 2 ikan',
     riverLocked: 'Butuh Joran Biasa (tempa di Anvil)', unlockedRiver: 'Sungai terbuka!', catFish: 'Ikan',
+    leafJamu: 'Jamu Daun', grilledWader: 'Wader Bakar', grilledTilapia: 'Nila Bakar', pepesWader: 'Pepes Wader',
+    friedCatfish: 'Lele Goreng', pindangSnakehead: 'Pindang Gabus', catFood: 'Masakan',
+    cooking: 'Memasak', needKitchen: lv => `Butuh Dapur Lv. ${lv}`, outOfIngredients: 'Bahan habis',
+    kitchenRecipes: n => `${n} resep terbuka`, cookSpeed: 'Kecepatan masak', heals: 'Memulihkan',
     miss: 'Zonk', empty: 'Belum ada item.',
     theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa', sound: 'Suara', on: 'Nyala', off: 'Mati',
     openMenu: 'Buka menu', level: 'Level',
@@ -32,13 +36,17 @@ const TEXT = {
     discarded: 'Dibuang karena rumah penuh', dismiss: 'Tutup',
   },
   en: {
-    forest: 'Forest', cave: 'Cave', river: 'River', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
+    forest: 'Forest', cave: 'Cave', river: 'River', kitchen: 'Kitchen', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
     acacia: 'Acacia Tree', teak: 'Teak Tree', rock: 'Rock', copper: 'Copper Rock', seconds: 'sec',
     acaciaWood: 'Acacia Wood', teakWood: 'Teak Wood', twig: 'Twig', leaf: 'Leaf',
     stone: 'Stone', pebble: 'Pebble', copperOre: 'Copper Ore',
     riverFishing: 'Fishing', wader: 'Rasbora', tilapia: 'Tilapia', catfish: 'Catfish', snakehead: 'Snakehead',
     rodNone: 'No fishing rod yet', rodBasic: 'Basic Rod', rodInterval: 'Fishing interval', doubleFish: 'Chance of 2 fish',
     riverLocked: 'Requires Basic Rod (forge at the Anvil)', unlockedRiver: 'River unlocked!', catFish: 'Fish',
+    leafJamu: 'Leaf Tonic', grilledWader: 'Grilled Rasbora', grilledTilapia: 'Grilled Tilapia', pepesWader: 'Rasbora Pepes',
+    friedCatfish: 'Fried Catfish', pindangSnakehead: 'Snakehead Stew', catFood: 'Food',
+    cooking: 'Cooking', needKitchen: lv => `Requires Kitchen Lv. ${lv}`, outOfIngredients: 'Out of ingredients',
+    kitchenRecipes: n => `${n} recipes unlocked`, cookSpeed: 'Cooking speed', heals: 'Heals',
     miss: 'Miss', empty: 'No items yet.',
     theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language', sound: 'Sound', on: 'On', off: 'Off',
     openMenu: 'Open menu', level: 'Level',
@@ -86,6 +94,7 @@ const CATEGORIES = [
   { key: 'wood', name: 'catWood' },
   { key: 'stone', name: 'catStone' },
   { key: 'fish', name: 'catFish' },
+  { key: 'food', name: 'catFood' },
   { key: 'nature', name: 'catNature' },
 ];
 
@@ -103,7 +112,15 @@ const ITEMS = [
   { key: 'tilapia', icon: fishIcon('tilapia'), cat: 'fish', price: 6 },
   { key: 'catfish', icon: fishIcon('catfish'), cat: 'fish', price: 10 },
   { key: 'snakehead', icon: fishIcon('snakehead'), cat: 'fish', price: 25 },
+  // Masakan: heal = HP yang dipulihkan saat petualangan
+  { key: 'leafJamu', icon: '🍵', cat: 'food', price: 6, heal: 15 },
+  { key: 'grilledWader', icon: '🍢', cat: 'food', price: 6, heal: 30 },
+  { key: 'grilledTilapia', icon: '🥘', cat: 'food', price: 12, heal: 50 },
+  { key: 'pepesWader', icon: '🫔', cat: 'food', price: 14, heal: 80 },
+  { key: 'friedCatfish', icon: '🍤', cat: 'food', price: 20, heal: 80 },
+  { key: 'pindangSnakehead', icon: '🍲', cat: 'food', price: 45, heal: 150 },
 ];
+const heals = Object.fromEntries(ITEMS.filter(it => it.heal).map(it => [it.key, it.heal]));
 const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
 const prices = Object.fromEntries(ITEMS.map(it => [it.key, it.price]));
 
@@ -168,6 +185,28 @@ const ANVIL = {
   start: 1,
   // cost[n] = biaya naik ke level n (draf)
   cost: { 2: { kepeng: 1000, teakWood: 200, copperOre: 200 } },
+};
+
+// Dapur: memasak adalah kegiatan idle (satu kegiatan dalam satu waktu). Tiap masakan memakai bahan, kalau
+// bahan habis kegiatannya berhenti. Level Dapur membuka resep; skill Memasak (kurva exp sama dengan node,
+// 10 exp per detik → ±2 hari ke Lv. 100) memotong waktu masak 0,5% per level.
+// Key resep = key item hasilnya. kitchen = level Dapur minimum. (Draf, disetel setelah dicoba.)
+const COOK_CUT = 0.005;
+const KITCHEN = {
+  start: 1,
+  // cost[n] = biaya naik ke level n
+  cost: {
+    2: { kepeng: 800, acaciaWood: 300, stone: 300 },
+    3: { kepeng: 3000, teakWood: 300, copperOre: 200 },
+  },
+};
+const RECIPES = {
+  leafJamu: { kitchen: 1, time: 3000, xp: 30, input: { leaf: 3, twig: 1 } },
+  grilledWader: { kitchen: 1, time: 3000, xp: 30, input: { wader: 1, twig: 1 } },
+  grilledTilapia: { kitchen: 2, time: 3000, xp: 30, input: { tilapia: 1, twig: 1 } },
+  pepesWader: { kitchen: 2, time: 4000, xp: 40, input: { wader: 2, leaf: 2, twig: 1 } },
+  friedCatfish: { kitchen: 3, time: 4000, xp: 40, input: { catfish: 1, twig: 2 } },
+  pindangSnakehead: { kitchen: 3, time: 5000, xp: 50, input: { snakehead: 1, leaf: 2, twig: 2 } },
 };
 
 // Area yang terkunci di awal; unlock(state) → true kalau syaratnya terpenuhi

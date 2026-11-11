@@ -10,6 +10,8 @@ const freshState = () => ({
   nodes: Object.fromEntries(Object.keys(NODES).map(k => [k, { level: 0, xp: 0 }])),
   tools: Object.fromEntries(Object.keys(TOOLS).map(k => [k, { tier: 0, level: 0, xp: 0 }])),
   anvil: { level: ANVIL.start },
+  kitchen: { level: KITCHEN.start },
+  cooking: { level: 0, xp: 0 }, // skill Memasak
   unlocked: Object.fromEntries(Object.keys(AREA_UNLOCKS).map(k => [k, false])),
   kepeng: 0,
   house: { level: 0 },
@@ -18,8 +20,8 @@ const freshState = () => ({
   progress: 0,
   lastTick: Date.now(),
   // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci;
-  // 6: joran + Sungai (cukup diisi bawaan)
-  version: 6,
+  // 6: joran + Sungai; 7: Dapur + Memasak (keduanya cukup diisi bawaan)
+  version: 7,
 });
 const state = freshState();
 const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true };
@@ -48,11 +50,13 @@ function loadState(saved) {
     // Sebelum versi 5 kapak disimpan di state.axe
     for (const k in TOOLS) Object.assign(state.tools[k], k === 'axe' && saved.axe, saved.tools && saved.tools[k]);
     Object.assign(state.anvil, saved.anvil);
+    Object.assign(state.kitchen, saved.kitchen);
+    Object.assign(state.cooking, saved.cooking);
     Object.assign(state.unlocked, saved.unlocked);
     state.kepeng = saved.kepeng || 0; // simpanan sebelum versi 3 belum punya Kepeng
     Object.assign(state.house, saved.house); // sebelum versi 4 belum ada Rumah: mulai dari level 0
     Object.assign(state.discarded, saved.discarded);
-    state.active = NODES[saved.active] ? saved.active : null;
+    state.active = NODES[saved.active] || RECIPES[saved.active] ? saved.active : null;
     state.progress = saved.progress || 0;
     state.lastTick = saved.lastTick || Date.now();
   }
@@ -96,8 +100,9 @@ function checkUnlocks() {
 }
 const areaOpen = area => !(area in AREA_UNLOCKS) || state.unlocked[area];
 
-// Node terkunci kalau areanya belum terbuka atau tingkat alatnya kurang
-const nodeOpen = key => areaOpen(NODES[key].area) && state.tools[NODES[key].tool].tier >= NODES[key].tier;
+// Kegiatan terkunci kalau: node → areanya belum terbuka atau tingkat alatnya kurang; resep → level Dapur kurang
+const nodeOpen = key => RECIPES[key] ? state.kitchen.level >= RECIPES[key].kitchen
+  : areaOpen(NODES[key].area) && state.tools[NODES[key].tool].tier >= NODES[key].tier;
 
 function rollDrop(key) {
   let r = Math.random();
@@ -107,8 +112,9 @@ function rollDrop(key) {
   return null;
 }
 
-// Waktu satu aksi dalam ms; makin cepat seiring level alatnya
-const actionTime = key => NODES[key].time * (1 - TOOL_CUT * state.tools[NODES[key].tool].level);
+// Waktu satu aksi dalam ms; makin cepat seiring level alat (node) atau skill Memasak (resep)
+const actionTime = key => RECIPES[key] ? RECIPES[key].time * (1 - COOK_CUT * state.cooking.level)
+  : NODES[key].time * (1 - TOOL_CUT * state.tools[NODES[key].tool].level);
 
 // Rumah: kapasitas = jumlah item berbeda yang bisa disimpan
 const houseCapacity = () => HOUSE.base + HOUSE.perLevel * state.house.level;
@@ -178,9 +184,35 @@ function forgeTool(tool) {
   return { ok, key: tier.key };
 }
 
-// Satu aksi (tebang/tambang): undi hasil, tambah exp ke sumber daya dan alatnya.
+// Dapur
+const kitchenMax = Math.max(KITCHEN.start, ...Object.keys(KITCHEN.cost).map(Number));
+function upgradeKitchen() {
+  const cost = KITCHEN.cost[state.kitchen.level + 1];
+  if (!cost || !canAfford(cost)) return false;
+  pay(cost);
+  state.kitchen.level++;
+  save();
+  return true;
+}
+
+// Satu kali masak: pakai bahan, hasilkan 1 masakan, tambah exp Memasak.
+// Kegiatan langsung berhenti begitu bahan tidak cukup untuk masakan berikutnya (stopped: true).
+function cook(key) {
+  const recipe = RECIPES[key];
+  const stop = () => { state.active = null; state.progress = 0; };
+  if (!canAfford(recipe.input)) { stop(); return { stopped: true }; }
+  pay(recipe.input);
+  const lost = !addItem(key, 1);
+  gainXp(state.cooking, recipe.xp, xpNeeded);
+  const stopped = !canAfford(recipe.input);
+  if (stopped) stop();
+  return { item: key, qty: 1, lost, stopped };
+}
+
+// Satu aksi (tebang/tambang/mancing/masak): undi hasil, tambah exp ke sumber daya dan alatnya.
 // Mengembalikan { item, qty, lost }, atau null kalau zonk; lost = dibuang karena rumah penuh.
 function act(key) {
+  if (RECIPES[key]) return cook(key);
   const node = NODES[key], tool = state.tools[node.tool], drop = rollDrop(key);
   let qty = 0;
   if (drop) {
@@ -206,7 +238,7 @@ function sell(key, qty) {
 if (state.active && !nodeOpen(state.active)) state.active = null;
 if (state.active) {
   let elapsed = Math.min(Date.now() - state.lastTick, OFFLINE_CAP) + state.progress;
-  for (let time; elapsed >= (time = actionTime(state.active)); elapsed -= time) act(state.active);
-  state.progress = elapsed;
+  for (let time; state.active && elapsed >= (time = actionTime(state.active)); elapsed -= time) act(state.active);
+  if (state.active) state.progress = elapsed;
   checkUnlocks();
 }

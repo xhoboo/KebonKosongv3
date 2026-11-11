@@ -16,7 +16,7 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 
 ## Aturan game
 
-- Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang atau menambang, tidak bersamaan). Menyalakan satu kartu otomatis mematikan kartu lain.
+- Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang, menambang, memancing, atau memasak; tidak bersamaan). Menyalakan satu kartu otomatis mematikan kartu lain.
 - Setiap sumber daya butuh sekitar 2 hari aksi aktif untuk mencapai level 100, dihitung dengan alat level 0. Node tingkat lebih tinggi lebih lambat per aksi tapi exp per aksinya naik sebanding (Akasia/Batu 2 detik 20 Exp, Jati/Tembaga 3 detik 30 Exp), jadi exp per detik sama. Alat yang ikut naik level mempercepat aksi, jadi nyatanya lebih cepat dari 2 hari; itu disengaja.
 - Alat: kapak (pohon di Hutan), beliung (batu di Goa), dan joran (memancing di Sungai). Exp aksi masuk ke level node itu sendiri dan ke alatnya sekaligus.
 - Alat butuh sekitar 15 hari aksi nonstop untuk mencapai level 100. Tiap level butuh 10% exp lebih banyak dari level sebelumnya. Tiap level memotong waktu aksi 0,75% (75% di level 100).
@@ -30,6 +30,7 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 - Menempa bukan kegiatan idle dan tidak menghentikan kegiatan yang berjalan: klik, 1,5 detik animasi + tiga dentang palu, lalu hasil keluar. Bahan dipotong dan hasil diundi saat diklik. Gagal = bahan hilang, alat tetap.
 - Anvil mulai Lv. 1. Tiap tingkat alat butuh level Anvil minimum; peluang berhasil = dasar per tingkat (Berkilau 90%) + 10% per level Anvil di atas syarat, maks 100%. Upgrade Anvil ke Lv. 2: 1.000 Kepeng + 200 Kayu Jati + 200 Bijih Tembaga.
 - Suara bisa dimatikan di Pengaturan.
+- Dapur: memasak adalah kegiatan idle. Tiap masakan memakai bahan (`RECIPES` di `data.js`, key resep = key item hasil) dan menghasilkan 1 masakan; kegiatan berhenti sendiri begitu bahan tidak cukup untuk masakan berikutnya, juga saat offline. Ranting adalah bahan bakar semua resep. Level Dapur (mulai Lv. 1, maks Lv. 3, upgrade dengan Kepeng + bahan) membuka resep. Skill Memasak memakai kurva exp node (±2 hari ke Lv. 100) dan memotong waktu masak 0,5% per level. Masakan punya `heal` (HP yang dipulihkan saat petualangan nanti).
 
 ## Rancangan
 

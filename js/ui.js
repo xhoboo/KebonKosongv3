@@ -6,19 +6,29 @@ const t = key => TEXT[settings.lang][key];
 const num = (n, digits = 0) => n.toLocaleString(settings.lang === 'id' ? 'id-ID' : 'en-US', { maximumFractionDigits: digits });
 let page = 'hutan';
 
-// Buat kartu untuk tiap sumber daya
+// Halaman tempat kartu sebuah kegiatan berada
+const activityArea = key => RECIPES[key] ? 'dapur' : NODES[key].area;
+
+// Buat kartu untuk tiap kegiatan: sumber daya (tebang/tambang/mancing) dan resep Dapur
 const cards = {};
-for (const [key, node] of Object.entries(NODES)) {
+for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES)]) {
+  const node = NODES[key], recipe = RECIPES[key];
   const el = document.createElement('button');
   el.className = 'card';
   el.dataset.node = key;
-  el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${node.name || key}"></span>` +
-    `<span class="duration"></span><span class="icon">${node.icon}</span>` +
+  el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${node && node.name || key}"></span>` +
+    `<span class="duration"></span>${recipe ? '<span class="inputs"></span>' : ''}` +
+    `<span class="icon">${recipe ? icons[key] : node.icon}</span>` +
     `<span class="bar"><span class="fill"></span></span>`;
-  document.querySelector(`.cards[data-area="${node.area}"]`).appendChild(el);
-  cards[key] = { el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), fill: el.querySelector('.fill'), icon: el.querySelector('.icon') };
+  document.querySelector(`.cards[data-area="${activityArea(key)}"]`).appendChild(el);
+  cards[key] = {
+    el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), inputs: el.querySelector('.inputs'),
+    fill: el.querySelector('.fill'), icon: el.querySelector('.icon'),
+  };
   el.addEventListener('click', () => {
     if (!nodeOpen(key)) return;
+    // Resep yang bahannya kurang tidak bisa dimulai
+    if (recipe && state.active !== key && !canAfford(recipe.input)) { popup(key, null, t('outOfIngredients')); return; }
     state.active = state.active === key ? null : key;
     state.progress = 0;
     save();
@@ -125,11 +135,17 @@ document.querySelectorAll('[data-sort-choice]').forEach(b => b.addEventListener(
 
 function render() {
   for (const [key, card] of Object.entries(cards)) {
-    const n = state.nodes[key], on = state.active === key;
+    const on = state.active === key;
     card.el.classList.toggle('locked', !nodeOpen(key));
     card.fill.style.width = (on ? state.progress / actionTime(key) * 100 : 0) + '%';
-    card.level.textContent = t('level') + ' ' + n.level;
-    card.el.style.setProperty('--lv', (n.level >= MAX_LEVEL ? 100 : n.xp / xpNeeded(n.level) * 100) + '%');
+    if (RECIPES[key]) {
+      // Resep tidak punya level sendiri: tampilkan HP yang dipulihkan
+      card.level.textContent = '❤️ ' + heals[key];
+    } else {
+      const n = state.nodes[key];
+      card.level.textContent = t('level') + ' ' + n.level;
+      card.el.style.setProperty('--lv', (n.level >= MAX_LEVEL ? 100 : n.xp / xpNeeded(n.level) * 100) + '%');
+    }
     card.el.classList.toggle('on', on);
     card.el.setAttribute('aria-pressed', on);
   }
@@ -164,12 +180,38 @@ function renderTools() {
     el.querySelector('.tool-hint').hidden = !nextTier(tool);
   }
   for (const [key, card] of Object.entries(cards)) {
-    const node = NODES[key];
-    card.duration.innerHTML = nodeOpen(key)
-      ? num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + ` · ${node.xp} Exp`
+    const node = NODES[key] || RECIPES[key];
+    card.duration.innerHTML = nodeOpen(key) ? num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + ` · ${node.xp} Exp`
+      : RECIPES[key] ? '🔒 ' + t('needKitchen')(node.kitchen)
       : '🔒 ' + t('needs')(t(TOOLS[node.tool].tiers[node.tier].key));
+    if (card.inputs) card.inputs.innerHTML = costHtml(node.input);
+  }
+  renderKitchen();
+}
+
+// Dapur: kartu level + skill Memasak + upgrade
+const kitchenUpgradeBtn = $('kitchen-upgrade');
+function renderKitchen() {
+  const lv = state.kitchen.level, cost = KITCHEN.cost[lv + 1], c = state.cooking, maxed = c.level >= MAX_LEVEL;
+  $('kitchen-level').textContent = 'Lv. ' + lv;
+  $('kitchen-desc').textContent = t('kitchenRecipes')(Object.values(RECIPES).filter(r => r.kitchen <= lv).length);
+  $('cooking-level').textContent = t('cooking') + ' Lv. ' + c.level;
+  $('cooking-fill').style.width = (maxed ? 100 : c.xp / xpNeeded(c.level) * 100) + '%';
+  $('cooking-xp').textContent = maxed ? t('max') : num(c.xp) + ' / ' + num(xpNeeded(c.level));
+  $('cook-speed-row').hidden = !c.level;
+  $('cook-speed').textContent = '−' + num(COOK_CUT * c.level * 100, 2) + '%';
+  kitchenUpgradeBtn.hidden = !cost;
+  if (cost) {
+    $('kitchen-next').textContent = t('upgradeLv')(lv + 1);
+    $('kitchen-cost').innerHTML = costHtml(cost);
+    kitchenUpgradeBtn.disabled = !canAfford(cost);
   }
 }
+kitchenUpgradeBtn.addEventListener('click', () => {
+  if (!upgradeKitchen()) return;
+  renderTools();
+  renderKepeng();
+});
 
 // Menu: area terkunci tidak bisa dibuka dan menampilkan syaratnya
 function renderNav() {
@@ -370,7 +412,7 @@ function showTip(key) {
   renderHouse();
   if (!key) { tipEl.hidden = true; return; }
   const r = itemsEl.querySelector(`[data-item="${key}"]`).getBoundingClientRect();
-  tipEl.textContent = t(key);
+  tipEl.textContent = t(key) + (heals[key] ? ' · ❤️ ' + heals[key] : '');
   tipEl.hidden = false;
   // Jaga popup tetap di dalam layar walau namanya panjang
   const half = tipEl.offsetWidth / 2;
@@ -401,15 +443,19 @@ function loop(now) {
     state.progress += dt;
     if (state.progress >= actionTime(key)) {
       let got;
-      for (let time; state.progress >= (time = actionTime(key)); state.progress -= time) got = act(key);
+      for (let time; state.active && state.progress >= (time = actionTime(key)); state.progress -= time) got = act(key);
+      if (got && got.stopped) save();
       const opened = checkUnlocks();
       if (opened.length) {
         save();
         renderNav();
-        if (page === NODES[key].area) popup(key, null, t(AREA_UNLOCKS[opened[0]].done));
+        if (page === activityArea(key)) popup(key, null, t(AREA_UNLOCKS[opened[0]].done));
       }
       renderTools();
-      if (page === NODES[key].area) popup(key, got);
+      if (page === activityArea(key)) {
+        if (!got || got.item) popup(key, got);
+        if (got && got.stopped) popup(key, null, t('outOfIngredients'));
+      }
       else if (page === 'anvil') renderAnvil();
       else if (page === 'rumah') renderHouse();
       else if (page === 'pasar') renderMarket();
@@ -421,7 +467,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['hutan', 'goa', 'sungai', 'rumah', 'pasar', 'anvil', 'settings'];
+const PAGES = ['hutan', 'goa', 'sungai', 'dapur', 'rumah', 'pasar', 'anvil', 'settings'];
 const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
 function setMenu(open) {

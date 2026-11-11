@@ -171,6 +171,11 @@
   .card.locked .icon { filter: grayscale(1); opacity: .35; }
   .card.locked .level { visibility: hidden; }
   .tool-hint { display: block; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .skill { margin-top: 12px; }
+  .skill .level { display: block; }
+  .skill .bar { margin-top: 4px; }
+  .inputs { display: block; font-size: 11px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; line-height: 1.5; }
+  .card.on .inputs { color: inherit; opacity: .85; }
 
   /* Anvil: satu baris per alat yang bisa ditempa */
   .recipes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
@@ -364,6 +369,7 @@
   <button class="nav-item" data-page="hutan"><span>🌳</span><span data-i18n="forest"></span></button>
   <button class="nav-item" data-page="goa"><span>⛰️</span><span class="nav-text"><span data-i18n="cave"></span><small class="nav-lock" data-i18n="caveLocked"></small></span></button>
   <button class="nav-item" data-page="sungai"><span>🏞️</span><span class="nav-text"><span data-i18n="river"></span><small class="nav-lock" data-i18n="riverLocked"></small></span></button>
+  <button class="nav-item" data-page="dapur"><span>🍳</span><span data-i18n="kitchen"></span></button>
   <button class="nav-item" data-page="rumah"><span>🏠</span><span data-i18n="house"></span></button>
   <button class="nav-item" data-page="pasar"><span>🏪</span><span data-i18n="market"></span></button>
   <button class="nav-item" data-page="anvil"><span>⚒️</span><span data-i18n="anvil"></span></button>
@@ -392,6 +398,26 @@
   <main id="page-sungai" hidden>
     <section class="tool" data-tool="rod"></section>
     <div class="cards" data-area="sungai"></div>
+  </main>
+
+  <main id="page-dapur" hidden>
+    <section class="tool">
+      <div class="tool-top">
+        <span class="tool-icon" aria-hidden="true">🍳</span>
+        <div class="tool-main">
+          <div class="tool-title"><span class="level" id="kitchen-level"></span><span class="name" data-i18n="kitchen"></span></div>
+          <span class="tool-xp" id="kitchen-desc"></span>
+        </div>
+      </div>
+      <div class="skill">
+        <span class="level" id="cooking-level"></span>
+        <span class="bar"><span class="fill" id="cooking-fill"></span></span>
+        <span class="tool-xp" id="cooking-xp"></span>
+      </div>
+      <dl class="stats"><div id="cook-speed-row"><dt data-i18n="cookSpeed"></dt><dd id="cook-speed"></dd></div></dl>
+      <button class="upgrade-btn" id="kitchen-upgrade"><span id="kitchen-next"></span><span class="cost" id="kitchen-cost"></span></button>
+    </section>
+    <div class="cards" data-area="dapur"></div>
   </main>
 
   <main id="page-rumah" hidden>
