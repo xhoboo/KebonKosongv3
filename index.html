@@ -146,6 +146,23 @@
     font-variant-numeric: tabular-nums; white-space: nowrap;
   }
   .empty { color: var(--muted); font-size: 14px; margin: 0; }
+  .group { font-size: 12px; font-weight: 600; color: var(--muted); margin: 4px 0 10px; }
+  .items + .group { margin-top: 12px; }
+  .segment.three { grid-template-columns: repeat(3, 1fr); }
+  .sort { margin-bottom: 16px; }
+  .tool .fill.full { background: var(--danger); }
+  .pop.full { color: var(--danger); }
+  .notice {
+    background: var(--card); border: 1.5px solid var(--danger); border-radius: 12px;
+    padding: 12px 14px; margin-bottom: 12px;
+  }
+  .notice-title { display: block; font-weight: 600; font-size: 14px; color: var(--danger); }
+  .notice-list { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0 10px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .notice-btn {
+    min-height: 32px; padding: 0 12px;
+    background: var(--track); border: 0; border-radius: 8px;
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer;
+  }
 
   .market { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   .sell-row {
@@ -302,7 +319,7 @@
   <div class="brand">Kebon Kosong</div>
   <button class="nav-item" data-page="pohon"><span>🌳</span><span data-i18n="trees"></span></button>
   <button class="nav-item" data-page="goa"><span>⛰️</span><span data-i18n="cave"></span></button>
-  <button class="nav-item" data-page="inventory"><span>🎒</span><span data-i18n="inventory"></span></button>
+  <button class="nav-item" data-page="rumah"><span>🏠</span><span data-i18n="house"></span></button>
   <button class="nav-item" data-page="pasar"><span>🏪</span><span data-i18n="market"></span></button>
   <button class="nav-item" data-page="settings"><span>⚙️</span><span data-i18n="settings"></span></button>
 </nav>
@@ -339,9 +356,29 @@
   <div class="cards" data-area="goa"></div>
   </main>
 
-  <main id="page-inventory" hidden>
-    <h2 data-i18n="inventory"></h2>
-    <ul class="items" id="items"></ul>
+  <main id="page-rumah" hidden>
+    <section class="tool">
+      <div class="tool-top">
+        <span class="tool-icon" aria-hidden="true">🏠</span>
+        <div class="tool-main">
+          <div class="tool-title"><span class="level" id="house-level"></span><span class="name" data-i18n="house"></span></div>
+          <span class="bar"><span class="fill" id="house-fill"></span></span>
+          <span class="tool-xp" id="house-slots"></span>
+        </div>
+      </div>
+      <button class="upgrade-btn" id="house-upgrade"><span id="house-next"></span><span class="cost" id="house-cost"></span></button>
+    </section>
+    <section class="notice" id="discarded" hidden>
+      <span class="notice-title" data-i18n="discarded"></span>
+      <div class="notice-list" id="discarded-list"></div>
+      <button class="notice-btn" id="discarded-dismiss" data-i18n="dismiss"></button>
+    </section>
+    <div class="segment three sort">
+      <button data-sort-choice="cat" data-i18n="sortCat"></button>
+      <button data-sort-choice="qty" data-i18n="sortQty"></button>
+      <button data-sort-choice="name" data-i18n="sortName"></button>
+    </div>
+    <div id="items"></div>
     <div class="tip" id="tip" role="status" hidden></div>
     <p class="empty" id="empty" data-i18n="empty"></p>
   </main>

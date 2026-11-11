@@ -134,7 +134,7 @@ Draf tier:
 ## Urutan pengerjaan
 
 1. ✅ Pecah `index.html` ke `js/data.js`, `js/game.js`, `js/ui.js` (script biasa, tanpa build), save v3 + migrasi, Kepeng + jual item, batas offline 24 jam.
-2. Rumah (batas jenis item).
+2. ✅ Rumah (batas item berbeda, upgrade, sortir, catatan item dibuang).
 3. Hutan & Goa dengan rantai alat silang (tier 1–2), Anvil dasar.
 4. Sungai & alat pancing.
 5. Dapur.

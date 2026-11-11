@@ -2,7 +2,7 @@
 
 const TEXT = {
   id: {
-    trees: 'Pohon', cave: 'Goa', inventory: 'Inventory', market: 'Pasar', settings: 'Pengaturan',
+    trees: 'Pohon', cave: 'Goa', house: 'Rumah', market: 'Pasar', settings: 'Pengaturan',
     acacia: 'Pohon Akasia', rock: 'Batu', seconds: 'detik',
     acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', stone: 'Batu', pebble: 'Kerikil',
     miss: 'Zonk', empty: 'Belum ada item.',
@@ -13,9 +13,14 @@ const TEXT = {
     progress: 'Progres', reset: 'Klik 3 kali untuk reset progress', resetLeft: n => `Klik ${n} kali lagi`,
     kepeng: 'Kepeng', marketEmpty: 'Belum ada item untuk dijual.', each: 'per item',
     sellOne: 'Jual 1', sellAll: 'Jual semua', sure: 'Yakin?',
+    slotsUsed: (used, cap) => `${used} / ${cap} item berbeda`, houseFull: 'Rumah penuh',
+    houseUpgrade: (lv, add) => `Upgrade ke Lv. ${lv} · +${add} slot`,
+    sortCat: 'Kategori', sortQty: 'Jumlah', sortName: 'Nama',
+    catWood: 'Kayu', catStone: 'Batu & Logam', catNature: 'Bahan Alam',
+    discarded: 'Dibuang karena rumah penuh', dismiss: 'Tutup',
   },
   en: {
-    trees: 'Trees', cave: 'Cave', inventory: 'Inventory', market: 'Market', settings: 'Settings',
+    trees: 'Trees', cave: 'Cave', house: 'House', market: 'Market', settings: 'Settings',
     acacia: 'Acacia Tree', rock: 'Rock', seconds: 'sec',
     acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', stone: 'Stone', pebble: 'Pebble',
     miss: 'Miss', empty: 'No items yet.',
@@ -26,6 +31,11 @@ const TEXT = {
     progress: 'Progress', reset: 'Click 3 times to reset progress', resetLeft: n => `Click ${n} more ${n === 1 ? 'time' : 'times'}`,
     kepeng: 'Kepeng', marketEmpty: 'No items to sell yet.', each: 'each',
     sellOne: 'Sell 1', sellAll: 'Sell all', sure: 'Sure?',
+    slotsUsed: (used, cap) => `${used} / ${cap} different items`, houseFull: 'House full',
+    houseUpgrade: (lv, add) => `Upgrade to Lv. ${lv} · +${add} slots`,
+    sortCat: 'Category', sortQty: 'Amount', sortName: 'Name',
+    catWood: 'Wood', catStone: 'Stone & Metal', catNature: 'Natural',
+    discarded: 'Discarded because the house is full', dismiss: 'Close',
   },
 };
 
@@ -37,17 +47,33 @@ const PEBBLE_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">'
 // Mata uang
 const KEPENG_ICON = '🪙';
 
-// Semua item yang bisa didapat, sesuai urutan tampil di inventory.
+// Kategori item, sesuai urutan tampil saat Rumah disortir per kategori
+const CATEGORIES = [
+  { key: 'wood', name: 'catWood' },
+  { key: 'stone', name: 'catStone' },
+  { key: 'nature', name: 'catNature' },
+];
+
+// Semua item yang bisa didapat, sesuai urutan bawaan di Rumah.
 // price = harga jual per item di Pasar dalam Kepeng (draf, disetel setelah dicoba).
 const ITEMS = [
-  { key: 'acaciaWood', icon: '🪵', price: 2 },
-  { key: 'twig', icon: '🌿', price: 1 },
-  { key: 'leaf', icon: '🍃', price: 1 },
-  { key: 'stone', icon: '🪨', price: 2 },
-  { key: 'pebble', icon: PEBBLE_ICON, price: 1 },
+  { key: 'acaciaWood', icon: '🪵', cat: 'wood', price: 2 },
+  { key: 'twig', icon: '🌿', cat: 'nature', price: 1 },
+  { key: 'leaf', icon: '🍃', cat: 'nature', price: 1 },
+  { key: 'stone', icon: '🪨', cat: 'stone', price: 2 },
+  { key: 'pebble', icon: PEBBLE_ICON, cat: 'stone', price: 1 },
 ];
 const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
 const prices = Object.fromEntries(ITEMS.map(it => [it.key, it.price]));
+
+// Rumah: menampung sejumlah item berbeda (jumlah per item tidak dibatasi).
+// Item jenis baru yang didapat saat rumah penuh dibuang. Biaya upgrade draf, disetel setelah dicoba.
+const HOUSE = {
+  base: 50,
+  perLevel: 10,
+  maxLevel: 10,
+  cost: level => ({ kepeng: 500 * 2 ** level, acaciaWood: 200 * (level + 1), stone: 200 * (level + 1) }),
+};
 
 // Progres offline (dan saat tab tidak terlihat) paling lama dihitung 24 jam
 const OFFLINE_CAP = 24 * 60 * 60 * 1000;

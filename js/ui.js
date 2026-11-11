@@ -1,4 +1,4 @@
-// Tampilan: kartu, inventory, pasar, menu, pengaturan, dan loop animasi.
+// Tampilan: kartu, rumah, pasar, menu, pengaturan, dan loop animasi.
 
 const $ = id => document.getElementById(id);
 const itemsEl = $('items'), emptyEl = $('empty');
@@ -29,8 +29,8 @@ for (const [key, node] of Object.entries(NODES)) {
 function popup(key, got) {
   const card = cards[key];
   const el = document.createElement('span');
-  el.className = got ? 'pop' : 'pop miss';
-  el.innerHTML = got ? '+' + got.qty + ' ' + icons[got.item] : t('miss');
+  el.className = !got ? 'pop miss' : got.lost ? 'pop full' : 'pop';
+  el.innerHTML = !got ? t('miss') : got.lost ? icons[got.item] + ' ' + t('houseFull') : '+' + got.qty + ' ' + icons[got.item];
   card.el.appendChild(el);
   // Tetap di dalam kartu sepanjang animasi (mulai 6px lebih rendah, berakhir 8px lebih tinggi), jarak tepi 6px
   const x0 = 6, x1 = card.el.clientWidth - el.offsetWidth - 6;
@@ -53,17 +53,73 @@ function popup(key, got) {
 
 let openItem = null; // item yang namanya sedang ditampilkan
 
-function renderInventory() {
-  const owned = ITEMS.filter(it => state.items[it.key] >= 1);
-  itemsEl.innerHTML = owned.map(it => {
-    const qty = num(Math.floor(state.items[it.key]));
-    const open = it.key === openItem;
-    return `<li><button class="item" data-item="${it.key}" aria-expanded="${open}" aria-label="${t(it.key)}: ${qty}">` +
-      `<span class="item-icon" aria-hidden="true">${it.icon}</span>` +
-      `<span class="item-qty" aria-hidden="true">${qty}</span></button></li>`;
-  }).join('');
-  emptyEl.hidden = owned.length > 0;
+// Biaya (Kepeng dan/atau item) sebagai "ikon punya/butuh"
+const costHtml = cost => Object.entries(cost)
+  .map(([key, n]) => `${key === 'kepeng' ? KEPENG_ICON : icons[key]} ${num(Math.floor(have(key)))}/${num(n)}`).join(' · ');
+
+function itemTile(it) {
+  const qty = num(Math.floor(state.items[it.key]));
+  const open = it.key === openItem;
+  return `<li><button class="item" data-item="${it.key}" aria-expanded="${open}" aria-label="${t(it.key)}: ${qty}">` +
+    `<span class="item-icon" aria-hidden="true">${it.icon}</span>` +
+    `<span class="item-qty" aria-hidden="true">${qty}</span></button></li>`;
 }
+
+// Rumah: kartu kapasitas + upgrade, catatan item yang dibuang, lalu isi rumah sesuai urutan yang dipilih
+const houseUpgradeBtn = $('house-upgrade');
+function renderHouse() {
+  const owned = ITEMS.filter(it => state.items[it.key] >= 1);
+  let groups;
+  if (settings.sort === 'cat') {
+    groups = CATEGORIES.map(c => [t(c.name), owned.filter(it => it.cat === c.key)]).filter(([, list]) => list.length);
+  } else {
+    const list = [...owned];
+    if (settings.sort === 'qty') list.sort((a, b) => state.items[b.key] - state.items[a.key]);
+    else {
+      const collator = new Intl.Collator(settings.lang);
+      list.sort((a, b) => collator.compare(t(a.key), t(b.key)));
+    }
+    groups = [[null, list]];
+  }
+  itemsEl.innerHTML = groups.map(([title, list]) =>
+    (title ? `<h3 class="group">${title}</h3>` : '') + `<ul class="items">${list.map(itemTile).join('')}</ul>`).join('');
+  emptyEl.hidden = owned.length > 0;
+  document.querySelectorAll('[data-sort-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.sortChoice === settings.sort));
+
+  const used = usedSlots(), cap = houseCapacity(), lv = state.house.level;
+  $('house-level').textContent = 'Lv. ' + lv;
+  $('house-fill').style.width = Math.min(100, used / cap * 100) + '%';
+  $('house-fill').classList.toggle('full', used >= cap);
+  $('house-slots').textContent = t('slotsUsed')(num(used), num(cap));
+  houseUpgradeBtn.hidden = lv >= HOUSE.maxLevel;
+  if (lv < HOUSE.maxLevel) {
+    const cost = HOUSE.cost(lv);
+    $('house-next').textContent = t('houseUpgrade')(lv + 1, HOUSE.perLevel);
+    $('house-cost').innerHTML = costHtml(cost);
+    houseUpgradeBtn.disabled = !canAfford(cost);
+  }
+
+  const lost = Object.keys(state.discarded);
+  $('discarded').hidden = !lost.length;
+  $('discarded-list').innerHTML = lost.map(key => `<span>${icons[key]} ×${num(state.discarded[key])}</span>`).join('');
+}
+
+houseUpgradeBtn.addEventListener('click', () => {
+  if (!upgradeHouse()) return;
+  renderHouse();
+  renderKepeng();
+  renderAxe();
+});
+$('discarded-dismiss').addEventListener('click', () => {
+  state.discarded = {};
+  save();
+  renderHouse();
+});
+document.querySelectorAll('[data-sort-choice]').forEach(b => b.addEventListener('click', () => {
+  settings.sort = b.dataset.sortChoice;
+  saveSettings();
+  renderHouse();
+}));
 
 function render() {
   for (const [key, card] of Object.entries(cards)) {
@@ -122,7 +178,7 @@ function applySettings() {
   $('menu-btn').setAttribute('aria-label', t('openMenu'));
   document.querySelectorAll('[data-theme-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeChoice === settings.theme));
   document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
-  renderInventory();
+  renderHouse();
   renderMarket();
   renderKepeng();
 }
@@ -190,7 +246,7 @@ let tipTimer;
 function showTip(key) {
   openItem = key;
   clearTimeout(tipTimer);
-  renderInventory();
+  renderHouse();
   if (!key) { tipEl.hidden = true; return; }
   const r = itemsEl.querySelector(`[data-item="${key}"]`).getBoundingClientRect();
   tipEl.textContent = t(key);
@@ -227,7 +283,7 @@ function loop(now) {
       for (let time; state.progress >= (time = actionTime(key)); state.progress -= time) got = act(key);
       renderAxe();
       if (page === NODES[key].area) popup(key, got);
-      else if (page === 'inventory') renderInventory();
+      else if (page === 'rumah') renderHouse();
       else if (page === 'pasar') renderMarket();
     }
   }
@@ -237,7 +293,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['pohon', 'goa', 'inventory', 'pasar', 'settings'];
+const PAGES = ['pohon', 'goa', 'rumah', 'pasar', 'settings'];
 const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
 function setMenu(open) {
@@ -247,13 +303,14 @@ function setMenu(open) {
 
 function showPage(name) {
   if (openItem) showTip(null);
+  if (name === 'inventory') name = 'rumah'; // tautan lama sebelum Inventory jadi Rumah
   page = PAGES.includes(name) ? name : 'pohon';
   PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
   navItems.forEach(n => {
     if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
     else n.removeAttribute('aria-current');
   });
-  if (page === 'inventory') renderInventory();
+  if (page === 'rumah') renderHouse();
   if (page === 'pasar') renderMarket();
 }
 
@@ -301,7 +358,7 @@ resetBtn.addEventListener('click', () => {
   save();
   render();
   renderAxe();
-  renderInventory();
+  renderHouse();
   renderMarket();
   renderKepeng();
 });

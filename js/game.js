@@ -10,14 +10,16 @@ const freshState = () => ({
   nodes: Object.fromEntries(Object.keys(NODES).map(k => [k, { level: 0, xp: 0 }])),
   axe: { tier: 0, level: 0, xp: 0 },
   kepeng: 0,
+  house: { level: 0 },
+  discarded: {}, // item yang dibuang karena rumah penuh, sampai catatannya ditutup
   active: null, // hanya satu aksi yang berjalan dalam satu waktu
   progress: 0,
   lastTick: Date.now(),
-  // 2: exp sumber daya dihitung per exp, bukan per aksi; 3: ada Kepeng
-  version: 3,
+  // 2: exp sumber daya dihitung per exp, bukan per aksi; 3: ada Kepeng; 4: ada Rumah
+  version: 4,
 });
 const state = freshState();
-const settings = { theme: document.documentElement.dataset.theme, lang: 'id' };
+const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat' };
 
 // Tambah exp ke sumber daya atau kapak; exp berlebih dibawa ke level berikutnya
 function gainXp(s, amount, need) {
@@ -42,6 +44,8 @@ function loadState(saved) {
     for (const k in NODES) Object.assign(state.nodes[k], saved.nodes && saved.nodes[k]);
     Object.assign(state.axe, saved.axe);
     state.kepeng = saved.kepeng || 0; // simpanan sebelum versi 3 belum punya Kepeng
+    Object.assign(state.house, saved.house); // sebelum versi 4 belum ada Rumah: mulai dari level 0
+    Object.assign(state.discarded, saved.discarded);
     state.active = NODES[saved.active] ? saved.active : null;
     state.progress = saved.progress || 0;
     state.lastTick = saved.lastTick || Date.now();
@@ -55,6 +59,7 @@ try { loadState(JSON.parse(localStorage.getItem(SAVE_KEY))); } catch {}
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
   if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
+  if (saved && ['cat', 'qty', 'name'].includes(saved.sort)) settings.sort = saved.sort;
 } catch {}
 
 function save() {
@@ -77,18 +82,52 @@ function rollDrop(key) {
 // Waktu satu aksi dalam ms; ayunan ke pohon makin cepat seiring level kapak
 const actionTime = key => NODES[key].time * (NODES[key].tool === 'axe' ? 1 - AXE_CUT * state.axe.level : 1);
 
+// Rumah: kapasitas = jumlah item berbeda yang bisa disimpan
+const houseCapacity = () => HOUSE.base + HOUSE.perLevel * state.house.level;
+const usedSlots = () => ITEMS.reduce((n, it) => n + (state.items[it.key] >= 1), 0);
+
+// Masukkan item ke Rumah. Item yang sudah ada selalu muat; item jenis baru dibuang kalau rumah penuh.
+function addItem(key, qty) {
+  if (state.items[key] < 1 && usedSlots() >= houseCapacity()) {
+    state.discarded[key] = (state.discarded[key] || 0) + qty;
+    return false;
+  }
+  state.items[key] += qty;
+  return true;
+}
+
+// Biaya bisa berisi Kepeng (key 'kepeng') dan item
+const have = key => key === 'kepeng' ? state.kepeng : state.items[key];
+const canAfford = cost => Object.entries(cost).every(([key, n]) => have(key) >= n);
+function pay(cost) {
+  for (const [key, n] of Object.entries(cost)) {
+    if (key === 'kepeng') state.kepeng -= n;
+    else state.items[key] -= n;
+  }
+}
+
+function upgradeHouse() {
+  if (state.house.level >= HOUSE.maxLevel) return false;
+  const cost = HOUSE.cost(state.house.level);
+  if (!canAfford(cost)) return false;
+  pay(cost);
+  state.house.level++;
+  save();
+  return true;
+}
+
 // Satu aksi (tebang/tambang): undi hasil, tambah exp ke sumber daya (dan kapak untuk pohon).
-// Mengembalikan { item, qty }, atau null kalau zonk.
+// Mengembalikan { item, qty, lost }, atau null kalau zonk; lost = dibuang karena rumah penuh.
 function act(key) {
   const node = NODES[key], drop = rollDrop(key);
   let qty = 0;
   if (drop) {
     qty = drop === node.wood && Math.random() < AXES[state.axe.tier].double ? 2 : 1;
-    state.items[drop] += qty;
   }
+  const lost = drop && !addItem(drop, qty);
   gainXp(state.nodes[key], node.xp, xpNeeded);
   if (node.tool === 'axe') gainXp(state.axe, node.xp, axeXpNeeded);
-  return drop && { item: drop, qty };
+  return drop && { item: drop, qty, lost };
 }
 
 // Jual item di Pasar dengan harga tetap; mengembalikan jumlah yang benar-benar terjual

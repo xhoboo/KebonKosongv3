@@ -5,7 +5,7 @@ Game idle sederhana, tanpa build step (script biasa, bukan ES module, supaya tet
 - `index.html`: markup dan CSS.
 - `js/data.js`: data saja (teks id/en, item, harga, sumber daya, alat, rumus exp).
 - `js/game.js`: state, simpan/muat + migrasi, aksi, jual, progres offline. Tidak menyentuh DOM.
-- `js/ui.js`: tampilan, menu, pasar, pengaturan, loop animasi.
+- `js/ui.js`: tampilan, menu, rumah, pasar, pengaturan, loop animasi.
 
 Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perubahan bentuk state wajib dimigrasi di `loadState`, jangan reset progres pemain.
 
@@ -22,6 +22,7 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 - Kapak butuh sekitar 15 hari menebang Akasia nonstop untuk mencapai level 100. Tiap level butuh 10% exp lebih banyak dari level sebelumnya (awal cepat, akhir sangat lama). Tiap level memotong waktu ayunan ke pohon 0,75% (75% di level 100).
 - Progres offline (dan tab yang lama tersembunyi) dihitung paling lama 24 jam.
 - Mata uang: Kepeng. Item dijual di Pasar dengan harga tetap per item (`price` di `ITEMS`); "Jual semua" butuh klik kedua dalam 3 detik.
+- Rumah menyimpan item berdasarkan jumlah item **berbeda** (jumlah per item tidak dibatasi): awal 50, +10 per level, maks level 10, upgrade dengan Kepeng + Kayu Akasia + Batu (`HOUSE` di `data.js`). Semua item masuk lewat `addItem`; item jenis baru saat rumah penuh dibuang dan dicatat di Rumah sampai catatannya ditutup. Isi Rumah bisa diurutkan per kategori, jumlah, atau nama.
 - Upgrade Kapak Biasa → Kapak Berkilau (250 Kayu Akasia + 250 Batu) bisa kapan saja, level dan exp kapak tetap, dan memberi 5% peluang dapat 2 kayu.
 
 ## Rancangan
