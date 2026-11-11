@@ -2,14 +2,23 @@
 
 const TEXT = {
   id: {
-    trees: 'Pohon', cave: 'Goa', house: 'Rumah', market: 'Pasar', settings: 'Pengaturan',
-    acacia: 'Pohon Akasia', rock: 'Batu', seconds: 'detik',
-    acaciaWood: 'Kayu Akasia', twig: 'Ranting', leaf: 'Daun', stone: 'Batu', pebble: 'Kerikil',
+    forest: 'Hutan', cave: 'Goa', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
+    acacia: 'Pohon Akasia', teak: 'Pohon Jati', rock: 'Batu', copper: 'Batu Tembaga', seconds: 'detik',
+    acaciaWood: 'Kayu Akasia', teakWood: 'Kayu Jati', twig: 'Ranting', leaf: 'Daun',
+    stone: 'Batu', pebble: 'Kerikil', copperOre: 'Bijih Tembaga',
     miss: 'Zonk', empty: 'Belum ada item.',
-    theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa',
+    theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa', sound: 'Suara', on: 'Nyala', off: 'Mati',
     openMenu: 'Buka menu', level: 'Level',
     axeBasic: 'Kapak Biasa', axeShiny: 'Kapak Berkilau', axeInterval: 'Interval kapak', doubleWood: 'Peluang 2 kayu',
-    max: 'Maks', upgradeTo: name => `Upgrade ke ${name}`,
+    pickBasic: 'Beliung Biasa', pickShiny: 'Beliung Berkilau', pickInterval: 'Interval beliung', doubleOre: 'Peluang 2 batu/bijih',
+    max: 'Maks', needs: name => `Butuh ${name}`,
+    caveLocked: 'Terbuka di Pohon Akasia Lv. 10', unlockedCave: 'Goa terbuka!',
+    toolHint: 'Upgrade alat di Anvil',
+    anvilCanForge: tier => `Bisa menempa alat sampai tingkat ${tier}`,
+    upgradeLv: lv => `Upgrade ke Lv. ${lv}`,
+    forge: 'Tempa', forging: 'Menempa…', chance: p => `Peluang berhasil ${p}%`,
+    needAnvil: lv => `Butuh Anvil Lv. ${lv}`, topTier: 'Sudah tingkat tertinggi',
+    forgeOk: name => `Berhasil! ${name}`, forgeFail: 'Gagal, bahan hilang',
     progress: 'Progres', reset: 'Klik 3 kali untuk reset progress', resetLeft: n => `Klik ${n} kali lagi`,
     kepeng: 'Kepeng', marketEmpty: 'Belum ada item untuk dijual.', each: 'per item',
     sellOne: 'Jual 1', sellAll: 'Jual semua', sure: 'Yakin?',
@@ -20,14 +29,23 @@ const TEXT = {
     discarded: 'Dibuang karena rumah penuh', dismiss: 'Tutup',
   },
   en: {
-    trees: 'Trees', cave: 'Cave', house: 'House', market: 'Market', settings: 'Settings',
-    acacia: 'Acacia Tree', rock: 'Rock', seconds: 'sec',
-    acaciaWood: 'Acacia Wood', twig: 'Twig', leaf: 'Leaf', stone: 'Stone', pebble: 'Pebble',
+    forest: 'Forest', cave: 'Cave', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
+    acacia: 'Acacia Tree', teak: 'Teak Tree', rock: 'Rock', copper: 'Copper Rock', seconds: 'sec',
+    acaciaWood: 'Acacia Wood', teakWood: 'Teak Wood', twig: 'Twig', leaf: 'Leaf',
+    stone: 'Stone', pebble: 'Pebble', copperOre: 'Copper Ore',
     miss: 'Miss', empty: 'No items yet.',
-    theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language',
+    theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language', sound: 'Sound', on: 'On', off: 'Off',
     openMenu: 'Open menu', level: 'Level',
     axeBasic: 'Basic Axe', axeShiny: 'Shiny Axe', axeInterval: 'Axe interval', doubleWood: 'Chance of 2 wood',
-    max: 'Max', upgradeTo: name => `Upgrade to ${name}`,
+    pickBasic: 'Basic Pickaxe', pickShiny: 'Shiny Pickaxe', pickInterval: 'Pickaxe interval', doubleOre: 'Chance of 2 stone/ore',
+    max: 'Max', needs: name => `Requires ${name}`,
+    caveLocked: 'Unlocks at Acacia Tree Lv. 10', unlockedCave: 'Cave unlocked!',
+    toolHint: 'Upgrade tools at the Anvil',
+    anvilCanForge: tier => `Can forge tools up to tier ${tier}`,
+    upgradeLv: lv => `Upgrade to Lv. ${lv}`,
+    forge: 'Forge', forging: 'Forging…', chance: p => `Success chance ${p}%`,
+    needAnvil: lv => `Requires Anvil Lv. ${lv}`, topTier: 'Highest tier reached',
+    forgeOk: name => `Success! ${name}`, forgeFail: 'Failed, materials lost',
     progress: 'Progress', reset: 'Click 3 times to reset progress', resetLeft: n => `Click ${n} more ${n === 1 ? 'time' : 'times'}`,
     kepeng: 'Kepeng', marketEmpty: 'No items to sell yet.', each: 'each',
     sellOne: 'Sell 1', sellAll: 'Sell all', sure: 'Sure?',
@@ -39,10 +57,19 @@ const TEXT = {
   },
 };
 
-// Tidak ada emoji kerikil, jadi digambar sendiri
+// Ikon yang tidak ada emojinya digambar sendiri
 const PEBBLE_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
   '<ellipse cx="7" cy="16" rx="5" ry="4" fill="#9a958c"/><ellipse cx="16.5" cy="17" rx="4.5" ry="3.5" fill="#7f7a72"/>' +
   '<ellipse cx="12" cy="9.5" rx="4" ry="3.2" fill="#b8b2a8"/></svg>';
+const COPPER_ORE_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path d="M4 16 7 8l8-3 6 6-2 8-9 1Z" fill="#a85e32"/><path d="m7 8 8-3 6 6-7 1Z" fill="#d98a52"/>' +
+  '<path d="m14 12 7-1-2 8Z" fill="#8a4a26"/></svg>';
+const COPPER_ROCK_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path d="M2 18 5 9l7-5 7 3 3 10-6 4H7Z" fill="#8d877d"/><path d="m5 9 7-5 7 3-6 4Z" fill="#aaa397"/>' +
+  '<circle cx="8.5" cy="14.5" r="1.9" fill="#d9783a"/><circle cx="15.5" cy="15.5" r="1.6" fill="#e08a4a"/>' +
+  '<circle cx="12.5" cy="8.5" r="1.2" fill="#c96a2e"/></svg>';
+// Kayu Jati: emoji kayu yang digelapkan
+const TEAK_WOOD_ICON = '<span class="emoji-teak">🪵</span>';
 
 // Mata uang
 const KEPENG_ICON = '🪙';
@@ -58,10 +85,12 @@ const CATEGORIES = [
 // price = harga jual per item di Pasar dalam Kepeng (draf, disetel setelah dicoba).
 const ITEMS = [
   { key: 'acaciaWood', icon: '🪵', cat: 'wood', price: 2 },
+  { key: 'teakWood', icon: TEAK_WOOD_ICON, cat: 'wood', price: 5 },
   { key: 'twig', icon: '🌿', cat: 'nature', price: 1 },
   { key: 'leaf', icon: '🍃', cat: 'nature', price: 1 },
   { key: 'stone', icon: '🪨', cat: 'stone', price: 2 },
   { key: 'pebble', icon: PEBBLE_ICON, cat: 'stone', price: 1 },
+  { key: 'copperOre', icon: COPPER_ORE_ICON, cat: 'stone', price: 5 },
 ];
 const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
 const prices = Object.fromEntries(ITEMS.map(it => [it.key, it.price]));
@@ -78,35 +107,73 @@ const HOUSE = {
 // Progres offline (dan saat tab tidak terlihat) paling lama dihitung 24 jam
 const OFFLINE_CAP = 24 * 60 * 60 * 1000;
 
-// Level sumber daya: tiap aksi memberi exp sebesar xp node-nya (20). Bagian eksponensial menjaga awal tetap cepat,
-// bagian kubik membuat level atas makin berat.
-// Dengan aksi 2 detik, kira-kira: Lv 10 ≈ 2 menit, Lv 50 ≈ 2 jam, Lv 75 ≈ 11,5 jam, Lv 100 ≈ 2 hari.
+// Level sumber daya: tiap aksi memberi exp sebesar xp node-nya. Bagian eksponensial menjaga awal tetap cepat,
+// bagian kubik membuat level atas makin berat. Exp per detik sama untuk semua node (20 exp / 2 detik),
+// jadi tiap node butuh kira-kira: Lv 10 ≈ 2 menit, Lv 50 ≈ 2 jam, Lv 75 ≈ 11,5 jam, Lv 100 ≈ 2 hari.
 const MAX_LEVEL = 100;
 const xpNeeded = level => 20 * Math.floor(4 * 1.07 ** level + 0.0015 * level ** 3);
 
-// Kapak: dapat exp yang sama dari menebang pohon, tiap level memotong waktu ayunan 0,75% (75% di level 100).
-// Tiap level butuh 10% exp lebih banyak dari level sebelumnya: awal cepat, akhir sangat lama.
-// Menebang Akasia nonstop (20 Exp, ayunan makin cepat):
-// Lv 10 ≈ 7 menit, Lv 25 ≈ 40 menit, Lv 50 ≈ 6,5 jam, Lv 75 ≈ 2 hari, Lv 90 ≈ 7 hari, Lv 100 ≈ 15 hari.
-const AXE_CUT = 0.0075;
-const axeXpNeeded = level => Math.round(283 * 1.1 ** level);
-// Tingkat kapak; cost = bahan untuk upgrade ke tingkat itu, double = peluang dapat 2 kayu sekali tebang
-const AXES = [
-  { key: 'axeBasic', double: 0 },
-  { key: 'axeShiny', double: 0.05, cost: { acaciaWood: 250, stone: 250 } },
-];
+// Alat (kapak untuk pohon, beliung untuk batu): dapat exp yang sama dengan node yang dikerjakan,
+// tiap level memotong waktu aksi 0,75% (75% di level 100). Tiap level butuh 10% exp lebih banyak:
+// menebang Akasia nonstop → Lv 10 ≈ 7 menit, Lv 50 ≈ 6,5 jam, Lv 75 ≈ 2 hari, Lv 100 ≈ 15 hari.
+const TOOL_CUT = 0.0075;
+const toolXpNeeded = level => Math.round(283 * 1.1 ** level);
+
+// Tingkat alat. Tingkat berikutnya ditempa di Anvil; level & exp alat tetap.
+// double = peluang hasil utama ganda; anvil = level Anvil minimum; cost = bahan tempa.
+// Aturan silang: bahan selalu kayu + batu/logam dari tingkat di bawahnya, untuk kapak maupun beliung.
+const TOOLS = {
+  axe: {
+    icon: '🪓', area: 'hutan', interval: 'axeInterval', doubleText: 'doubleWood',
+    tiers: [
+      { key: 'axeBasic', double: 0 },
+      { key: 'axeShiny', double: 0.05, anvil: 1, cost: { acaciaWood: 250, stone: 250 } },
+    ],
+  },
+  pickaxe: {
+    icon: '⛏️', area: 'goa', interval: 'pickInterval', doubleText: 'doubleOre',
+    tiers: [
+      { key: 'pickBasic', double: 0 },
+      { key: 'pickShiny', double: 0.05, anvil: 1, cost: { acaciaWood: 250, stone: 250 } },
+    ],
+  },
+};
+
+// Anvil: level menentukan tingkat alat yang bisa ditempa. Peluang berhasil tergantung selisih
+// level Anvil dengan syarat tingkat itu: pas = FORGE_BASE[tingkat], tiap level lebih +FORGE_GAP (maks 100%).
+// Gagal = bahan hilang, alat tetap.
+const FORGE_BASE = [1, 0.9, 0.75, 0.6];
+const FORGE_GAP = 0.1;
+const ANVIL = {
+  start: 1,
+  // cost[n] = biaya naik ke level n (draf)
+  cost: { 2: { kepeng: 1000, teakWood: 200, copperOre: 200 } },
+};
+
+// Area yang terkunci di awal; unlock(state) → true kalau syaratnya terpenuhi
+const AREA_UNLOCKS = {
+  goa: { text: 'caveLocked', done: 'unlockedCave', unlock: s => s.nodes.acacia.level >= 10 },
+};
 
 // Sumber daya yang bisa dikerjakan. drops(p) → [item, peluang]; p = level / 100.
 // Item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
-// xp = exp per aksi untuk level sumber daya itu. Pohon (tool: 'axe') memberi exp yang sama ke kapak
-// dan ayunannya dipercepat oleh level kapak.
+// tool + tier = alat yang dipakai dan tingkat minimumnya (di bawah itu node terkunci).
+// main = item yang bisa jadi ganda karena alat. time naik per tingkat, xp ikut naik supaya exp per detik tetap.
 const NODES = {
   acacia: {
-    area: 'pohon', icon: '🌳', time: 2000, xp: 20, tool: 'axe', wood: 'acaciaWood',
+    area: 'hutan', icon: '🌳', time: 2000, xp: 20, tool: 'axe', tier: 0, main: 'acaciaWood',
     drops: p => { const main = 0.4 + 0.6 * p; return [['acaciaWood', main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; },
   },
+  teak: {
+    area: 'hutan', icon: '🌲', time: 3000, xp: 30, tool: 'axe', tier: 1, main: 'teakWood',
+    drops: p => { const main = 0.4 + 0.6 * p; return [['teakWood', main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; },
+  },
   rock: {
-    area: 'goa', icon: '🪨', time: 2000, xp: 20,
+    area: 'goa', icon: '🪨', time: 2000, xp: 20, tool: 'pickaxe', tier: 0, main: 'stone',
     drops: p => { const main = 0.4 + 0.6 * p; return [['stone', main], ['pebble', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
+  },
+  copper: {
+    area: 'goa', icon: COPPER_ROCK_ICON, time: 3000, xp: 30, tool: 'pickaxe', tier: 1, main: 'copperOre',
+    drops: p => { const main = 0.4 + 0.6 * p; return [['copperOre', main], ['stone', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
   },
 };

@@ -1,10 +1,10 @@
-// Tampilan: kartu, rumah, pasar, menu, pengaturan, dan loop animasi.
+// Tampilan: kartu, alat, anvil, rumah, pasar, menu, pengaturan, suara, dan loop animasi.
 
 const $ = id => document.getElementById(id);
 const itemsEl = $('items'), emptyEl = $('empty');
 const t = key => TEXT[settings.lang][key];
 const num = (n, digits = 0) => n.toLocaleString(settings.lang === 'id' ? 'id-ID' : 'en-US', { maximumFractionDigits: digits });
-let page = 'pohon';
+let page = 'hutan';
 
 // Buat kartu untuk tiap sumber daya
 const cards = {};
@@ -18,6 +18,7 @@ for (const [key, node] of Object.entries(NODES)) {
   document.querySelector(`.cards[data-area="${node.area}"]`).appendChild(el);
   cards[key] = { el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), fill: el.querySelector('.fill'), icon: el.querySelector('.icon') };
   el.addEventListener('click', () => {
+    if (!nodeOpen(key)) return;
     state.active = state.active === key ? null : key;
     state.progress = 0;
     save();
@@ -26,11 +27,12 @@ for (const [key, node] of Object.entries(NODES)) {
 }
 
 // Popup hasil di posisi acak di dalam kartu; kalau aksinya cepat, popup menumpuk dan menyebar
-function popup(key, got) {
+// text = pesan khusus (mis. area baru terbuka) sebagai pengganti hasil aksi
+function popup(key, got, text) {
   const card = cards[key];
   const el = document.createElement('span');
-  el.className = !got ? 'pop miss' : got.lost ? 'pop full' : 'pop';
-  el.innerHTML = !got ? t('miss') : got.lost ? icons[got.item] + ' ' + t('houseFull') : '+' + got.qty + ' ' + icons[got.item];
+  el.className = text ? 'pop' : !got ? 'pop miss' : got.lost ? 'pop full' : 'pop';
+  el.innerHTML = text || (!got ? t('miss') : got.lost ? icons[got.item] + ' ' + t('houseFull') : '+' + got.qty + ' ' + icons[got.item]);
   card.el.appendChild(el);
   // Tetap di dalam kartu sepanjang animasi (mulai 6px lebih rendah, berakhir 8px lebih tinggi), jarak tepi 6px
   const x0 = 6, x1 = card.el.clientWidth - el.offsetWidth - 6;
@@ -108,7 +110,7 @@ houseUpgradeBtn.addEventListener('click', () => {
   if (!upgradeHouse()) return;
   renderHouse();
   renderKepeng();
-  renderAxe();
+  renderTools();
 });
 $('discarded-dismiss').addEventListener('click', () => {
   state.discarded = {};
@@ -124,6 +126,7 @@ document.querySelectorAll('[data-sort-choice]').forEach(b => b.addEventListener(
 function render() {
   for (const [key, card] of Object.entries(cards)) {
     const n = state.nodes[key], on = state.active === key;
+    card.el.classList.toggle('locked', !nodeOpen(key));
     card.fill.style.width = (on ? state.progress / actionTime(key) * 100 : 0) + '%';
     card.level.textContent = t('level') + ' ' + n.level;
     card.el.style.setProperty('--lv', (n.level >= MAX_LEVEL ? 100 : n.xp / xpNeeded(n.level) * 100) + '%');
@@ -132,40 +135,153 @@ function render() {
   }
 }
 
-// Kartu kapak, plus teks waktu & exp di kartu pohon (keduanya ikut berubah saat kapak naik level)
-const axeUpgradeBtn = $('axe-upgrade');
-function renderAxe() {
-  const axe = state.axe, tier = AXES[axe.tier], next = AXES[axe.tier + 1], maxed = axe.level >= MAX_LEVEL;
-  $('axe-level').textContent = 'Lv. ' + axe.level;
-  $('axe-name').textContent = t(tier.key);
-  $('axe-fill').style.width = (maxed ? 100 : axe.xp / axeXpNeeded(axe.level) * 100) + '%';
-  $('axe-xp').textContent = maxed ? t('max') : num(axe.xp) + ' / ' + num(axeXpNeeded(axe.level));
-  // Baris bonus hanya tampil kalau bonusnya ada
-  $('axe-cut-row').hidden = !axe.level;
-  $('axe-cut').textContent = '−' + num(AXE_CUT * axe.level * 100, 2) + '%';
-  $('axe-double-row').hidden = !tier.double;
-  $('axe-stats').hidden = !axe.level && !tier.double;
-  $('axe-double').textContent = num(tier.double * 100) + '%';
-  axeUpgradeBtn.hidden = !next;
-  if (next) {
-    const costs = Object.entries(next.cost);
-    $('axe-next').textContent = t('upgradeTo')(t(next.key));
-    $('axe-cost').innerHTML = costs.map(([item, n]) => `${icons[item]} ${num(Math.floor(state.items[item]))}/${num(n)}`).join(' · ');
-    axeUpgradeBtn.disabled = costs.some(([item, n]) => state.items[item] < n);
+// Kartu alat (kapak di Hutan, beliung di Goa), plus teks waktu & exp di kartu node
+// (keduanya ikut berubah saat alat naik level atau tingkat)
+for (const [tool, def] of Object.entries(TOOLS)) {
+  document.querySelector(`.tool[data-tool="${tool}"]`).innerHTML =
+    `<div class="tool-top"><span class="tool-icon" aria-hidden="true">${def.icon}</span><div class="tool-main">` +
+    `<div class="tool-title"><span class="level"></span><span class="name"></span></div>` +
+    `<span class="bar"><span class="fill"></span></span><span class="tool-xp"></span></div></div>` +
+    `<dl class="stats"><div class="row-cut"><dt data-i18n="${def.interval}"></dt><dd></dd></div>` +
+    `<div class="row-double"><dt data-i18n="${def.doubleText}"></dt><dd></dd></div></dl>` +
+    `<span class="tool-hint" data-i18n="toolHint"></span>`;
+}
+
+function renderTools() {
+  for (const [tool, def] of Object.entries(TOOLS)) {
+    const el = document.querySelector(`.tool[data-tool="${tool}"]`), s = state.tools[tool];
+    const tier = def.tiers[s.tier], maxed = s.level >= MAX_LEVEL;
+    el.querySelector('.level').textContent = 'Lv. ' + s.level;
+    el.querySelector('.name').textContent = t(tier.key);
+    el.querySelector('.fill').style.width = (maxed ? 100 : s.xp / toolXpNeeded(s.level) * 100) + '%';
+    el.querySelector('.tool-xp').textContent = maxed ? t('max') : num(s.xp) + ' / ' + num(toolXpNeeded(s.level));
+    // Baris bonus hanya tampil kalau bonusnya ada
+    el.querySelector('.row-cut').hidden = !s.level;
+    el.querySelector('.row-cut dd').textContent = '−' + num(TOOL_CUT * s.level * 100, 2) + '%';
+    el.querySelector('.row-double').hidden = !tier.double;
+    el.querySelector('.row-double dd').textContent = num(tier.double * 100) + '%';
+    el.querySelector('.stats').hidden = !s.level && !tier.double;
+    el.querySelector('.tool-hint').hidden = !nextTier(tool);
   }
   for (const [key, card] of Object.entries(cards)) {
     const node = NODES[key];
-    card.duration.textContent = num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + (node.tool === 'axe' ? ` · ${node.xp} Exp` : '');
+    card.duration.innerHTML = nodeOpen(key)
+      ? num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + ` · ${node.xp} Exp`
+      : '🔒 ' + t('needs')(t(TOOLS[node.tool].tiers[node.tier].key));
   }
 }
 
-axeUpgradeBtn.addEventListener('click', () => {
-  const next = AXES[state.axe.tier + 1];
-  if (!next || Object.entries(next.cost).some(([item, n]) => state.items[item] < n)) return;
-  for (const [item, n] of Object.entries(next.cost)) state.items[item] -= n;
-  state.axe.tier++;
-  save();
-  renderAxe();
+// Menu: area terkunci tidak bisa dibuka dan menampilkan syaratnya
+function renderNav() {
+  for (const area of Object.keys(AREA_UNLOCKS)) {
+    const btn = document.querySelector(`.nav-item[data-page="${area}"]`);
+    btn.disabled = !areaOpen(area);
+    btn.querySelector('.nav-lock').hidden = areaOpen(area);
+  }
+}
+
+// Suara dibuat langsung dengan Web Audio (tanpa file), hanya setelah pemain menyentuh layar
+let audio;
+function tone({ freq, type = 'sine', dur = 0.3, vol = 0.2, at = 0, slide }) {
+  if (!settings.sound) return;
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    const start = audio.currentTime + at, osc = audio.createOscillator(), gain = audio.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, start);
+    if (slide) osc.frequency.exponentialRampToValueAtTime(slide, start + dur);
+    gain.gain.setValueAtTime(vol, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(start);
+    osc.stop(start + dur);
+  } catch {}
+}
+const SOUNDS = {
+  // Dentang palu di anvil: nada logam tinggi + ketukan rendah
+  clang: at => {
+    tone({ freq: 1760, type: 'triangle', dur: 0.35, vol: 0.12, at });
+    tone({ freq: 2637, type: 'sine', dur: 0.25, vol: 0.06, at });
+    tone({ freq: 180, type: 'square', dur: 0.06, vol: 0.08, at, slide: 60 });
+  },
+  success: at => { tone({ freq: 660, dur: 0.15, at }); tone({ freq: 990, dur: 0.35, at: at + 0.12 }); },
+  fail: at => { tone({ freq: 220, type: 'sawtooth', dur: 0.4, vol: 0.12, at, slide: 70 }); },
+};
+
+// Anvil: kartu level + upgrade, lalu satu baris per alat dengan tingkat berikutnya
+const anvilUpgradeBtn = $('anvil-upgrade'), recipesEl = $('recipes');
+const FORGE_TIME = 1500; // animasi + suara sebelum hasil tempa keluar
+let forging = null; // alat yang sedang ditempa
+const forgeResults = {}; // tool → { ok, key, timer } hasil terakhir yang masih ditampilkan
+
+recipesEl.innerHTML = Object.entries(TOOLS).map(([tool, def]) =>
+  `<li class="recipe" data-recipe="${tool}"><span class="recipe-icon" aria-hidden="true">${def.icon}</span>` +
+  `<span class="recipe-info"><span class="recipe-name"></span><span class="recipe-meta recipe-cost"></span>` +
+  `<span class="recipe-meta recipe-chance"></span><span class="recipe-result" role="status"></span></span>` +
+  `<button class="forge-btn" data-forge="${tool}"></button></li>`).join('');
+
+function renderAnvil() {
+  const lv = state.anvil.level, cost = ANVIL.cost[lv + 1];
+  $('anvil-level').textContent = 'Lv. ' + lv;
+  $('anvil-desc').textContent = t('anvilCanForge')(lv + 1);
+  anvilUpgradeBtn.hidden = !cost;
+  if (cost) {
+    $('anvil-next').textContent = t('upgradeLv')(lv + 1);
+    $('anvil-cost').innerHTML = costHtml(cost);
+    anvilUpgradeBtn.disabled = !canAfford(cost);
+  }
+  for (const tool of Object.keys(TOOLS)) {
+    const row = recipesEl.querySelector(`[data-recipe="${tool}"]`), next = nextTier(tool);
+    const btn = row.querySelector('.forge-btn'), result = forgeResults[tool];
+    const current = t(TOOLS[tool].tiers[state.tools[tool].tier].key);
+    row.querySelector('.recipe-name').textContent = next ? current + ' → ' + t(next.key) : current;
+    row.querySelector('.recipe-cost').innerHTML = next ? costHtml(next.cost) : t('topTier');
+    row.querySelector('.recipe-chance').textContent = !next ? ''
+      : lv < next.anvil ? t('needAnvil')(next.anvil) : t('chance')(num(forgeChance(tool) * 100));
+    const res = row.querySelector('.recipe-result');
+    res.textContent = result ? (result.ok ? t('forgeOk')(t(result.key)) : t('forgeFail')) : '';
+    res.className = 'recipe-result' + (result ? (result.ok ? ' ok' : ' fail') : '');
+    res.hidden = !result;
+    btn.hidden = !next && forging !== tool;
+    btn.textContent = forging === tool ? t('forging') : t('forge');
+    btn.disabled = !!forging || !canForge(tool);
+    row.classList.toggle('forging', forging === tool);
+  }
+}
+
+anvilUpgradeBtn.addEventListener('click', () => {
+  if (!upgradeAnvil()) return;
+  renderAnvil();
+  renderKepeng();
+});
+
+// Tempa: bahan langsung terpakai dan hasil langsung diundi (supaya aman kalau halaman ditutup),
+// tapi baru ditampilkan setelah animasi & tiga dentang palu.
+recipesEl.addEventListener('click', e => {
+  const btn = e.target.closest('.forge-btn');
+  if (!btn || forging) return;
+  const tool = btn.dataset.forge, result = forgeTool(tool);
+  if (!result) return;
+  forging = tool;
+  clearTimeout(forgeResults[tool] && forgeResults[tool].timer);
+  delete forgeResults[tool];
+  for (let i = 0; i < 3; i++) SOUNDS.clang(i * 0.45);
+  renderAnvil();
+  renderKepeng();
+  setTimeout(() => {
+    forging = null;
+    (result.ok ? SOUNDS.success : SOUNDS.fail)(0);
+    result.timer = setTimeout(() => { delete forgeResults[tool]; renderAnvil(); }, 4000);
+    forgeResults[tool] = result;
+    const row = recipesEl.querySelector(`[data-recipe="${tool}"]`);
+    if (!result.ok) {
+      row.classList.remove('shake');
+      void row.offsetWidth;
+      row.classList.add('shake');
+    }
+    renderAnvil();
+    renderTools();
+  }, FORGE_TIME);
 });
 
 function applySettings() {
@@ -174,8 +290,11 @@ function applySettings() {
   root.lang = settings.lang;
   document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim();
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
-  renderAxe();
+  renderTools();
+  renderNav();
+  renderAnvil();
   $('menu-btn').setAttribute('aria-label', t('openMenu'));
+  document.querySelectorAll('[data-sound-choice]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.soundChoice === 'on') === settings.sound));
   document.querySelectorAll('[data-theme-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeChoice === settings.theme));
   document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
   renderHouse();
@@ -234,7 +353,7 @@ marketEl.addEventListener('click', e => {
   } else {
     if (btn.dataset.qty === 'all') disarmSell();
     sell(key, btn.dataset.qty === 'all' ? Infinity : 1);
-    renderAxe();
+    renderTools();
     renderKepeng();
   }
   renderMarket();
@@ -281,8 +400,15 @@ function loop(now) {
     if (state.progress >= actionTime(key)) {
       let got;
       for (let time; state.progress >= (time = actionTime(key)); state.progress -= time) got = act(key);
-      renderAxe();
+      const opened = checkUnlocks();
+      if (opened.length) {
+        save();
+        renderNav();
+        if (page === NODES[key].area) popup(key, null, t(AREA_UNLOCKS[opened[0]].done));
+      }
+      renderTools();
       if (page === NODES[key].area) popup(key, got);
+      else if (page === 'anvil') renderAnvil();
       else if (page === 'rumah') renderHouse();
       else if (page === 'pasar') renderMarket();
     }
@@ -293,7 +419,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['pohon', 'goa', 'rumah', 'pasar', 'settings'];
+const PAGES = ['hutan', 'goa', 'rumah', 'pasar', 'anvil', 'settings'];
 const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
 function setMenu(open) {
@@ -303,8 +429,9 @@ function setMenu(open) {
 
 function showPage(name) {
   if (openItem) showTip(null);
-  if (name === 'inventory') name = 'rumah'; // tautan lama sebelum Inventory jadi Rumah
-  page = PAGES.includes(name) ? name : 'pohon';
+  // Tautan lama: Inventory jadi Rumah, Pohon jadi Hutan
+  name = { inventory: 'rumah', pohon: 'hutan' }[name] || name;
+  page = PAGES.includes(name) && areaOpen(name) ? name : 'hutan';
   PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
   navItems.forEach(n => {
     if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
@@ -312,6 +439,7 @@ function showPage(name) {
   });
   if (page === 'rumah') renderHouse();
   if (page === 'pasar') renderMarket();
+  if (page === 'anvil') renderAnvil();
 }
 
 menuBtn.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
@@ -327,6 +455,12 @@ document.querySelectorAll('[data-theme-choice]').forEach(b => b.addEventListener
   settings.theme = b.dataset.themeChoice;
   saveSettings();
   applySettings();
+}));
+document.querySelectorAll('[data-sound-choice]').forEach(b => b.addEventListener('click', () => {
+  settings.sound = b.dataset.soundChoice === 'on';
+  saveSettings();
+  applySettings();
+  if (settings.sound) SOUNDS.clang(0);
 }));
 document.querySelectorAll('[data-lang-choice]').forEach(b => b.addEventListener('click', () => {
   settings.lang = b.dataset.langChoice;
@@ -357,10 +491,13 @@ resetBtn.addEventListener('click', () => {
   Object.assign(state, freshState());
   save();
   render();
-  renderAxe();
+  renderTools();
+  renderNav();
+  renderAnvil();
   renderHouse();
   renderMarket();
   renderKepeng();
+  showPage(location.hash.slice(1));
 });
 
 applySettings();

@@ -152,6 +152,45 @@
   .sort { margin-bottom: 16px; }
   .tool .fill.full { background: var(--danger); }
   .pop.full { color: var(--danger); }
+  .emoji-teak { display: inline-block; filter: brightness(.68) saturate(1.5) hue-rotate(-8deg); }
+
+  /* Area terkunci di menu */
+  .nav-text { display: flex; flex-direction: column; }
+  .nav-lock { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .nav-item:disabled { cursor: default; opacity: .6; }
+  .nav-item:disabled:active { background: none; }
+
+  /* Node terkunci: tidak bisa diklik, ikon pudar, syarat ditampilkan */
+  .card.locked { cursor: default; }
+  .card.locked:active { transform: none; }
+  .card.locked .icon { filter: grayscale(1); opacity: .35; }
+  .card.locked .level { visibility: hidden; }
+  .tool-hint { display: block; margin-top: 10px; font-size: 12px; color: var(--muted); }
+
+  /* Anvil: satu baris per alat yang bisa ditempa */
+  .recipes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .recipe {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px;
+  }
+  .recipe-icon { flex: none; font-size: 32px; line-height: 1; }
+  .recipe-info { flex: 1; min-width: 0; }
+  .recipe-name { display: block; font-weight: 600; font-size: 14px; }
+  .recipe-meta { display: block; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .recipe-result { display: block; font-size: 13px; font-weight: 700; margin-top: 4px; }
+  .recipe-result.ok { color: var(--on-bg); }
+  .recipe-result.fail { color: var(--danger); }
+  .forge-btn {
+    flex: none; min-width: 84px; min-height: 40px; padding: 0 12px;
+    background: var(--on-bg); border: 0; border-radius: 10px;
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--on-ink); cursor: pointer;
+  }
+  .forge-btn:disabled { background: var(--track); color: var(--muted); cursor: default; }
+  .recipe.forging .recipe-icon { animation: hammer .5s ease-in-out infinite; transform-origin: 70% 80%; }
+  @keyframes hammer { 0%, 100% { transform: rotate(0); } 40% { transform: rotate(-35deg); } 60% { transform: rotate(8deg); } }
+  .recipe.shake { animation: shake .35s; }
+  @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
   .notice {
     background: var(--card); border: 1.5px solid var(--danger); border-radius: 12px;
     padding: 12px 14px; margin-bottom: 12px;
@@ -317,10 +356,11 @@
 <div class="scrim" id="scrim"></div>
 <nav class="drawer" id="drawer" aria-label="Menu">
   <div class="brand">Kebon Kosong</div>
-  <button class="nav-item" data-page="pohon"><span>🌳</span><span data-i18n="trees"></span></button>
-  <button class="nav-item" data-page="goa"><span>⛰️</span><span data-i18n="cave"></span></button>
+  <button class="nav-item" data-page="hutan"><span>🌳</span><span data-i18n="forest"></span></button>
+  <button class="nav-item" data-page="goa"><span>⛰️</span><span class="nav-text"><span data-i18n="cave"></span><small class="nav-lock" data-i18n="caveLocked"></small></span></button>
   <button class="nav-item" data-page="rumah"><span>🏠</span><span data-i18n="house"></span></button>
   <button class="nav-item" data-page="pasar"><span>🏪</span><span data-i18n="market"></span></button>
+  <button class="nav-item" data-page="anvil"><span>⚒️</span><span data-i18n="anvil"></span></button>
   <button class="nav-item" data-page="settings"><span>⚙️</span><span data-i18n="settings"></span></button>
 </nav>
 
@@ -333,27 +373,14 @@
     </button>
   </header>
 
-  <main id="page-pohon">
-  <section class="tool">
-    <div class="tool-top">
-      <span class="tool-icon" aria-hidden="true">🪓</span>
-      <div class="tool-main">
-        <div class="tool-title"><span class="level" id="axe-level"></span><span class="name" id="axe-name"></span></div>
-        <span class="bar"><span class="fill" id="axe-fill"></span></span>
-        <span class="tool-xp" id="axe-xp"></span>
-      </div>
-    </div>
-    <dl class="stats" id="axe-stats">
-      <div id="axe-cut-row"><dt data-i18n="axeInterval"></dt><dd id="axe-cut"></dd></div>
-      <div id="axe-double-row"><dt data-i18n="doubleWood"></dt><dd id="axe-double"></dd></div>
-    </dl>
-    <button class="upgrade-btn" id="axe-upgrade"><span id="axe-next"></span><span class="cost" id="axe-cost"></span></button>
-  </section>
-  <div class="cards" data-area="pohon"></div>
+  <main id="page-hutan">
+    <section class="tool" data-tool="axe"></section>
+    <div class="cards" data-area="hutan"></div>
   </main>
 
   <main id="page-goa" hidden>
-  <div class="cards" data-area="goa"></div>
+    <section class="tool" data-tool="pickaxe"></section>
+    <div class="cards" data-area="goa"></div>
   </main>
 
   <main id="page-rumah" hidden>
@@ -389,6 +416,20 @@
     <p class="empty" id="market-empty" data-i18n="marketEmpty"></p>
   </main>
 
+  <main id="page-anvil" hidden>
+    <section class="tool">
+      <div class="tool-top">
+        <span class="tool-icon" aria-hidden="true">⚒️</span>
+        <div class="tool-main">
+          <div class="tool-title"><span class="level" id="anvil-level"></span><span class="name" data-i18n="anvil"></span></div>
+          <span class="tool-xp" id="anvil-desc"></span>
+        </div>
+      </div>
+      <button class="upgrade-btn" id="anvil-upgrade"><span id="anvil-next"></span><span class="cost" id="anvil-cost"></span></button>
+    </section>
+    <ul class="recipes" id="recipes"></ul>
+  </main>
+
   <main id="page-settings" hidden>
     <h2 data-i18n="settings"></h2>
     <div class="setting">
@@ -403,6 +444,13 @@
       <div class="segment">
         <button data-lang-choice="id">Indonesia</button>
         <button data-lang-choice="en">English</button>
+      </div>
+    </div>
+    <div class="setting">
+      <span class="setting-label" data-i18n="sound"></span>
+      <div class="segment">
+        <button data-sound-choice="on" data-i18n="on"></button>
+        <button data-sound-choice="off" data-i18n="off"></button>
       </div>
     </div>
     <div class="setting">

@@ -1,4 +1,4 @@
-// State game, simpan/muat (dengan migrasi), aksi, dan progres offline. Tidak menyentuh DOM.
+// State game, simpan/muat (dengan migrasi), aksi, tempa, dan progres offline. Tidak menyentuh DOM.
 
 const SAVE_KEY = 'kebon-kosong-v2';
 const SETTINGS_KEY = 'kebon-kosong-settings';
@@ -8,20 +8,22 @@ try { ['idle-penebang-v1', 'kebon-kosong'].forEach(k => localStorage.removeItem(
 const freshState = () => ({
   items: Object.fromEntries(ITEMS.map(it => [it.key, 0])),
   nodes: Object.fromEntries(Object.keys(NODES).map(k => [k, { level: 0, xp: 0 }])),
-  axe: { tier: 0, level: 0, xp: 0 },
+  tools: Object.fromEntries(Object.keys(TOOLS).map(k => [k, { tier: 0, level: 0, xp: 0 }])),
+  anvil: { level: ANVIL.start },
+  unlocked: Object.fromEntries(Object.keys(AREA_UNLOCKS).map(k => [k, false])),
   kepeng: 0,
   house: { level: 0 },
   discarded: {}, // item yang dibuang karena rumah penuh, sampai catatannya ditutup
   active: null, // hanya satu aksi yang berjalan dalam satu waktu
   progress: 0,
   lastTick: Date.now(),
-  // 2: exp sumber daya dihitung per exp, bukan per aksi; 3: ada Kepeng; 4: ada Rumah
-  version: 4,
+  // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci
+  version: 5,
 });
 const state = freshState();
-const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat' };
+const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true };
 
-// Tambah exp ke sumber daya atau kapak; exp berlebih dibawa ke level berikutnya
+// Tambah exp ke sumber daya atau alat; exp berlebih dibawa ke level berikutnya
 function gainXp(s, amount, need) {
   s.xp += amount;
   while (s.level < MAX_LEVEL && s.xp >= need(s.level)) {
@@ -42,7 +44,10 @@ function loadState(saved) {
   } else {
     Object.assign(state.items, saved.items);
     for (const k in NODES) Object.assign(state.nodes[k], saved.nodes && saved.nodes[k]);
-    Object.assign(state.axe, saved.axe);
+    // Sebelum versi 5 kapak disimpan di state.axe
+    for (const k in TOOLS) Object.assign(state.tools[k], k === 'axe' && saved.axe, saved.tools && saved.tools[k]);
+    Object.assign(state.anvil, saved.anvil);
+    Object.assign(state.unlocked, saved.unlocked);
     state.kepeng = saved.kepeng || 0; // simpanan sebelum versi 3 belum punya Kepeng
     Object.assign(state.house, saved.house); // sebelum versi 4 belum ada Rumah: mulai dari level 0
     Object.assign(state.discarded, saved.discarded);
@@ -52,14 +57,20 @@ function loadState(saved) {
   }
   // Simpanan lama menghitung 1 exp per aksi
   if (!saved.version) for (const k in NODES) state.nodes[k].xp *= NODES[k].xp;
-  // Kurva exp kapak pernah berubah; exp yang sudah melebihi kebutuhan langsung jadi level
-  gainXp(state.axe, 0, axeXpNeeded);
+  // Sebelum versi 5 Goa selalu terbuka: pemain yang sudah pernah menambang tetap bisa masuk
+  if (!(saved.version >= 5) && (state.nodes.rock.level > 0 || state.nodes.rock.xp > 0 || state.items.stone > 0 || state.items.pebble > 0)) {
+    state.unlocked.goa = true;
+  }
+  // Kurva exp alat pernah berubah; exp yang sudah melebihi kebutuhan langsung jadi level
+  for (const k in TOOLS) gainXp(state.tools[k], 0, toolXpNeeded);
+  checkUnlocks();
 }
 try { loadState(JSON.parse(localStorage.getItem(SAVE_KEY))); } catch {}
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
   if (saved && TEXT[saved.lang]) settings.lang = saved.lang;
   if (saved && ['cat', 'qty', 'name'].includes(saved.sort)) settings.sort = saved.sort;
+  if (saved && typeof saved.sound === 'boolean') settings.sound = saved.sound;
 } catch {}
 
 function save() {
@@ -71,6 +82,22 @@ function saveSettings() {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch {}
 }
 
+// Buka area yang syaratnya sudah terpenuhi; mengembalikan daftar area yang baru terbuka
+function checkUnlocks() {
+  const opened = [];
+  for (const [area, rule] of Object.entries(AREA_UNLOCKS)) {
+    if (!state.unlocked[area] && rule.unlock(state)) {
+      state.unlocked[area] = true;
+      opened.push(area);
+    }
+  }
+  return opened;
+}
+const areaOpen = area => !(area in AREA_UNLOCKS) || state.unlocked[area];
+
+// Node terkunci kalau areanya belum terbuka atau tingkat alatnya kurang
+const nodeOpen = key => areaOpen(NODES[key].area) && state.tools[NODES[key].tool].tier >= NODES[key].tier;
+
 function rollDrop(key) {
   let r = Math.random();
   for (const [item, chance] of NODES[key].drops(state.nodes[key].level / MAX_LEVEL)) {
@@ -79,8 +106,8 @@ function rollDrop(key) {
   return null;
 }
 
-// Waktu satu aksi dalam ms; ayunan ke pohon makin cepat seiring level kapak
-const actionTime = key => NODES[key].time * (NODES[key].tool === 'axe' ? 1 - AXE_CUT * state.axe.level : 1);
+// Waktu satu aksi dalam ms; makin cepat seiring level alatnya
+const actionTime = key => NODES[key].time * (1 - TOOL_CUT * state.tools[NODES[key].tool].level);
 
 // Rumah: kapasitas = jumlah item berbeda yang bisa disimpan
 const houseCapacity = () => HOUSE.base + HOUSE.perLevel * state.house.level;
@@ -116,17 +143,50 @@ function upgradeHouse() {
   return true;
 }
 
-// Satu aksi (tebang/tambang): undi hasil, tambah exp ke sumber daya (dan kapak untuk pohon).
+// Anvil
+const anvilMax = Math.max(ANVIL.start, ...Object.keys(ANVIL.cost).map(Number));
+function upgradeAnvil() {
+  const cost = ANVIL.cost[state.anvil.level + 1];
+  if (!cost || !canAfford(cost)) return false;
+  pay(cost);
+  state.anvil.level++;
+  save();
+  return true;
+}
+
+// Tingkat berikutnya dari sebuah alat, atau undefined kalau sudah tertinggi
+const nextTier = tool => TOOLS[tool].tiers[state.tools[tool].tier + 1];
+function forgeChance(tool) {
+  const i = state.tools[tool].tier + 1, tier = TOOLS[tool].tiers[i];
+  return Math.min(1, FORGE_BASE[i] + FORGE_GAP * (state.anvil.level - tier.anvil));
+}
+const canForge = tool => {
+  const tier = nextTier(tool);
+  return !!tier && state.anvil.level >= tier.anvil && canAfford(tier.cost);
+};
+
+// Tempa alat ke tingkat berikutnya. Bahan selalu terpakai; kalau gagal alat tetap.
+// Mengembalikan { ok, key } atau null kalau tidak bisa menempa.
+function forgeTool(tool) {
+  if (!canForge(tool)) return null;
+  const tier = nextTier(tool), ok = Math.random() < forgeChance(tool);
+  pay(tier.cost);
+  if (ok) state.tools[tool].tier++;
+  save();
+  return { ok, key: tier.key };
+}
+
+// Satu aksi (tebang/tambang): undi hasil, tambah exp ke sumber daya dan alatnya.
 // Mengembalikan { item, qty, lost }, atau null kalau zonk; lost = dibuang karena rumah penuh.
 function act(key) {
-  const node = NODES[key], drop = rollDrop(key);
+  const node = NODES[key], tool = state.tools[node.tool], drop = rollDrop(key);
   let qty = 0;
   if (drop) {
-    qty = drop === node.wood && Math.random() < AXES[state.axe.tier].double ? 2 : 1;
+    qty = drop === node.main && Math.random() < TOOLS[node.tool].tiers[tool.tier].double ? 2 : 1;
   }
   const lost = drop && !addItem(drop, qty);
   gainXp(state.nodes[key], node.xp, xpNeeded);
-  if (node.tool === 'axe') gainXp(state.axe, node.xp, axeXpNeeded);
+  gainXp(tool, node.xp, toolXpNeeded);
   return drop && { item: drop, qty, lost };
 }
 
@@ -141,8 +201,10 @@ function sell(key, qty) {
 }
 
 // Progres offline: kalau ada aksi berjalan saat ditutup, hitung aksi yang terlewat (paling lama 24 jam)
+if (state.active && !nodeOpen(state.active)) state.active = null;
 if (state.active) {
   let elapsed = Math.min(Date.now() - state.lastTick, OFFLINE_CAP) + state.progress;
   for (let time; elapsed >= (time = actionTime(state.active)); elapsed -= time) act(state.active);
   state.progress = elapsed;
+  checkUnlocks();
 }
