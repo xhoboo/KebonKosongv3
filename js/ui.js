@@ -6,6 +6,13 @@ const t = key => TEXT[settings.lang][key];
 const num = (n, digits = 0) => n.toLocaleString(settings.lang === 'id' ? 'id-ID' : 'en-US', { maximumFractionDigits: digits });
 let page = 'hutan';
 
+// Nama & ikon item, termasuk item berkualitas ('kris@good' → "Keris Bagus", Pusaka + sifat dalam kurung)
+const iconOf = key => key === 'kepeng' ? KEPENG_ICON : itemDef(key).icon;
+function nameOf(key) {
+  const { base, q, trait } = parseKey(key);
+  return t(base) + (q !== 'common' ? ' ' + t(QUALITY[q].name) : '') + (trait ? ` (${t(TRAITS[trait].name)})` : '');
+}
+
 // Halaman tempat kartu sebuah kegiatan berada
 const activityArea = key => ADVENTURES[key] ? 'petualangan' : RECIPES[key] ? 'dapur' : NODES[key].area;
 
@@ -69,27 +76,27 @@ let openItem = null; // item yang namanya sedang ditampilkan
 const costHtml = cost => Object.entries(cost)
   .map(([key, n]) => `${key === 'kepeng' ? KEPENG_ICON : icons[key]} ${num(Math.floor(have(key)))}/${num(n)}`).join(' · ');
 
-function itemTile(it) {
-  const qty = num(Math.floor(state.items[it.key]));
-  const open = it.key === openItem;
-  return `<li><button class="item" data-item="${it.key}" aria-expanded="${open}" aria-label="${t(it.key)}: ${qty}">` +
-    `<span class="item-icon" aria-hidden="true">${it.icon}</span>` +
+function itemTile(key) {
+  const qty = num(Math.floor(state.items[key]));
+  const open = key === openItem;
+  return `<li><button class="item q-${parseKey(key).q}" data-item="${key}" aria-expanded="${open}" aria-label="${nameOf(key)}: ${qty}">` +
+    `<span class="item-icon" aria-hidden="true">${iconOf(key)}</span>` +
     `<span class="item-qty" aria-hidden="true">${qty}</span></button></li>`;
 }
 
 // Rumah: kartu kapasitas + upgrade, catatan item yang dibuang, lalu isi rumah sesuai urutan yang dipilih
 const houseUpgradeBtn = $('house-upgrade');
 function renderHouse() {
-  const owned = ITEMS.filter(it => state.items[it.key] >= 1);
+  const owned = ownedKeys();
   let groups;
   if (settings.sort === 'cat') {
-    groups = CATEGORIES.map(c => [t(c.name), owned.filter(it => it.cat === c.key)]).filter(([, list]) => list.length);
+    groups = CATEGORIES.map(c => [t(c.name), owned.filter(k => itemDef(k).cat === c.key)]).filter(([, list]) => list.length);
   } else {
     const list = [...owned];
-    if (settings.sort === 'qty') list.sort((a, b) => state.items[b.key] - state.items[a.key]);
+    if (settings.sort === 'qty') list.sort((a, b) => state.items[b] - state.items[a]);
     else {
       const collator = new Intl.Collator(settings.lang);
-      list.sort((a, b) => collator.compare(t(a.key), t(b.key)));
+      list.sort((a, b) => collator.compare(nameOf(a), nameOf(b)));
     }
     groups = [[null, list]];
   }
@@ -113,7 +120,7 @@ function renderHouse() {
 
   const lost = Object.keys(state.discarded);
   $('discarded').hidden = !lost.length;
-  $('discarded-list').innerHTML = lost.map(key => `<span>${icons[key]} ×${num(state.discarded[key])}</span>`).join('');
+  $('discarded-list').innerHTML = lost.map(key => `<span>${iconOf(key)} ×${num(state.discarded[key])}</span>`).join('');
 }
 
 houseUpgradeBtn.addEventListener('click', () => {
@@ -264,9 +271,9 @@ const forgeResults = {}; // tool → { ok, key, timer } hasil terakhir yang masi
 
 // Statistik singkat perlengkapan: serangan & interval untuk senjata, pertahanan & HP untuk armor
 const gearStats = key => {
-  const it = ITEM[key];
-  return it.weapon ? `⚔️ ${num(it.weapon.atk)} · ⏱️ ${num(it.weapon.interval / 1000)} ${t('seconds')}`
-    : `🛡️ ${num(it.armor.def)} · ❤️ +${num(it.armor.hp)}`;
+  const it = itemDef(key);
+  return (it.weapon ? `⚔️ ${num(it.weapon.atk, 2)} · ⏱️ ${num(it.weapon.interval / 1000, 2)} ${t('seconds')}`
+    : `🛡️ ${num(it.armor.def)} · ❤️ +${num(it.armor.hp)}`) + (it.trait ? ' · ' + t(TRAITS[it.trait].desc) : '');
 };
 
 recipesEl.innerHTML = [...Object.entries(TOOLS).map(([key, def]) => [key, def.icon]), ...Object.keys(GEAR).map(key => [key, ITEM[key].icon])].map(([tool, icon]) =>
@@ -279,6 +286,8 @@ function renderAnvil() {
   const lv = state.anvil.level, cost = ANVIL.cost[lv + 1];
   $('anvil-level').textContent = 'Lv. ' + lv;
   $('anvil-desc').textContent = t('anvilCanForge')(lv + 1);
+  skillBar('smith', state.smithing);
+  $('quality-odds').innerHTML = qualityOdds().map(([q, p]) => `<span class="q-${q}">${t(QUALITY[q].name)} ${num(p * 100, 1)}%</span>`).join(' · ');
   anvilUpgradeBtn.hidden = !cost;
   if (cost) {
     $('anvil-next').textContent = t('upgradeLv')(lv + 1);
@@ -295,7 +304,7 @@ function renderAnvil() {
     row.querySelector('.recipe-chance').textContent = !next ? ''
       : lv < next.anvil ? t('needAnvil')(next.anvil) : t('chance')(num(forgeChance(tool) * 100));
     const res = row.querySelector('.recipe-result');
-    res.textContent = result ? (result.ok ? t('forgeOk')(t(result.key)) : t('forgeFail')) : '';
+    res.innerHTML = result ? (result.ok ? t('forgeOk')(t(result.key)) : t('forgeFail')) + ` <small>${t('smithXp')(num(result.xp))}</small>` : '';
     res.className = 'recipe-result' + (result ? (result.ok ? ' ok' : ' fail') : '');
     res.hidden = !result;
     btn.hidden = !next && forging !== tool;
@@ -305,14 +314,17 @@ function renderAnvil() {
   }
   for (const key of Object.keys(GEAR)) {
     const row = recipesEl.querySelector(`[data-recipe="${key}"]`), g = GEAR[key], result = forgeResults[key];
-    const owned = (state.items[key] || 0) + (state.equip.weapon === key || state.equip.armor === key ? 1 : 0);
+    // Jumlah dimiliki, semua kualitas, termasuk yang sedang dipakai
+    const mine = k => parseKey(k).base === key;
+    const owned = ownedKeys().filter(mine).reduce((n, k) => n + state.items[k], 0)
+      + ['weapon', 'armor'].filter(s => state.equip[s] && mine(state.equip[s])).length;
     row.querySelector('.recipe-name').textContent = t(key) + (owned ? ` (${num(owned)})` : '');
     row.querySelector('.recipe-cost').innerHTML = gearStats(key) + '<br>' + costHtml(g.cost);
     row.querySelector('.recipe-chance').textContent = lv < g.anvil ? t('needAnvil')(g.anvil)
-      : !canStore(key) ? t('houseFull') : t('chance')(num(gearChance(key) * 100));
+      : usedSlots() >= houseCapacity() ? t('houseFull') : t('chance')(num(gearChance(key) * 100));
     const res = row.querySelector('.recipe-result');
-    res.textContent = result ? (result.ok ? t('forgeOk')(t(key)) : t('forgeFail')) : '';
-    res.className = 'recipe-result' + (result ? (result.ok ? ' ok' : ' fail') : '');
+    res.innerHTML = result ? (result.ok ? t('forgeOk')(nameOf(result.key)) : t('forgeFail')) + ` <small>${t('smithXp')(num(result.xp))}</small>` : '';
+    res.className = 'recipe-result' + (result ? (result.ok ? ' ok q-' + parseKey(result.key).q : ' fail') : '');
     res.hidden = !result;
     const btn = row.querySelector('.forge-btn');
     btn.textContent = forging === key ? t('forging') : t('forge');
@@ -401,12 +413,12 @@ function renderAdventure() {
   // Perlengkapan: yang dipakai + pilihan dari Rumah
   $('equip').innerHTML = ['weapon', 'armor'].map(slot => {
     const cur = state.equip[slot];
-    const options = ITEMS.filter(it => it[slot] && state.items[it.key] >= 1);
+    const options = ownedKeys().filter(k => itemDef(k)[slot]);
     return `<div class="equip-slot"><span class="equip-label">${t(slot)}</span>` +
-      `<div class="equip-cur">${cur ? `<span class="equip-icon">${ITEM[cur].icon}</span><span class="equip-name">${t(cur)}<small>${gearStats(cur)}</small></span>` +
+      `<div class="equip-cur">${cur ? `<span class="equip-icon">${iconOf(cur)}</span><span class="equip-name q-${parseKey(cur).q}">${nameOf(cur)}<small>${gearStats(cur)}</small></span>` +
         `<button class="chip" data-unequip="${slot}" ${busy ? 'disabled' : ''}>${t('unequip')}</button>` : `<span class="equip-none">${t('none')}</span>`}</div>` +
-      (options.length ? `<div class="equip-options">${options.map(it =>
-        `<button class="chip" data-equip="${slot}" data-key="${it.key}" ${busy ? 'disabled' : ''}>${it.icon} ${t(it.key)} ×${num(state.items[it.key])}</button>`).join('')}</div>` : '') +
+      (options.length ? `<div class="equip-options">${options.map(k =>
+        `<button class="chip q-${parseKey(k).q}" data-equip="${slot}" data-key="${k}" ${busy ? 'disabled' : ''}>${iconOf(k)} ${nameOf(k)} ×${num(state.items[k])}</button>`).join('')}</div>` : '') +
       `</div>`;
   }).join('');
 
@@ -422,8 +434,8 @@ function renderAdventure() {
     $('bag-upgrade').disabled = !canAfford(bagCost);
   }
   $('bag-items').innerHTML = bagKeys.map(k =>
-    `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${icons[k]}</span>` +
-    `<span class="sell-info"><span class="sell-name">${t(k)}</span><span class="sell-meta">${num(state.bag.items[k])}${heals[k] ? ' · ❤️ ' + heals[k] : ''}</span></span>` +
+    `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
+    `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">${num(state.bag.items[k])}${heals[k] ? ' · ❤️ ' + heals[k] : ''}</span></span>` +
     `<button class="sell-btn" data-store="${k}" ${busy || !canStore(k) ? 'disabled' : ''}>${canStore(k) ? t('store') : t('houseFull')}</button>` +
     `<button class="sell-btn ${armedDiscard === k ? 'confirm' : ''}" data-discard="${k}" ${busy ? 'disabled' : ''}>${armedDiscard === k ? t('sure') : t('discard')}</button></li>`).join('');
   $('bag-empty').hidden = bagKeys.length > 0;
@@ -501,22 +513,22 @@ function disarmSell() {
 }
 
 function renderMarket() {
-  const owned = ITEMS.filter(it => state.items[it.key] >= 1);
-  const keys = owned.map(it => it.key).join();
+  const owned = ownedKeys();
+  const keys = owned.join();
   if (keys !== marketKeys) {
     marketKeys = keys;
-    marketEl.innerHTML = owned.map(it =>
-      `<li class="sell-row" data-row="${it.key}"><span class="sell-icon" aria-hidden="true">${it.icon}</span>` +
-      `<span class="sell-info"><span class="sell-name"></span><span class="sell-meta"></span></span>` +
-      `<button class="sell-btn" data-sell="${it.key}" data-qty="1"></button>` +
-      `<button class="sell-btn" data-sell="${it.key}" data-qty="all"></button></li>`).join('');
+    marketEl.innerHTML = owned.map(k =>
+      `<li class="sell-row" data-row="${k}"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
+      `<span class="sell-info"><span class="sell-name q-${parseKey(k).q}"></span><span class="sell-meta"></span></span>` +
+      `<button class="sell-btn" data-sell="${k}" data-qty="1"></button>` +
+      `<button class="sell-btn" data-sell="${k}" data-qty="all"></button></li>`).join('');
   }
-  for (const it of owned) {
-    const row = marketEl.querySelector(`[data-row="${it.key}"]`);
-    row.querySelector('.sell-name').textContent = t(it.key);
-    row.querySelector('.sell-meta').textContent = `${num(Math.floor(state.items[it.key]))} · ${KEPENG_ICON} ${num(it.price)} ${t('each')}`;
+  for (const k of owned) {
+    const row = marketEl.querySelector(`[data-row="${k}"]`);
+    row.querySelector('.sell-name').textContent = nameOf(k);
+    row.querySelector('.sell-meta').textContent = `${num(Math.floor(state.items[k]))} · ${KEPENG_ICON} ${num(itemDef(k).price)} ${t('each')}`;
     row.querySelector('[data-qty="1"]').textContent = t('sellOne');
-    const all = row.querySelector('[data-qty="all"]'), armed = armedSell === it.key;
+    const all = row.querySelector('[data-qty="all"]'), armed = armedSell === k;
     all.textContent = armed ? t('sure') : t('sellAll');
     all.classList.toggle('confirm', armed);
   }
@@ -550,7 +562,8 @@ function showTip(key) {
   renderHouse();
   if (!key) { tipEl.hidden = true; return; }
   const r = itemsEl.querySelector(`[data-item="${key}"]`).getBoundingClientRect();
-  tipEl.textContent = t(key) + (heals[key] ? ' · ❤️ ' + heals[key] : '');
+  const def = itemDef(key);
+  tipEl.textContent = nameOf(key) + (heals[key] ? ' · ❤️ ' + heals[key] : '') + (def.weapon || def.armor ? ' · ' + gearStats(key) : '');
   tipEl.hidden = false;
   // Jaga popup tetap di dalam layar walau namanya panjang
   const half = tipEl.offsetWidth / 2;

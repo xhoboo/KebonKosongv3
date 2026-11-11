@@ -21,6 +21,11 @@ const TEXT = {
     weapon: 'Senjata', armor: 'Armor', none: 'Kosong', unequip: 'Lepas',
     attack: 'Serangan', interval: 'Interval', defense: 'Pertahanan', hp: 'HP', winChance: 'Peluang menang',
     bag: 'Tas', bagSlots: (u, c) => `${u} / ${c} slot`, pack: 'Bawa dari rumah', packHint: 'Hanya masakan yang bisa dibawa.',
+    qCommon: 'Biasa', qGood: 'Bagus', qGreat: 'Istimewa', qLegend: 'Pusaka',
+    trSharp: 'Tajam', trLight: 'Ringan', trLucky: 'Beruntung', trSturdy: 'Kokoh', trVital: 'Perkasa',
+    trSharpDesc: '+15% serangan', trLightDesc: '−15% interval', trLuckyDesc: '+25% peluang loot musuh',
+    trSturdyDesc: '+15% pertahanan', trVitalDesc: '+20% HP armor',
+    smithing: 'Menempa', qualityOdds: 'Peluang kualitas', smithXp: n => `+${n} Exp Menempa`,
     all: 'Semua', store: 'Simpan', discard: 'Buang', storeAll: 'Simpan semua', bagEmpty: 'Tas kosong.', noFood: 'Belum ada masakan di rumah.',
     needWeapon: 'Pakai senjata dulu', busyAdv: 'Sedang berpetualang', journal: 'Jurnal', journalEmpty: 'Belum ada catatan.',
     advSummary: (w, l, k) => `Petualangan ini: ${w} menang, ${l} kalah, ${k} Kepeng`,
@@ -69,6 +74,11 @@ const TEXT = {
     weapon: 'Weapon', armor: 'Armor', none: 'None', unequip: 'Unequip',
     attack: 'Attack', interval: 'Interval', defense: 'Defense', hp: 'HP', winChance: 'Win chance',
     bag: 'Bag', bagSlots: (u, c) => `${u} / ${c} slots`, pack: 'Pack from the house', packHint: 'Only food can be packed.',
+    qCommon: 'Common', qGood: 'Fine', qGreat: 'Superior', qLegend: 'Heirloom',
+    trSharp: 'Sharp', trLight: 'Light', trLucky: 'Lucky', trSturdy: 'Sturdy', trVital: 'Vigorous',
+    trSharpDesc: '+15% attack', trLightDesc: '−15% interval', trLuckyDesc: '+25% enemy loot chance',
+    trSturdyDesc: '+15% defense', trVitalDesc: '+20% armor HP',
+    smithing: 'Smithing', qualityOdds: 'Quality odds', smithXp: n => `+${n} Smithing Exp`,
     all: 'All', store: 'Store', discard: 'Discard', storeAll: 'Store all', bagEmpty: 'The bag is empty.', noFood: 'No food in the house yet.',
     needWeapon: 'Equip a weapon first', busyAdv: 'Out adventuring', journal: 'Journal', journalEmpty: 'No entries yet.',
     advSummary: (w, l, k) => `This adventure: ${w} won, ${l} lost, ${k} Kepeng`,
@@ -163,6 +173,52 @@ const ITEMS = [
 ];
 const ITEM = Object.fromEntries(ITEMS.map(it => [it.key, it]));
 const heals = Object.fromEntries(ITEMS.filter(it => it.heal).map(it => [it.key, it.heal]));
+
+// Kualitas hasil tempa perlengkapan. Item dengan kualitas berbeda = item berbeda (slot Rumah sendiri).
+// Key item: 'kris' (Biasa), 'kris@good', 'kris@great', 'kris@legend:sharp' (Pusaka + sifatnya).
+// mult = pengali statistik utama (serangan, pertahanan, HP armor) dan harga jual.
+// w0 / w100 = bobot peluang di skill Menempa Lv. 0 / Lv. 100 (berubah lurus di antaranya).
+const QUALITIES = [
+  { key: 'common', name: 'qCommon', mult: 1, price: 1, w0: 70, w100: 35 },
+  { key: 'good', name: 'qGood', mult: 1.1, price: 1.5, w0: 22, w100: 40 },
+  { key: 'great', name: 'qGreat', mult: 1.25, price: 2.5, w0: 7, w100: 20 },
+  { key: 'legend', name: 'qLegend', mult: 1.5, price: 5, w0: 1, w100: 5 },
+];
+const QUALITY = Object.fromEntries(QUALITIES.map(q => [q.key, q]));
+// Sifat Pusaka (satu, diundi dari sifat yang cocok dengan jenis perlengkapannya)
+const TRAITS = {
+  sharp: { name: 'trSharp', desc: 'trSharpDesc', slot: 'weapon', atk: 1.15 },
+  light: { name: 'trLight', desc: 'trLightDesc', slot: 'weapon', interval: 0.85 },
+  lucky: { name: 'trLucky', desc: 'trLuckyDesc', slot: 'any', drop: 1.25 },
+  sturdy: { name: 'trSturdy', desc: 'trSturdyDesc', slot: 'armor', def: 1.15 },
+  vital: { name: 'trVital', desc: 'trVitalDesc', slot: 'armor', hp: 1.2 },
+};
+
+const itemKey = (base, q = 'common', trait) => q === 'common' ? base : `${base}@${q}${trait ? ':' + trait : ''}`;
+function parseKey(key) {
+  const [base, rest = 'common'] = key.split('@');
+  const [q, trait] = rest.split(':');
+  return { base, q, trait };
+}
+// Data lengkap sebuah item, termasuk statistik setelah kualitas & sifat. Disimpan supaya tidak dihitung ulang.
+const itemCache = {};
+function itemDef(key) {
+  if (itemCache[key]) return itemCache[key];
+  const { base, q, trait } = parseKey(key), it = ITEM[base], qual = QUALITY[q], tr = TRAITS[trait] || {};
+  const def = { ...it, key, base, q, trait, price: Math.round(it.price * qual.price) };
+  if (it.weapon) def.weapon = { interval: Math.round(it.weapon.interval * (tr.interval || 1)), atk: +(it.weapon.atk * qual.mult * (tr.atk || 1)).toFixed(2) };
+  if (it.armor) def.armor = { def: Math.round(it.armor.def * qual.mult * (tr.def || 1)), hp: Math.round(it.armor.hp * qual.mult * (tr.hp || 1)) };
+  def.drop = tr.drop || 1;
+  return itemCache[key] = def;
+}
+// Urutan tampil: sesuai ITEMS, lalu kualitas, lalu sifat
+const ITEM_ORDER = Object.fromEntries(ITEMS.map((it, i) => [it.key, i]));
+function compareKeys(a, b) {
+  const pa = parseKey(a), pb = parseKey(b);
+  return ITEM_ORDER[pa.base] - ITEM_ORDER[pb.base]
+    || QUALITIES.indexOf(QUALITY[pa.q]) - QUALITIES.indexOf(QUALITY[pb.q])
+    || (pa.trait || '').localeCompare(pb.trait || '');
+}
 const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
 const prices = Object.fromEntries(ITEMS.map(it => [it.key, it.price]));
 
@@ -250,6 +306,9 @@ const RECIPES = {
   friedCatfish: { kitchen: 3, time: 4000, xp: 40, input: { catfish: 1, twig: 2 } },
   pindangSnakehead: { kitchen: 3, time: 5000, xp: 50, input: { snakehead: 1, leaf: 2, twig: 2 } },
 };
+
+// Skill Menempa: exp per tempa = nilai bahan yang dipakai (jumlah × harga jual), juga saat gagal.
+// Kurva exp sama dengan node. Level menggeser peluang kualitas (lihat QUALITIES).
 
 // Perlengkapan yang ditempa di Anvil (hasilnya masuk Rumah). tier menentukan peluang dasar (FORGE_BASE),
 // anvil = level Anvil minimum. Draf, disetel setelah dicoba.

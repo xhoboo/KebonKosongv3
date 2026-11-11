@@ -172,6 +172,15 @@
   .card.locked .level { visibility: hidden; }
   .tool-hint { display: block; margin-top: 10px; font-size: 12px; color: var(--muted); }
   .skill { margin-top: 12px; }
+  /* Kualitas tempa: warna nama + bingkai kotak item */
+  .q-good { --q: #3c9a52; } .q-great { --q: #3a7fd5; } .q-legend { --q: #c98a12; }
+  :root[data-theme="dark"] .q-good { --q: #62c47a; } :root[data-theme="dark"] .q-great { --q: #6aa8ff; } :root[data-theme="dark"] .q-legend { --q: #f0b43c; }
+  .item.q-good, .item.q-great, .item.q-legend { border: 2px solid var(--q); }
+  .item.q-legend { box-shadow: 0 0 0 3px color-mix(in srgb, var(--q) 25%, transparent); }
+  .sell-name.q-good, .sell-name.q-great, .sell-name.q-legend, .equip-name.q-good, .equip-name.q-great, .equip-name.q-legend,
+  .chip.q-good, .chip.q-great, .chip.q-legend, .odds .q-good, .odds .q-great, .odds .q-legend, .recipe-result.q-good, .recipe-result.q-great, .recipe-result.q-legend { color: var(--q); }
+  .odds { margin: 2px 0 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .recipe-result small { font-weight: 500; color: var(--muted); }
   .tool .fill.hp { background: #3fa45b; }
   .tool .fill.hp.low { background: var(--danger); }
   .stats dd { text-align: right; }
@@ -225,6 +234,7 @@
   .recipe-result { display: block; font-size: 13px; font-weight: 700; margin-top: 4px; }
   .recipe-result.ok { color: var(--on-bg); }
   .recipe-result.fail { color: var(--danger); }
+  .recipe-result.ok.q-good, .recipe-result.ok.q-great, .recipe-result.ok.q-legend { color: var(--q); }
   .forge-btn {
     flex: none; min-width: 84px; min-height: 40px; padding: 0 12px;
     background: var(--on-bg); border: 0; border-radius: 10px;
@@ -543,6 +553,10 @@
           <span class="tool-xp" id="anvil-desc"></span>
         </div>
       </div>
+      <div class="skill"><span class="level"><span data-i18n="smithing"></span> <span id="smith-level"></span></span>
+        <span class="bar"><span class="fill" id="smith-fill"></span></span><span class="tool-xp" id="smith-xp"></span></div>
+      <dl class="stats"><div><dt data-i18n="qualityOdds"></dt></div></dl>
+      <p class="odds" id="quality-odds"></p>
       <button class="upgrade-btn" id="anvil-upgrade"><span id="anvil-next"></span><span class="cost" id="anvil-cost"></span></button>
     </section>
     <ul class="recipes" id="recipes"></ul>

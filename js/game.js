@@ -12,6 +12,7 @@ const freshState = () => ({
   anvil: { level: ANVIL.start },
   kitchen: { level: KITCHEN.start },
   cooking: { level: 0, xp: 0 }, // skill Memasak
+  smithing: { level: 0, xp: 0 }, // skill Menempa
   equip: { weapon: null, armor: null }, // perlengkapan yang dipakai tidak memakan slot Rumah
   mastery: { melee: { level: 0, xp: 0 }, armor: { level: 0, xp: 0 } },
   bag: { level: 0, items: {} },
@@ -26,8 +27,9 @@ const freshState = () => ({
   progress: 0,
   lastTick: Date.now(),
   // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci;
-  // 6: joran + Sungai; 7: Dapur + Memasak; 8: Petualangan (semuanya cukup diisi bawaan)
-  version: 8,
+  // 6: joran + Sungai; 7: Dapur + Memasak; 8: Petualangan; 9: kualitas tempa + Menempa (semuanya cukup diisi bawaan;
+  // item lama otomatis berkualitas Biasa karena key-nya tidak berubah)
+  version: 9,
 });
 const state = freshState();
 const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true };
@@ -58,6 +60,7 @@ function loadState(saved) {
     Object.assign(state.anvil, saved.anvil);
     Object.assign(state.kitchen, saved.kitchen);
     Object.assign(state.cooking, saved.cooking);
+    Object.assign(state.smithing, saved.smithing);
     Object.assign(state.equip, saved.equip);
     for (const k in state.mastery) Object.assign(state.mastery[k], saved.mastery && saved.mastery[k]);
     Object.assign(state.bag, saved.bag);
@@ -128,13 +131,15 @@ function rollDrop(key) {
 
 // Waktu satu aksi dalam ms; makin cepat seiring level alat (node) atau skill Memasak (resep);
 // petualangan mengikuti interval senjata yang dipakai
-const actionTime = key => ADVENTURES[key] ? (state.equip.weapon ? ITEM[state.equip.weapon].weapon.interval : 5000)
+const actionTime = key => ADVENTURES[key] ? (state.equip.weapon ? itemDef(state.equip.weapon).weapon.interval : 5000)
   : RECIPES[key] ? RECIPES[key].time * (1 - COOK_CUT * state.cooking.level)
   : NODES[key].time * (1 - TOOL_CUT * state.tools[NODES[key].tool].level);
 
 // Rumah: kapasitas = jumlah item berbeda yang bisa disimpan
 const houseCapacity = () => HOUSE.base + HOUSE.perLevel * state.house.level;
-const usedSlots = () => ITEMS.reduce((n, it) => n + (state.items[it.key] >= 1), 0);
+// Semua key item yang dimiliki (termasuk item berkualitas), urut seperti tampil di Rumah
+const ownedKeys = () => Object.keys(state.items).filter(k => state.items[k] >= 1).sort(compareKeys);
+const usedSlots = () => Object.values(state.items).filter(n => n >= 1).length;
 
 // Item bisa disimpan di Rumah kalau sudah ada, atau masih ada slot kosong
 const canStore = key => state.items[key] >= 1 || usedSlots() < houseCapacity();
@@ -145,7 +150,7 @@ function addItem(key, qty) {
     state.discarded[key] = (state.discarded[key] || 0) + qty;
     return false;
   }
-  state.items[key] += qty;
+  state.items[key] = (state.items[key] || 0) + qty;
   return true;
 }
 
@@ -180,6 +185,25 @@ function upgradeAnvil() {
   return true;
 }
 
+// Skill Menempa: exp = nilai bahan (jumlah × harga jual dasar)
+const smithXp = cost => Object.entries(cost).reduce((sum, [k, n]) => sum + (k === 'kepeng' ? 0 : n * prices[k]), 0);
+
+// Peluang tiap kualitas di level Menempa sekarang: [[kualitas, peluang]]
+function qualityOdds() {
+  const p = state.smithing.level / MAX_LEVEL;
+  const w = QUALITIES.map(q => [q.key, q.w0 + (q.w100 - q.w0) * p]);
+  const total = w.reduce((sum, [, x]) => sum + x, 0);
+  return w.map(([q, x]) => [q, x / total]);
+}
+// Undi kualitas (dan sifat kalau Pusaka) untuk perlengkapan jenis slot ('weapon' / 'armor')
+function rollQuality(slot) {
+  let r = Math.random(), q = 'common';
+  for (const [key, chance] of qualityOdds()) if ((r -= chance) < 0) { q = key; break; }
+  if (q !== 'legend') return { q };
+  const traits = Object.keys(TRAITS).filter(k => TRAITS[k].slot === slot || TRAITS[k].slot === 'any');
+  return { q, trait: traits[Math.floor(Math.random() * traits.length)] };
+}
+
 // Tingkat berikutnya dari sebuah alat, atau undefined kalau sudah tertinggi
 const nextTier = tool => TOOLS[tool].tiers[state.tools[tool].tier + 1];
 function forgeChance(tool) {
@@ -195,12 +219,13 @@ const canForge = tool => {
 // Mengembalikan { ok, key } atau null kalau tidak bisa menempa.
 function forgeTool(tool) {
   if (!canForge(tool)) return null;
-  const tier = nextTier(tool), ok = Math.random() < forgeChance(tool);
+  const tier = nextTier(tool), ok = Math.random() < forgeChance(tool), xp = smithXp(tier.cost);
   pay(tier.cost);
+  gainXp(state.smithing, xp, xpNeeded);
   if (ok) state.tools[tool].tier++;
   checkUnlocks(); // mis. joran pertama membuka Sungai
   save();
-  return { ok, key: tier.key };
+  return { ok, key: tier.key, xp };
 }
 
 // Dapur
@@ -233,23 +258,32 @@ function gearChance(key) {
   const g = GEAR[key];
   return Math.min(1, FORGE_BASE[g.tier] + FORGE_GAP * (state.anvil.level - g.anvil));
 }
-const canForgeGear = key => state.anvil.level >= GEAR[key].anvil && canAfford(GEAR[key].cost) && canStore(key);
+// Kualitas hasil belum diketahui, jadi menempa perlengkapan butuh satu slot Rumah kosong
+const canForgeGear = key => state.anvil.level >= GEAR[key].anvil && canAfford(GEAR[key].cost) && usedSlots() < houseCapacity();
 function forgeGear(key) {
   if (!canForgeGear(key)) return null;
-  const ok = Math.random() < gearChance(key);
+  const ok = Math.random() < gearChance(key), xp = smithXp(GEAR[key].cost);
   pay(GEAR[key].cost);
-  if (ok) addItem(key, 1);
+  gainXp(state.smithing, xp, xpNeeded);
+  let made = null;
+  if (ok) {
+    const { q, trait } = rollQuality(ITEM[key].weapon ? 'weapon' : 'armor');
+    made = itemKey(key, q, trait);
+    addItem(made, 1);
+  }
   checkUnlocks(); // senjata pertama membuka Petualangan
   save();
-  return { ok, key };
+  return { ok, key: made || key, xp };
 }
 
 // ---------- Petualangan ----------
 
 const adventuring = () => !!ADVENTURES[state.active];
-const meleeAtk = () => (state.equip.weapon ? ITEM[state.equip.weapon].weapon.atk : 0) * (1 + ADV.atkPerMeleeLv * state.mastery.melee.level);
-const playerDef = () => (state.equip.armor ? ITEM[state.equip.armor].armor.def : 0) + ADV.defPerArmorLv * state.mastery.armor.level;
-const maxHp = () => ADV.baseHp + ADV.hpPerArmorLv * state.mastery.armor.level + (state.equip.armor ? ITEM[state.equip.armor].armor.hp : 0);
+const meleeAtk = () => (state.equip.weapon ? itemDef(state.equip.weapon).weapon.atk : 0) * (1 + ADV.atkPerMeleeLv * state.mastery.melee.level);
+const playerDef = () => (state.equip.armor ? itemDef(state.equip.armor).armor.def : 0) + ADV.defPerArmorLv * state.mastery.armor.level;
+const maxHp = () => ADV.baseHp + ADV.hpPerArmorLv * state.mastery.armor.level + (state.equip.armor ? itemDef(state.equip.armor).armor.hp : 0);
+// Sifat Beruntung pada senjata/armor yang dipakai menaikkan peluang loot musuh
+const lootMult = () => ['weapon', 'armor'].reduce((m, s) => m * (state.equip[s] ? itemDef(state.equip[s]).drop : 1), 1);
 const winChance = enemy => { const a = meleeAtk() ** 2, p = ENEMIES[enemy].power ** 2; return a / (a + p); };
 const hitDamage = enemy => Math.max(1, Math.round(ENEMIES[enemy].dmg * 100 / (100 + playerDef())));
 
@@ -278,7 +312,7 @@ function upgradeBag() {
 
 // Rumah → Tas: hanya bekal (masakan), dan tidak saat sedang berpetualang
 function packFood(key, qty) {
-  if (adventuring() || ITEM[key].cat !== 'food') return 0;
+  if (adventuring() || itemDef(key).cat !== 'food') return 0;
   qty = Math.min(qty, Math.floor(state.items[key]));
   if (!(qty > 0) || !bagAdd(key, qty)) return 0;
   state.items[key] -= qty;
@@ -306,7 +340,7 @@ function discardFromBag(key) {
 
 // Pakai/lepas perlengkapan (tidak saat berpetualang). Barang yang dilepas kembali ke Rumah.
 function equipItem(slot, key) {
-  if (adventuring() || !(state.items[key] >= 1) || !ITEM[key][slot]) return false;
+  if (adventuring() || !(state.items[key] >= 1) || !itemDef(key)[slot]) return false;
   const prev = state.equip[slot];
   state.items[key]--;
   if (prev && !canStore(prev)) { state.items[key]++; return false; }
@@ -379,7 +413,7 @@ function adventure(key, at) {
     if (res.win) {
       state.adv.wins++;
       gainXp(state.mastery.melee, enemy.xp, xpNeeded);
-      for (const [item, chance, min, max] of enemy.drops) if (Math.random() < chance) take(item, randInt(min, max));
+      for (const [item, chance, min, max] of enemy.drops) if (Math.random() < chance * lootMult()) take(item, randInt(min, max));
       log(at, { k: 'win', e: ev.enemy, loot: res.loot });
     } else {
       state.adv.losses++;
@@ -430,7 +464,7 @@ function sell(key, qty) {
   qty = Math.min(qty, Math.floor(state.items[key]));
   if (!(qty > 0)) return 0;
   state.items[key] -= qty;
-  state.kepeng += qty * prices[key];
+  state.kepeng += qty * itemDef(key).price;
   save();
   return qty;
 }
