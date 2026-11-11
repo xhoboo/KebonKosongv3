@@ -517,6 +517,14 @@
     .tool .stats { max-width: 440px; }
     .farm-actions { max-width: 520px; }
     .upgrade-btn { display: inline-block; width: auto; min-width: 280px; }
+    /* Kartu alat/skill: exp & level di kiri, statistik + tombol upgrade di kanan dengan garis pemisah */
+    .tool-split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); gap: 0 32px; align-items: center; }
+    .tool-side { padding-left: 32px; border-left: 1px solid var(--line); align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
+    .tool-side > :first-child, .tool-side > [hidden] + * { margin-top: 0; }
+    .tool-side .stats { max-width: none; }
+    .tool-side .upgrade-btn { width: 100%; min-width: 0; }
+    .tool-split:has(> .tool-side:not(:has(> :not([hidden])))) { grid-template-columns: 1fr; }
+    .tool-side:not(:has(> :not([hidden]))) { display: none; }
     .cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
     .card { border-radius: 12px; }
     .card:hover:not(.locked):not(.on) { border-color: var(--muted); }
@@ -576,7 +584,8 @@
   </header>
 
   <main id="page-kebun" hidden>
-    <section class="tool">
+    <section class="tool tool-split">
+      <div class="tool-body">
       <div class="tool-top">
         <span class="tool-icon" aria-hidden="true">🧑‍🌾</span>
         <div class="tool-main">
@@ -585,8 +594,11 @@
           <span class="tool-xp" id="farm-xp"></span>
         </div>
       </div>
+      </div>
+      <div class="tool-side">
       <dl class="stats"><div><dt id="farm-plots"></dt></div></dl>
       <button class="upgrade-btn" id="farm-buy"><span id="farm-buy-text"></span><span class="cost" id="farm-buy-cost"></span></button>
+      </div>
     </section>
     <section class="panel">
       <div class="panel-head"><span class="panel-title" data-i18n="chooseSeed"></span></div>
@@ -624,7 +636,8 @@
   </main>
 
   <main id="page-dapur" hidden>
-    <section class="tool">
+    <section class="tool tool-split">
+      <div class="tool-body">
       <div class="tool-top">
         <span class="tool-icon" aria-hidden="true">🍳</span>
         <div class="tool-main">
@@ -637,8 +650,11 @@
         <span class="bar"><span class="fill" id="cooking-fill"></span></span>
         <span class="tool-xp" id="cooking-xp"></span>
       </div>
+      </div>
+      <div class="tool-side">
       <dl class="stats"><div id="cook-speed-row"><dt data-i18n="cookSpeed"></dt><dd id="cook-speed"></dd></div></dl>
       <button class="upgrade-btn" id="kitchen-upgrade"><span id="kitchen-next"></span><span class="cost" id="kitchen-cost"></span></button>
+      </div>
     </section>
     <div class="cards" data-area="dapur"></div>
   </main>
@@ -690,7 +706,8 @@
   </main>
 
   <main id="page-rumah" hidden>
-    <section class="tool">
+    <section class="tool tool-split">
+      <div class="tool-body">
       <div class="tool-top">
         <span class="tool-icon" aria-hidden="true">🏠</span>
         <div class="tool-main">
@@ -699,7 +716,10 @@
           <span class="tool-xp" id="house-slots"></span>
         </div>
       </div>
+      </div>
+      <div class="tool-side">
       <button class="upgrade-btn" id="house-upgrade"><span id="house-next"></span><span class="cost" id="house-cost"></span></button>
+      </div>
     </section>
     <section class="notice" id="discarded" hidden>
       <span class="notice-title" data-i18n="discarded"></span>
@@ -728,7 +748,8 @@
   </main>
 
   <main id="page-anvil" hidden>
-    <section class="tool">
+    <section class="tool tool-split">
+      <div class="tool-body">
       <div class="tool-top">
         <span class="tool-icon" aria-hidden="true">⚒️</span>
         <div class="tool-main">
@@ -738,9 +759,12 @@
       </div>
       <div class="skill"><span class="level"><span data-i18n="smithing"></span> <span id="smith-level"></span></span>
         <span class="bar"><span class="fill" id="smith-fill"></span></span><span class="tool-xp" id="smith-xp"></span></div>
+      </div>
+      <div class="tool-side">
       <dl class="stats"><div><dt data-i18n="qualityOdds"></dt></div></dl>
       <p class="odds" id="quality-odds"></p>
       <button class="upgrade-btn" id="anvil-upgrade"><span id="anvil-next"></span><span class="cost" id="anvil-cost"></span></button>
+      </div>
     </section>
     <ul class="recipes" id="recipes"></ul>
   </main>

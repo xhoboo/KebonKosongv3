@@ -167,13 +167,15 @@ function render() {
 // Kartu alat (kapak di Hutan, beliung di Goa), plus teks waktu & exp di kartu node
 // (keduanya ikut berubah saat alat naik level atau tingkat)
 for (const [tool, def] of Object.entries(TOOLS)) {
-  document.querySelector(`.tool[data-tool="${tool}"]`).innerHTML =
-    `<div class="tool-top"><span class="tool-icon" aria-hidden="true">${def.icon}</span><div class="tool-main">` +
+  const box = document.querySelector(`.tool[data-tool="${tool}"]`);
+  box.classList.add('tool-split');
+  box.innerHTML =
+    `<div class="tool-body"><div class="tool-top"><span class="tool-icon" aria-hidden="true">${def.icon}</span><div class="tool-main">` +
     `<div class="tool-title"><span class="level"></span><span class="name"></span></div>` +
-    `<span class="bar"><span class="fill"></span></span><span class="tool-xp"></span></div></div>` +
-    `<dl class="stats"><div class="row-cut"><dt data-i18n="${def.interval}"></dt><dd></dd></div>` +
+    `<span class="bar"><span class="fill"></span></span><span class="tool-xp"></span></div></div></div>` +
+    `<div class="tool-side"><dl class="stats"><div class="row-cut"><dt data-i18n="${def.interval}"></dt><dd></dd></div>` +
     `<div class="row-double"><dt data-i18n="${def.doubleText}"></dt><dd></dd></div></dl>` +
-    `<span class="tool-hint" data-i18n="toolHint"></span>`;
+    `<span class="tool-hint" data-i18n="toolHint"></span></div>`;
 }
 
 function renderTools() {
