@@ -12,7 +12,7 @@ for (const [key, node] of Object.entries(NODES)) {
   const el = document.createElement('button');
   el.className = 'card';
   el.dataset.node = key;
-  el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${key}"></span>` +
+  el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${node.name || key}"></span>` +
     `<span class="duration"></span><span class="icon">${node.icon}</span>` +
     `<span class="bar"><span class="fill"></span></span>`;
   document.querySelector(`.cards[data-area="${node.area}"]`).appendChild(el);
@@ -233,8 +233,9 @@ function renderAnvil() {
   for (const tool of Object.keys(TOOLS)) {
     const row = recipesEl.querySelector(`[data-recipe="${tool}"]`), next = nextTier(tool);
     const btn = row.querySelector('.forge-btn'), result = forgeResults[tool];
-    const current = t(TOOLS[tool].tiers[state.tools[tool].tier].key);
-    row.querySelector('.recipe-name').textContent = next ? current + ' → ' + t(next.key) : current;
+    const cur = TOOLS[tool].tiers[state.tools[tool].tier], current = t(cur.key);
+    // Alat yang belum dimiliki (tingkat 0 = belum punya) cukup ditulis nama tingkat berikutnya
+    row.querySelector('.recipe-name').textContent = !next ? current : cur.none ? t(next.key) : current + ' → ' + t(next.key);
     row.querySelector('.recipe-cost').innerHTML = next ? costHtml(next.cost) : t('topTier');
     row.querySelector('.recipe-chance').textContent = !next ? ''
       : lv < next.anvil ? t('needAnvil')(next.anvil) : t('chance')(num(forgeChance(tool) * 100));
@@ -281,6 +282,7 @@ recipesEl.addEventListener('click', e => {
     }
     renderAnvil();
     renderTools();
+    renderNav();
   }, FORGE_TIME);
 });
 
@@ -419,7 +421,7 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['hutan', 'goa', 'rumah', 'pasar', 'anvil', 'settings'];
+const PAGES = ['hutan', 'goa', 'sungai', 'rumah', 'pasar', 'anvil', 'settings'];
 const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
 
 function setMenu(open) {

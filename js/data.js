@@ -2,10 +2,13 @@
 
 const TEXT = {
   id: {
-    forest: 'Hutan', cave: 'Goa', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
+    forest: 'Hutan', cave: 'Goa', river: 'Sungai', house: 'Rumah', market: 'Pasar', anvil: 'Anvil', settings: 'Pengaturan',
     acacia: 'Pohon Akasia', teak: 'Pohon Jati', rock: 'Batu', copper: 'Batu Tembaga', seconds: 'detik',
     acaciaWood: 'Kayu Akasia', teakWood: 'Kayu Jati', twig: 'Ranting', leaf: 'Daun',
     stone: 'Batu', pebble: 'Kerikil', copperOre: 'Bijih Tembaga',
+    riverFishing: 'Memancing', wader: 'Ikan Wader', tilapia: 'Ikan Nila', catfish: 'Ikan Lele', snakehead: 'Ikan Gabus',
+    rodNone: 'Belum punya joran', rodBasic: 'Joran Biasa', rodInterval: 'Interval memancing', doubleFish: 'Peluang 2 ikan',
+    riverLocked: 'Butuh Joran Biasa (tempa di Anvil)', unlockedRiver: 'Sungai terbuka!', catFish: 'Ikan',
     miss: 'Zonk', empty: 'Belum ada item.',
     theme: 'Tema', light: 'Terang', dark: 'Gelap', language: 'Bahasa', sound: 'Suara', on: 'Nyala', off: 'Mati',
     openMenu: 'Buka menu', level: 'Level',
@@ -29,10 +32,13 @@ const TEXT = {
     discarded: 'Dibuang karena rumah penuh', dismiss: 'Tutup',
   },
   en: {
-    forest: 'Forest', cave: 'Cave', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
+    forest: 'Forest', cave: 'Cave', river: 'River', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
     acacia: 'Acacia Tree', teak: 'Teak Tree', rock: 'Rock', copper: 'Copper Rock', seconds: 'sec',
     acaciaWood: 'Acacia Wood', teakWood: 'Teak Wood', twig: 'Twig', leaf: 'Leaf',
     stone: 'Stone', pebble: 'Pebble', copperOre: 'Copper Ore',
+    riverFishing: 'Fishing', wader: 'Rasbora', tilapia: 'Tilapia', catfish: 'Catfish', snakehead: 'Snakehead',
+    rodNone: 'No fishing rod yet', rodBasic: 'Basic Rod', rodInterval: 'Fishing interval', doubleFish: 'Chance of 2 fish',
+    riverLocked: 'Requires Basic Rod (forge at the Anvil)', unlockedRiver: 'River unlocked!', catFish: 'Fish',
     miss: 'Miss', empty: 'No items yet.',
     theme: 'Theme', light: 'Light', dark: 'Dark', language: 'Language', sound: 'Sound', on: 'On', off: 'Off',
     openMenu: 'Open menu', level: 'Level',
@@ -68,8 +74,9 @@ const COPPER_ROCK_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="tr
   '<path d="M2 18 5 9l7-5 7 3 3 10-6 4H7Z" fill="#8d877d"/><path d="m5 9 7-5 7 3-6 4Z" fill="#aaa397"/>' +
   '<circle cx="8.5" cy="14.5" r="1.9" fill="#d9783a"/><circle cx="15.5" cy="15.5" r="1.6" fill="#e08a4a"/>' +
   '<circle cx="12.5" cy="8.5" r="1.2" fill="#c96a2e"/></svg>';
-// Kayu Jati: emoji kayu yang digelapkan
+// Kayu Jati: emoji kayu yang digelapkan; ikan dibedakan dengan warna
 const TEAK_WOOD_ICON = '<span class="emoji-teak">🪵</span>';
+const fishIcon = cls => `<span class="emoji-fish ${cls}">🐟</span>`;
 
 // Mata uang
 const KEPENG_ICON = '🪙';
@@ -78,6 +85,7 @@ const KEPENG_ICON = '🪙';
 const CATEGORIES = [
   { key: 'wood', name: 'catWood' },
   { key: 'stone', name: 'catStone' },
+  { key: 'fish', name: 'catFish' },
   { key: 'nature', name: 'catNature' },
 ];
 
@@ -91,6 +99,10 @@ const ITEMS = [
   { key: 'stone', icon: '🪨', cat: 'stone', price: 2 },
   { key: 'pebble', icon: PEBBLE_ICON, cat: 'stone', price: 1 },
   { key: 'copperOre', icon: COPPER_ORE_ICON, cat: 'stone', price: 5 },
+  { key: 'wader', icon: fishIcon('wader'), cat: 'fish', price: 3 },
+  { key: 'tilapia', icon: fishIcon('tilapia'), cat: 'fish', price: 6 },
+  { key: 'catfish', icon: fishIcon('catfish'), cat: 'fish', price: 10 },
+  { key: 'snakehead', icon: fishIcon('snakehead'), cat: 'fish', price: 25 },
 ];
 const icons = Object.fromEntries(ITEMS.map(it => [it.key, it.icon]));
 const prices = Object.fromEntries(ITEMS.map(it => [it.key, it.price]));
@@ -113,7 +125,7 @@ const OFFLINE_CAP = 24 * 60 * 60 * 1000;
 const MAX_LEVEL = 100;
 const xpNeeded = level => 20 * Math.floor(4 * 1.07 ** level + 0.0015 * level ** 3);
 
-// Alat (kapak untuk pohon, beliung untuk batu): dapat exp yang sama dengan node yang dikerjakan,
+// Alat (kapak untuk pohon, beliung untuk batu, joran untuk memancing): dapat exp yang sama dengan node yang dikerjakan,
 // tiap level memotong waktu aksi 0,75% (75% di level 100). Tiap level butuh 10% exp lebih banyak:
 // menebang Akasia nonstop → Lv 10 ≈ 7 menit, Lv 50 ≈ 6,5 jam, Lv 75 ≈ 2 hari, Lv 100 ≈ 15 hari.
 const TOOL_CUT = 0.0075;
@@ -137,6 +149,14 @@ const TOOLS = {
       { key: 'pickShiny', double: 0.05, anvil: 1, cost: { acaciaWood: 250, stone: 250 } },
     ],
   },
+  // Joran: tingkat 0 = belum punya (Sungai terkunci). Mulai tingkat 2 joran juga butuh benang dari Kebun.
+  rod: {
+    icon: '🎣', area: 'sungai', interval: 'rodInterval', doubleText: 'doubleFish',
+    tiers: [
+      { key: 'rodNone', double: 0, none: true },
+      { key: 'rodBasic', double: 0, anvil: 1, cost: { teakWood: 150, copperOre: 150 } },
+    ],
+  },
 };
 
 // Anvil: level menentukan tingkat alat yang bisa ditempa. Peluang berhasil tergantung selisih
@@ -152,10 +172,21 @@ const ANVIL = {
 
 // Area yang terkunci di awal; unlock(state) → true kalau syaratnya terpenuhi
 const AREA_UNLOCKS = {
-  goa: { text: 'caveLocked', done: 'unlockedCave', unlock: s => s.nodes.acacia.level >= 10 },
+  goa: { done: 'unlockedCave', unlock: s => s.nodes.acacia.level >= 10 },
+  sungai: { done: 'unlockedRiver', unlock: s => s.tools.rod.tier >= 1 },
 };
 
-// Sumber daya yang bisa dikerjakan. drops(p) → [item, peluang]; p = level / 100.
+// Memancing: hasil diundi dari daftar ikan berbobot; ikan bagus lebih jarang, makin sering seiring level
+// node. rare(tier) = pengali bobot ikan langka dari tingkat joran (tingkat 1 = 1×).
+// fish: [item, bobot di level 0, bobot di level 100, langka?]. miss = peluang tidak dapat apa-apa.
+function fishDrops(fish, p, tier) {
+  const miss = 0.05 + 0.35 * (1 - p), rare = 1 + 0.5 * (tier - 1);
+  const weights = fish.map(([item, w0, w100, isRare]) => [item, (w0 + (w100 - w0) * p) * (isRare ? rare : 1)]);
+  const total = weights.reduce((sum, [, w]) => sum + w, 0);
+  return [...weights.map(([item, w]) => [item, w / total * (1 - miss)]), [null, miss]];
+}
+
+// Sumber daya yang bisa dikerjakan. drops(p, tier) → [item, peluang]; p = level / 100, tier = tingkat alat.
 // Item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
 // tool + tier = alat yang dipakai dan tingkat minimumnya (di bawah itu node terkunci).
 // main = item yang bisa jadi ganda karena alat. time naik per tingkat, xp ikut naik supaya exp per detik tetap.
@@ -171,6 +202,15 @@ const NODES = {
   rock: {
     area: 'goa', icon: '🪨', time: 2000, xp: 20, tool: 'pickaxe', tier: 0, main: 'stone',
     drops: p => { const main = 0.4 + 0.6 * p; return [['stone', main], ['pebble', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
+  },
+  river: {
+    area: 'sungai', icon: '🎣', time: 3000, xp: 30, tool: 'rod', tier: 1, main: null, name: 'riverFishing',
+    drops: (p, tier) => fishDrops([
+      ['wader', 50, 30],
+      ['tilapia', 25, 35],
+      ['catfish', 8, 25, true],
+      ['snakehead', 1, 10, true],
+    ], p, tier),
   },
   copper: {
     area: 'goa', icon: COPPER_ROCK_ICON, time: 3000, xp: 30, tool: 'pickaxe', tier: 1, main: 'copperOre',

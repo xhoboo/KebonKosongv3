@@ -17,8 +17,9 @@ const freshState = () => ({
   active: null, // hanya satu aksi yang berjalan dalam satu waktu
   progress: 0,
   lastTick: Date.now(),
-  // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci
-  version: 5,
+  // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci;
+  // 6: joran + Sungai (cukup diisi bawaan)
+  version: 6,
 });
 const state = freshState();
 const settings = { theme: document.documentElement.dataset.theme, lang: 'id', sort: 'cat', sound: true };
@@ -100,7 +101,7 @@ const nodeOpen = key => areaOpen(NODES[key].area) && state.tools[NODES[key].tool
 
 function rollDrop(key) {
   let r = Math.random();
-  for (const [item, chance] of NODES[key].drops(state.nodes[key].level / MAX_LEVEL)) {
+  for (const [item, chance] of NODES[key].drops(state.nodes[key].level / MAX_LEVEL, state.tools[NODES[key].tool].tier)) {
     if ((r -= chance) < 0) return item;
   }
   return null;
@@ -172,6 +173,7 @@ function forgeTool(tool) {
   const tier = nextTier(tool), ok = Math.random() < forgeChance(tool);
   pay(tier.cost);
   if (ok) state.tools[tool].tier++;
+  checkUnlocks(); // mis. joran pertama membuka Sungai
   save();
   return { ok, key: tier.key };
 }

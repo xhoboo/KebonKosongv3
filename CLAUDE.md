@@ -18,9 +18,10 @@ Simpanan ada di `localStorage` (`kebon-kosong-v2`) dengan field `version`; perub
 
 - Pemain hanya bisa menjalankan satu kegiatan dalam satu waktu (menebang atau menambang, tidak bersamaan). Menyalakan satu kartu otomatis mematikan kartu lain.
 - Setiap sumber daya butuh sekitar 2 hari aksi aktif untuk mencapai level 100, dihitung dengan alat level 0. Node tingkat lebih tinggi lebih lambat per aksi tapi exp per aksinya naik sebanding (Akasia/Batu 2 detik 20 Exp, Jati/Tembaga 3 detik 30 Exp), jadi exp per detik sama. Alat yang ikut naik level mempercepat aksi, jadi nyatanya lebih cepat dari 2 hari; itu disengaja.
-- Alat: kapak (pohon di Hutan) dan beliung (batu di Goa). Exp aksi masuk ke level node itu sendiri dan ke alatnya sekaligus.
+- Alat: kapak (pohon di Hutan), beliung (batu di Goa), dan joran (memancing di Sungai). Exp aksi masuk ke level node itu sendiri dan ke alatnya sekaligus.
 - Alat butuh sekitar 15 hari aksi nonstop untuk mencapai level 100. Tiap level butuh 10% exp lebih banyak dari level sebelumnya. Tiap level memotong waktu aksi 0,75% (75% di level 100).
 - Node kayu/bijih yang lebih bagus terkunci sampai alatnya mencapai tingkat yang cukup (Jati butuh Kapak Berkilau, Tembaga butuh Beliung Berkilau).
+- Sungai terkunci sampai pemain menempa Joran Biasa (150 Kayu Jati + 150 Bijih Tembaga, belum butuh benang; benang dari Kebun baru wajib mulai joran tingkat 2). Memancing: 3 detik, 30 Exp per lemparan; ikan diundi berbobot (Wader, Nila, Lele, Gabus), ikan langka makin sering seiring level, dan joran tingkat lebih tinggi menambah bobot ikan langka (+50% per tingkat di atas 1). Peluang zonk 40% di level 0, 5% di level 100.
 - Goa terkunci sampai Pohon Akasia Lv. 10. Pemain dari simpanan sebelum versi 5 yang sudah pernah menambang langsung punya Goa terbuka.
 - Progres offline (dan tab yang lama tersembunyi) dihitung paling lama 24 jam.
 - Mata uang: Kepeng. Item dijual di Pasar dengan harga tetap per item (`price` di `ITEMS`); "Jual semua" butuh klik kedua dalam 3 detik.

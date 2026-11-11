@@ -68,7 +68,7 @@ Draf tier:
 
 ### Memancing
 - Punya level.
-- Alat pancing dibuat dari kayu + logam + benang dari Kebun (aturan silang).
+- Alat pancing dibuat dari kayu + logam + benang dari Kebun (aturan silang). Pengecualian: Joran Biasa (tingkat 1) belum butuh benang, supaya Sungai tidak menunggu Kebun.
 - Tiap area punya beberapa jenis ikan, diundi acak; ikan makin bagus makin jarang.
 - Area lebih sulit butuh alat pancing tier lebih tinggi (Sungai → Danau → Laut), kalau belum punya, area terkunci.
 - Alat pancing juga lebih baik = peluang ikan langka naik.
@@ -136,7 +136,7 @@ Draf tier:
 1. ✅ Pecah `index.html` ke `js/data.js`, `js/game.js`, `js/ui.js` (script biasa, tanpa build), save v3 + migrasi, Kepeng + jual item, batas offline 24 jam.
 2. ✅ Rumah (batas item berbeda, upgrade, sortir, catatan item dibuang).
 3. ✅ Hutan & Goa dengan rantai alat silang (tier 1–2), Anvil dasar, Goa terbuka di Akasia Lv. 10, suara tempa.
-4. Sungai & alat pancing.
+4. ✅ Sungai & alat pancing (Joran Biasa, 4 ikan sungai).
 5. Dapur.
 6. Petualangan + jurnal (Hutan Tepi, Keris vs Tombak).
 7. Kualitas tempa.
