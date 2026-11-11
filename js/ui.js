@@ -243,6 +243,33 @@ function renderNav() {
   }
 }
 
+// Status di menu (terlihat di sidebar desktop): level skill tiap area dan titik kegiatan yang berjalan.
+// Hanya menulis ke DOM kalau nilainya berubah karena dipanggil tiap frame.
+const NAV_SKILL = {
+  kebun: () => state.farm, hutan: () => state.tools.axe, goa: () => state.tools.pickaxe, sungai: () => state.tools.rod,
+  dapur: () => state.cooking, anvil: () => state.smithing, petualangan: () => state.mastery.melee,
+};
+let navStatusKey = '';
+function renderNavStatus() {
+  const running = state.active ? activityArea(state.active) : null;
+  const levels = Object.entries(NAV_SKILL).map(([p, s]) => s().level);
+  const key = running + '|' + levels.join(',');
+  if (key === navStatusKey) return;
+  navStatusKey = key;
+  Object.keys(NAV_SKILL).forEach((p, i) => {
+    const el = document.querySelector(`.nav-item[data-page="${p}"] .nav-lv`);
+    if (el) el.textContent = levels[i] + ' / ' + MAX_LEVEL;
+  });
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('running', n.dataset.page === running));
+}
+
+function renderPageTitle() {
+  const nav = document.querySelector(`.nav-item[data-page="${page}"]`);
+  if (!nav) return;
+  const label = nav.querySelector('[data-i18n]') || nav.lastElementChild;
+  $('page-title').textContent = nav.firstElementChild.textContent + ' ' + label.textContent;
+}
+
 // Suara dibuat langsung dengan Web Audio (tanpa file), hanya setelah pemain menyentuh layar
 let audio;
 function tone({ freq, type = 'sine', dur = 0.3, vol = 0.2, at = 0, slide }) {
@@ -596,6 +623,7 @@ function applySettings() {
   renderKepeng();
   renderAdventure();
   renderFarm();
+  renderPageTitle();
 }
 
 const kepengEl = $('kepeng');
@@ -724,6 +752,7 @@ function loop(now) {
     }
   }
   render();
+  renderNavStatus();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
@@ -747,6 +776,7 @@ function showPage(name) {
     if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
     else n.removeAttribute('aria-current');
   });
+  renderPageTitle();
   if (page === 'rumah') renderHouse();
   if (page === 'pasar') { renderMarket(); renderSeedShop(); }
   if (page === 'anvil') renderAnvil();

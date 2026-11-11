@@ -2,7 +2,7 @@
 
 Game idle sederhana, tanpa build step (script biasa, bukan ES module, supaya tetap jalan dari `file://`):
 
-- `index.html`: markup dan CSS.
+- `index.html`: markup dan CSS. Layar ≥900px memakai layout desktop: sidebar tetap di kiri (grup Mengumpulkan/Mengolah/Bertarung/Lainnya, level skill per area, titik hijau di kegiatan yang berjalan), bar atas berisi judul halaman + Kepeng, kartu dalam grid beberapa kolom. Di bawah itu tetap drawer ponsel. Level di sidebar diatur `NAV_SKILL` di `ui.js`.
 - `js/data.js`: data saja (teks id/en, item, harga, sumber daya, alat, rumus exp).
 - `js/game.js`: state, simpan/muat + migrasi, aksi, tempa, jual, progres offline. Tidak menyentuh DOM.
 - `js/ui.js`: tampilan, menu, alat, anvil, rumah, pasar, pengaturan, suara (Web Audio, tanpa file), loop animasi.

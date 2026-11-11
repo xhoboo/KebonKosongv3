@@ -446,29 +446,129 @@
     70% { opacity: 1; }
     to { transform: translateY(-8px); opacity: 0; }
   }
+
+  /* Grup & level menu dan judul halaman hanya tampil di layout desktop */
+  .nav-group, .nav-lv, .page-title { display: none; }
+
+  /* Desktop: sidebar tetap di kiri dengan grup kegiatan dan level skill, bar atas berisi judul halaman,
+     konten melebar dengan grid kartu beberapa kolom. Ponsel tetap memakai drawer. */
+  @media (min-width: 900px) {
+    :root { --side-w: 248px; --side-bg: #1f2b24; --side-ink: #e8eee9; --side-muted: #8fa396; --side-hover: #2a3a30; --side-cur: #355042; }
+    :root[data-theme="dark"] { --side-bg: #0e1310; --side-hover: #1a231d; --side-cur: #24352a; }
+    body { padding: 0 0 0 var(--side-w); }
+    .scrim, .menu-btn, header h1 { display: none; }
+    .drawer {
+      transform: none; visibility: visible; transition: none;
+      left: 0; right: auto; width: var(--side-w);
+      background: var(--side-bg); color: var(--side-ink); border: 0;
+      padding: 0 0 24px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--side-hover) transparent;
+    }
+    .drawer .brand {
+      position: sticky; top: 0; z-index: 1;
+      height: 56px; display: flex; align-items: center; padding: 0 20px;
+      background: var(--side-bg); border-bottom: 1px solid rgba(255, 255, 255, .06);
+      font-size: 17px; letter-spacing: .01em;
+    }
+    .nav-group {
+      display: block; padding: 18px 20px 6px;
+      font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--side-muted);
+    }
+    .nav-item {
+      position: relative; gap: 12px; padding: 7px 16px 7px 20px; border-radius: 0;
+      font-size: 14px; color: var(--side-ink);
+    }
+    .nav-item:hover { background: var(--side-hover); }
+    .nav-item:active { background: var(--side-cur); }
+    .nav-item[aria-current="page"] { background: var(--side-cur); }
+    .nav-item[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #6fcf86; }
+    .nav-item:disabled:hover { background: none; }
+    .nav-item > span:first-child { flex: none; width: 24px; text-align: center; font-size: 18px; }
+    .nav-text { flex: 1; min-width: 0; }
+    .nav-lock { color: var(--side-muted); }
+    .nav-lv {
+      display: block; margin-left: auto; flex: none;
+      font-size: 12px; font-weight: 600; color: var(--side-muted); font-variant-numeric: tabular-nums;
+    }
+    .nav-item[aria-current="page"] .nav-lv { color: var(--side-ink); }
+    .nav-item:disabled .nav-lv { display: none; }
+    /* Titik hijau berdenyut di kegiatan yang sedang berjalan */
+    .nav-item.running > span:first-child { position: relative; }
+    .nav-item.running > span:first-child::after {
+      content: ""; position: absolute; right: -3px; top: -1px; width: 8px; height: 8px;
+      border-radius: 50%; background: #6fcf86; box-shadow: 0 0 0 2px var(--side-bg);
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse { 50% { opacity: .35; } }
+
+    .app { max-width: none; margin: 0; }
+    header {
+      position: sticky; top: 0; z-index: 4;
+      height: 56px; margin: 0; padding: 0 32px;
+      background: var(--card); border-bottom: 1px solid var(--line);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+    }
+    .page-title { display: block; font-size: 18px; font-weight: 700; }
+    .kepeng { padding: 6px 14px; background: var(--track); border-radius: 999px; font-size: 15px; }
+    main { max-width: 1280px; padding: 24px 32px 48px; }
+    main > :first-child { margin-top: 0; }
+
+    .tool, .panel { border-radius: 12px; padding: 18px 20px; }
+    .tool .stats { max-width: 440px; }
+    .farm-actions { max-width: 520px; }
+    .upgrade-btn { display: inline-block; width: auto; min-width: 280px; }
+    .cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+    .card { border-radius: 12px; }
+    .card:hover:not(.locked):not(.on) { border-color: var(--muted); }
+    .market, .recipes { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+    .items { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+    .plots { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 10px; }
+    .plot-icon { font-size: 30px; }
+    .sort { max-width: 420px; }
+    .equip { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+    #page-settings { max-width: 640px; }
+
+    /* Petualangan: status di kiri, perlengkapan di kanan, kartu penuh; tas, bekal, dan jurnal berdampingan */
+    #page-petualangan:not([hidden]) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    #page-petualangan > * { margin: 0; }
+    #page-petualangan > .tool { grid-column: 1; }
+    #page-petualangan > .equip { grid-column: 2 / -1; grid-template-columns: 1fr 1fr; align-self: stretch; }
+    #page-petualangan > .cards { grid-column: 1 / -1; }
+    #page-petualangan .panel .market { grid-template-columns: 1fr; }
+    .journal { max-height: 480px; }
+  }
+  @media (min-width: 900px) and (max-width: 1279px) {
+    #page-petualangan:not([hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #page-petualangan > .equip { grid-column: 2; grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 <div class="scrim" id="scrim"></div>
 <nav class="drawer" id="drawer" aria-label="Menu">
   <div class="brand">Kebon Kosong</div>
-  <button class="nav-item" data-page="kebun"><span>🌾</span><span data-i18n="farm"></span></button>
-  <button class="nav-item" data-page="hutan"><span>🌳</span><span data-i18n="forest"></span></button>
-  <button class="nav-item" data-page="goa"><span>⛰️</span><span class="nav-text"><span data-i18n="cave"></span><small class="nav-lock" data-i18n="caveLocked"></small></span></button>
-  <button class="nav-item" data-page="sungai"><span>🏞️</span><span class="nav-text"><span data-i18n="river"></span><small class="nav-lock" data-i18n="riverLocked"></small></span></button>
-  <button class="nav-item" data-page="danau"><span>🌊</span><span class="nav-text"><span data-i18n="lake"></span><small class="nav-lock" data-i18n="lakeLocked"></small></span></button>
-  <button class="nav-item" data-page="laut"><span>⛵</span><span class="nav-text"><span data-i18n="sea"></span><small class="nav-lock" data-i18n="seaLocked"></small></span></button>
-  <button class="nav-item" data-page="dapur"><span>🍳</span><span data-i18n="kitchen"></span></button>
-  <button class="nav-item" data-page="petualangan"><span>⚔️</span><span class="nav-text"><span data-i18n="adventure"></span><small class="nav-lock" data-i18n="advLocked"></small></span></button>
-  <button class="nav-item" data-page="rumah"><span>🏠</span><span data-i18n="house"></span></button>
-  <button class="nav-item" data-page="pasar"><span>🏪</span><span data-i18n="market"></span></button>
-  <button class="nav-item" data-page="anvil"><span>⚒️</span><span data-i18n="anvil"></span></button>
-  <button class="nav-item" data-page="settings"><span>⚙️</span><span data-i18n="settings"></span></button>
+  <div class="nav-group" data-i18n="navGather"></div>
+  <button class="nav-item" data-page="kebun"><span class="nav-icon">🌾</span><span data-i18n="farm"></span><span class="nav-lv"></span></button>
+  <button class="nav-item" data-page="hutan"><span class="nav-icon">🌳</span><span data-i18n="forest"></span><span class="nav-lv"></span></button>
+  <button class="nav-item" data-page="goa"><span class="nav-icon">⛰️</span><span class="nav-text"><span data-i18n="cave"></span><small class="nav-lock" data-i18n="caveLocked"></small></span><span class="nav-lv"></span></button>
+  <button class="nav-item" data-page="sungai"><span class="nav-icon">🏞️</span><span class="nav-text"><span data-i18n="river"></span><small class="nav-lock" data-i18n="riverLocked"></small></span><span class="nav-lv"></span></button>
+  <button class="nav-item" data-page="danau"><span class="nav-icon">🌊</span><span class="nav-text"><span data-i18n="lake"></span><small class="nav-lock" data-i18n="lakeLocked"></small></span></button>
+  <button class="nav-item" data-page="laut"><span class="nav-icon">⛵</span><span class="nav-text"><span data-i18n="sea"></span><small class="nav-lock" data-i18n="seaLocked"></small></span></button>
+  <div class="nav-group" data-i18n="navCraft"></div>
+  <button class="nav-item" data-page="dapur"><span class="nav-icon">🍳</span><span data-i18n="kitchen"></span><span class="nav-lv"></span></button>
+  <button class="nav-item" data-page="anvil"><span class="nav-icon">⚒️</span><span data-i18n="anvil"></span><span class="nav-lv"></span></button>
+  <div class="nav-group" data-i18n="navCombat"></div>
+  <button class="nav-item" data-page="petualangan"><span class="nav-icon">⚔️</span><span class="nav-text"><span data-i18n="adventure"></span><small class="nav-lock" data-i18n="advLocked"></small></span><span class="nav-lv"></span></button>
+  <div class="nav-group" data-i18n="navOther"></div>
+  <button class="nav-item" data-page="rumah"><span class="nav-icon">🏠</span><span data-i18n="house"></span></button>
+  <button class="nav-item" data-page="pasar"><span class="nav-icon">🏪</span><span data-i18n="market"></span></button>
+  <button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span data-i18n="settings"></span></button>
 </nav>
 
 <div class="app">
   <header>
     <h1>Kebon Kosong</h1>
+    <span class="page-title" id="page-title"></span>
     <span class="kepeng" id="kepeng"></span>
     <button class="menu-btn" id="menu-btn" aria-controls="drawer" aria-expanded="false">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
