@@ -1,49 +1,56 @@
 <!doctype html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f3efe6">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <title>Kebon Kosong</title>
-<script>
-  // Pasang tema sebelum halaman digambar supaya tidak berkedip
-  (function () {
-    let theme = null;
-    try { theme = JSON.parse(localStorage.getItem('kebon-kosong-settings')).theme; } catch {}
-    if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    document.documentElement.dataset.theme = theme;
-  })();
-</script>
 <style>
+  /* Token monokrom (panel admin). Warna hanya untuk ikon, bar, dan glow item grade tinggi. */
   :root {
-    --bg: #f3efe6;
-    --card: #fffdf8;
-    --ink: #2a2620;
-    --muted: #7a7266;
-    --line: #e4ddcf;
-    --track: #ebe5d8;
-    --wood: #a0673a;
-    --on-bg: #3f7d4e;
-    --on-ink: #ffffff;
-    --on-edge: #2b5a37;
-    --level: #2f7fe0;
-    --danger: #c0392b;
-    color-scheme: light;
-  }
-  :root[data-theme="dark"] {
-    --bg: #141a16;
-    --card: #1d2520;
-    --ink: #ece7dc;
-    --muted: #9a9486;
-    --line: #2c3530;
-    --track: #2a332d;
-    --wood: #c98a55;
-    --on-bg: #2f6b3e;
-    --on-ink: #eaf5ec;
-    --on-edge: #1c4227;
-    --level: #5aa2ff;
-    --danger: #ff6b5b;
     color-scheme: dark;
+    --bg: #0a0a0a;
+    --card: #111111;
+    --panel: #111111;
+    --panel-2: #161616;
+    --sunken: #0d0d0d;
+    --line: #242424;
+    --line-2: #2e2e2e;
+    --line-strong: #3a3a3a;
+    --track: #1f1f1f;
+    --ink: #f0f0f0;
+    --ink-2: #d4d4d4;
+    --muted: #8c8c8c;
+    --dim: #5c5c5c;
+    --off: #4d4d4d;
+    --wood: #c98a55;
+    --on-bg: var(--panel-2);
+    --on-ink: var(--ink);
+    --on-edge: var(--ink);
+    --level: #5b9cff;
+    --danger: #ff6b5b;
+    --side-bg: var(--bg);
+    --side-hover: #141414;
+    --side-cur: var(--panel-2);
+    --bar-action: #6fcf73;
+    --bar-xp: #5b9cff;
+    --bar-grow: #b8d86b;
+    --bar-short: #e0a64f;
+    --bar-hp: #e5534b;
+    --q-common: #8c8c8c;
+    --q-good: #6fcf73;
+    --q-great: #5b9cff;
+    --q-legend: #f2b544;
+    --glow-great: 0 0 10px rgba(91, 156, 255, .28), inset 0 0 8px rgba(91, 156, 255, .12);
+    --glow-legend: 0 0 12px rgba(242, 181, 68, .30), inset 0 0 8px rgba(242, 181, 68, .14);
+    --r: 6px;
+    --r-sm: 4px;
+    --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --ease-out: cubic-bezier(.2, .8, .2, 1);
   }
   * { box-sizing: border-box; }
   [hidden] { display: none !important; }
@@ -52,7 +59,7 @@
     min-height: 100dvh;
     background: var(--bg);
     color: var(--ink);
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: var(--font);
     -webkit-tap-highlight-color: transparent;
     padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
   }
@@ -65,7 +72,7 @@
   .menu-btn {
     width: 40px; height: 40px; margin-right: -8px;
     display: grid; place-items: center;
-    background: none; border: 0; border-radius: 10px;
+    background: none; border: 0; border-radius: var(--r);
     color: var(--ink); cursor: pointer;
   }
   .menu-btn:active { background: var(--track); }
@@ -94,7 +101,7 @@
   .nav-item {
     display: flex; align-items: center; gap: 12px;
     width: 100%; padding: 12px;
-    background: none; border: 0; border-radius: 10px;
+    background: none; border: 0; border-radius: var(--r);
     font: inherit; font-size: 15px; color: var(--ink); text-align: left;
     cursor: pointer;
   }
@@ -111,7 +118,7 @@
     background: var(--card);
     color: var(--ink);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--r);
     font: inherit;
     cursor: pointer;
   }
@@ -191,7 +198,7 @@
 
   /* Kebun */
   .chip small { display: block; font-size: 10px; font-weight: 500; color: var(--muted); }
-  .chip.selected { background: var(--on-bg); color: var(--on-ink); }
+  .chip.selected { background: var(--ink); color: var(--bg); }
   .chip.selected small { color: inherit; opacity: .8; }
   .farm-actions { display: flex; gap: 8px; margin-top: 12px; }
   .farm-actions .notice-btn { flex: 1; margin: 0; min-height: 40px; }
@@ -199,42 +206,42 @@
   .plot {
     position: relative; width: 100%; aspect-ratio: 1;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
-    padding: 4px; background: #e9dcc4; border: 1px solid #d6c4a3; border-radius: 10px;
+    padding: 4px; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r);
     font: inherit; color: var(--ink); cursor: pointer;
   }
-  :root[data-theme="dark"] .plot { background: #3a3126; border-color: #4a3f31; }
   .plot-icon { font-size: 24px; line-height: 1; }
+  .plot.empty { border-style: dashed; border-color: var(--dim); }
   .plot.empty .plot-icon { opacity: .35; }
   .plot.growing .plot-icon { opacity: .55; transform: scale(.8); }
-  .plot.ready { border: 2px solid var(--on-bg); box-shadow: 0 0 0 3px color-mix(in srgb, var(--on-bg) 25%, transparent); }
+  .plot.ready { background: var(--panel-2); border-color: var(--ink); }
   .plot.wilted { filter: grayscale(.7); }
   .plot-time { font-size: 10px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .plot.ready .plot-time { color: var(--on-bg); }
-  .plot-bar { width: 80%; height: 4px; background: rgba(0, 0, 0, .12); border-radius: 99px; overflow: hidden; }
-  .plot-bar span { display: block; height: 100%; background: var(--on-bg); }
+  .plot.ready .plot-time { color: var(--ink); }
+  .plot-bar { width: 80%; height: 3px; background: var(--track); border-radius: 2px; overflow: hidden; }
+  .plot-bar span { display: block; height: 100%; background: var(--bar-grow); }
   .plot-fx { position: absolute; inset: auto 0 50% 0; font-size: 12px; font-weight: 700; animation: rise 1.5s ease-out forwards; }
   .shop { margin: 0 0 16px; }
   /* Kualitas tempa: warna nama + bingkai kotak item */
-  .q-good { --q: #3c9a52; } .q-great { --q: #3a7fd5; } .q-legend { --q: #c98a12; }
-  :root[data-theme="dark"] .q-good { --q: #62c47a; } :root[data-theme="dark"] .q-great { --q: #6aa8ff; } :root[data-theme="dark"] .q-legend { --q: #f0b43c; }
-  .item.q-good, .item.q-great, .item.q-legend { border: 2px solid var(--q); }
-  .item.q-legend { box-shadow: 0 0 0 3px color-mix(in srgb, var(--q) 25%, transparent); }
+  .q-good { --q: var(--q-good); } .q-great { --q: var(--q-great); } .q-legend { --q: var(--q-legend); }
+  /* Glow tipis hanya untuk Istimewa & Pusaka di kotak inventori */
+  .item.q-great { border-color: rgba(91, 156, 255, .55); box-shadow: var(--glow-great); }
+  .item.q-legend { border-color: rgba(242, 181, 68, .6); box-shadow: var(--glow-legend); }
   .sell-name.q-good, .sell-name.q-great, .sell-name.q-legend, .equip-name.q-good, .equip-name.q-great, .equip-name.q-legend,
   .chip.q-good, .chip.q-great, .chip.q-legend, .odds .q-good, .odds .q-great, .odds .q-legend, .recipe-result.q-good, .recipe-result.q-great, .recipe-result.q-legend { color: var(--q); }
   .odds { margin: 2px 0 0; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .recipe-result small { font-weight: 500; color: var(--muted); }
-  .tool .fill.hp { background: #3fa45b; }
+  .tool .fill.hp { background: var(--bar-hp); }
   .tool .fill.hp.low { background: var(--danger); }
   .stats dd { text-align: right; }
 
   .equip { display: grid; gap: 8px; margin-bottom: 12px; }
-  .equip-slot { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .equip-slot { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; }
   .equip-label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
   .equip-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; min-height: 24px; }
   .equip-toggle {
     display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 8px; margin-right: -6px;
     background: none; border: 0; border-radius: 6px;
-    font: inherit; font-size: 12px; font-weight: 600; color: var(--level); cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 600; color: var(--ink); cursor: pointer;
   }
   .equip-toggle:hover { background: var(--track); }
   .caret { width: 7px; height: 7px; border: solid currentColor; border-width: 0 2px 2px 0; transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
@@ -247,12 +254,12 @@
   .equip-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
   .chip {
     min-height: 32px; padding: 0 10px;
-    background: var(--track); border: 0; border-radius: 999px;
+    background: var(--track); border: 0; border-radius: var(--r-sm);
     font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer;
   }
   .chip:disabled, .sell-btn:disabled, .notice-btn:disabled { opacity: .5; cursor: default; }
 
-  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin-top: 12px; }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-top: 12px; }
   .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
   .panel-title { font-weight: 700; }
   .panel-title .level { display: inline; font-size: 12px; }
@@ -275,7 +282,7 @@
   .recipes { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   .recipe {
     display: flex; align-items: center; gap: 12px;
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
     padding: 12px;
   }
   .recipe-icon { flex: none; font-size: 32px; line-height: 1; }
@@ -283,24 +290,24 @@
   .recipe-name { display: block; font-weight: 600; font-size: 14px; }
   .recipe-meta { display: block; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; margin-top: 2px; }
   .recipe-result { display: block; font-size: 13px; font-weight: 700; margin-top: 4px; }
-  .recipe-result.ok { color: var(--on-bg); }
-  .recipe-result.fail { color: var(--danger); }
+  .recipe-result.ok { color: var(--ink); }
+  .recipe-result.fail { color: var(--muted); }
   .recipe-result.ok.q-good, .recipe-result.ok.q-great, .recipe-result.ok.q-legend { color: var(--q); }
   .forge-btn {
     flex: none; min-width: 84px; min-height: 40px; padding: 0 12px;
-    background: var(--on-bg); border: 0; border-radius: 10px;
-    font: inherit; font-size: 14px; font-weight: 600; color: var(--on-ink); cursor: pointer;
+    background: var(--ink); border: 1px solid var(--ink); border-radius: var(--r);
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--bg); cursor: pointer;
   }
-  .forge-btn:disabled { background: var(--track); color: var(--muted); cursor: default; }
+  .forge-btn:disabled { background: var(--panel-2); border-color: var(--line-strong); color: var(--muted); cursor: default; }
   .recipe.forging .recipe-icon { animation: hammer .5s ease-in-out infinite; transform-origin: 70% 80%; }
   @keyframes hammer { 0%, 100% { transform: rotate(0); } 40% { transform: rotate(-35deg); } 60% { transform: rotate(8deg); } }
   .recipe.shake { animation: shake .35s; }
   @keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
   .notice {
-    background: var(--card); border: 1.5px solid var(--danger); border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r);
     padding: 12px 14px; margin-bottom: 12px;
   }
-  .notice-title { display: block; font-weight: 600; font-size: 14px; color: var(--danger); }
+  .notice-title { display: block; font-weight: 600; font-size: 14px; color: var(--ink); }
   .notice-list { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 8px 0 10px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .notice-btn {
     min-height: 32px; padding: 0 12px;
@@ -311,7 +318,7 @@
   .market { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
   .sell-row {
     display: flex; align-items: center; gap: 10px;
-    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
     padding: 10px 12px;
   }
   .sell-icon { flex: none; font-size: 28px; line-height: 1; }
@@ -325,17 +332,17 @@
     cursor: pointer; white-space: nowrap;
   }
   .sell-btn:active { transform: scale(.97); }
-  .sell-btn.confirm { background: var(--danger); color: var(--card); }
+  .sell-btn.confirm { border-color: var(--danger); color: var(--danger); }
 
   .setting {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: var(--r);
     padding: 12px 14px;
     margin-bottom: 8px;
   }
   .setting-label { display: block; font-weight: 600; margin-bottom: 10px; }
-  .segment { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--track); border-radius: 10px; padding: 4px; }
+  .segment { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--track); border-radius: var(--r); padding: 4px; }
   .segment button {
     min-height: 36px;
     background: none; border: 0; border-radius: 7px;
@@ -344,12 +351,12 @@
   }
   .reset-btn {
     width: 100%; min-height: 40px;
-    background: none; border: 1.5px solid var(--danger); border-radius: 10px;
+    background: none; border: 1.5px solid var(--danger); border-radius: var(--r);
     font: inherit; font-size: 14px; font-weight: 600; color: var(--danger);
     cursor: pointer;
   }
-  .reset-btn.confirm { background: var(--danger); color: var(--card); }
-  .segment button[aria-pressed="true"] { background: var(--card); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
+  .reset-btn.confirm { background: var(--panel-2); }
+  .segment button[aria-pressed="true"] { background: var(--track); color: var(--ink); font-weight: 600; }
 
   .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .card {
@@ -359,30 +366,26 @@
     background: var(--card);
     color: var(--ink);
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: var(--r);
     padding: 16px;
     font: inherit;
     text-align: center;
     cursor: pointer;
     transition: transform .12s, box-shadow .12s, background-color .2s, color .2s, border-color .2s;
   }
-  .card.on {
-    background: var(--on-bg); border-color: var(--on-bg); color: var(--on-ink);
-    transform: translateY(-4px);
-    box-shadow: 0 4px 0 var(--on-edge), 0 12px 18px -8px rgba(0, 0, 0, .45);
-  }
-  .card:active { transform: translateY(0) scale(.97); box-shadow: none; }
+  .card.on { background: var(--panel-2); border-color: var(--ink); }
+  .card:active { transform: scale(.97); }
   /* Cincin level: garis biru tipis di tepi kartu, mulai dari tengah atas searah jarum jam */
   .card::before {
     content: ""; position: absolute; inset: -1px;
     border-radius: inherit; padding: 2px;
-    background: conic-gradient(var(--level) var(--lv, 0%), transparent 0);
+    background: conic-gradient(var(--bar-xp) var(--lv, 0%), transparent 0);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
     pointer-events: none;
   }
-  .level { display: block; font-size: 11px; font-weight: 700; color: var(--level); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .level { display: block; font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
   .card.on .level { color: inherit; }
   .name { display: block; font-size: 16px; font-weight: 700; }
   .duration { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
@@ -401,15 +404,13 @@
     border-radius: 999px;
     overflow: hidden;
   }
-  .card.on .bar { background: color-mix(in srgb, var(--on-ink) 25%, transparent); }
-  .fill { display: block; height: 100%; width: 0%; background: var(--muted); border-radius: inherit; }
-  .card.on .fill { background: var(--on-ink); }
+    .fill { display: block; height: 100%; width: 0%; background: var(--bar-action); border-radius: inherit; }
 
   /* Kartu alat: memanjang penuh; ikon di kiri, di sebelahnya level + nama, bar exp, dan counter exp */
   .tool {
     background: var(--card);
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: var(--r);
     padding: 16px;
     margin-bottom: 12px;
   }
@@ -419,7 +420,7 @@
   .tool-title { display: flex; align-items: baseline; gap: 6px; }
   .tool .level { font-size: 13px; margin: 0; }
   .tool .bar { margin-top: 8px; }
-  .tool .fill { background: var(--level); }
+  .tool .fill, .skill .fill { background: var(--bar-xp); }
   .tool-xp { display: block; margin-top: 4px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .stats { margin: 12px 0 0; font-size: 13px; }
   .stats div { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; }
@@ -427,11 +428,11 @@
   .stats dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
   .upgrade-btn {
     display: block; width: 100%; min-height: 48px; margin-top: 12px; padding: 6px 12px;
-    background: var(--on-bg); border: 0; border-radius: 10px;
-    font: inherit; font-size: 14px; font-weight: 600; color: var(--on-ink);
+    background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r);
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink);
     cursor: pointer;
   }
-  .upgrade-btn:disabled { background: var(--track); color: var(--muted); cursor: default; }
+  .upgrade-btn:disabled { color: var(--muted); border-color: var(--line); cursor: default; }
   .upgrade-btn:not(:disabled):active { transform: scale(.98); }
   .cost { display: block; font-size: 12px; font-weight: 500; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
@@ -440,11 +441,10 @@
   .pop {
     position: absolute;
     padding: 3px 8px;
-    background: color-mix(in srgb, var(--card) 70%, transparent); color: var(--ink);
-    -webkit-backdrop-filter: blur(3px);
-    backdrop-filter: blur(3px);
-    border-radius: 999px;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, .15);
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--r-sm);
+    font-family: var(--mono);
     pointer-events: none; white-space: nowrap;
     font-size: 14px; font-weight: 700; line-height: 1.2;
     animation: rise 1.6s ease-out forwards;
@@ -462,8 +462,7 @@
   /* Desktop: sidebar tetap di kiri dengan grup kegiatan dan level skill, bar atas berisi judul halaman,
      konten melebar dengan grid kartu beberapa kolom. Ponsel tetap memakai drawer. */
   @media (min-width: 900px) {
-    :root { --side-w: 248px; --side-bg: #1f2b24; --side-ink: #e8eee9; --side-muted: #8fa396; --side-hover: #2a3a30; --side-cur: #355042; }
-    :root[data-theme="dark"] { --side-bg: #0e1310; --side-hover: #1a231d; --side-cur: #24352a; }
+    :root { --side-w: 232px; --side-ink: var(--ink); --side-muted: var(--muted); }
     body { padding: 0 0 0 var(--side-w); }
     .scrim, .menu-btn, header h1 { display: none; }
     .drawer {
@@ -476,7 +475,7 @@
     .drawer .brand {
       position: sticky; top: 0; z-index: 1;
       height: 56px; display: flex; align-items: center; padding: 0 20px;
-      background: var(--side-bg); border-bottom: 1px solid rgba(255, 255, 255, .06);
+      background: var(--side-bg); border-bottom: 1px solid var(--line);
       font-size: 17px; letter-spacing: .01em;
     }
     .nav-group {
@@ -490,7 +489,7 @@
     .nav-item:hover { background: var(--side-hover); }
     .nav-item:active { background: var(--side-cur); }
     .nav-item[aria-current="page"] { background: var(--side-cur); }
-    .nav-item[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: #6fcf86; }
+    .nav-item[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--ink); }
     .nav-item:disabled:hover { background: none; }
     .nav-item > span:first-child { flex: none; width: 24px; text-align: center; font-size: 18px; }
     .nav-text { flex: 1; min-width: 0; }
@@ -505,7 +504,7 @@
     .nav-item.running > span:first-child { position: relative; }
     .nav-item.running > span:first-child::after {
       content: ""; position: absolute; right: -3px; top: -1px; width: 8px; height: 8px;
-      border-radius: 50%; background: #6fcf86; box-shadow: 0 0 0 2px var(--side-bg);
+      border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--side-bg);
       animation: pulse 1.6s ease-in-out infinite;
     }
     @keyframes pulse { 50% { opacity: .35; } }
@@ -515,14 +514,13 @@
       position: sticky; top: 0; z-index: 4;
       height: 56px; margin: 0; padding: 0 32px;
       background: var(--card); border-bottom: 1px solid var(--line);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
     }
     .page-title { display: block; font-size: 18px; font-weight: 700; }
     .kepeng { padding: 6px 14px; background: var(--track); border-radius: 999px; font-size: 15px; }
     main { max-width: 1280px; padding: 24px 32px 48px; }
     main > :first-child { margin-top: 0; }
 
-    .tool, .panel { border-radius: 12px; padding: 18px 20px; }
+    .tool, .panel { border-radius: var(--r); padding: 18px 20px; }
     .tool .stats { max-width: 440px; }
     .farm-actions { max-width: 520px; }
     .upgrade-btn { display: inline-block; width: auto; min-width: 280px; }
@@ -539,7 +537,7 @@
     .tool-split:has(> .tool-side:not(:has(> :not([hidden])))) { grid-template-columns: 1fr; }
     .tool-side:not(:has(> :not([hidden]))) { display: none; }
     .cards { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-    .card { border-radius: 12px; }
+    .card { border-radius: var(--r); }
     .card:hover:not(.locked):not(.on) { border-color: var(--muted); }
     .market, .recipes { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
     .items { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
@@ -790,13 +788,6 @@
   <main id="page-settings" hidden>
     <h2 data-i18n="settings"></h2>
     <div class="setting">
-      <span class="setting-label" data-i18n="theme"></span>
-      <div class="segment">
-        <button data-theme-choice="light" data-i18n="light"></button>
-        <button data-theme-choice="dark" data-i18n="dark"></button>
-      </div>
-    </div>
-    <div class="setting">
       <span class="setting-label" data-i18n="language"></span>
       <div class="segment">
         <button data-lang-choice="id">Indonesia</button>
@@ -818,9 +809,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-11.1"></script>
-<script src="js/game.js?v=2026-11-11.1"></script>
-<script src="js/ui.js?v=2026-11-11.1"></script>
-<script src="js/debug.js?v=2026-11-11.1"></script>
+<script src="js/data.js?v=2026-11-12.1"></script>
+<script src="js/game.js?v=2026-11-12.1"></script>
+<script src="js/ui.js?v=2026-11-12.1"></script>
+<script src="js/debug.js?v=2026-11-12.1"></script>
 </body>
 </html>

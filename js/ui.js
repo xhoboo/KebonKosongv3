@@ -617,17 +617,16 @@ $('seed-shop').addEventListener('click', e => {
 });
 
 function applySettings() {
+  // Tema hanya gelap monokrom
   const root = document.documentElement;
-  root.dataset.theme = settings.theme;
+  root.dataset.theme = 'dark';
   root.lang = settings.lang;
-  document.querySelector('meta[name="theme-color"]').content = getComputedStyle(root).getPropertyValue('--bg').trim();
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
   renderTools();
   renderNav();
   renderAnvil();
   $('menu-btn').setAttribute('aria-label', t('openMenu'));
   document.querySelectorAll('[data-sound-choice]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.soundChoice === 'on') === settings.sound));
-  document.querySelectorAll('[data-theme-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeChoice === settings.theme));
   document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
   renderHouse();
   renderMarket();
@@ -804,11 +803,6 @@ navItems.forEach(n => n.addEventListener('click', () => {
 }));
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 
-document.querySelectorAll('[data-theme-choice]').forEach(b => b.addEventListener('click', () => {
-  settings.theme = b.dataset.themeChoice;
-  saveSettings();
-  applySettings();
-}));
 document.querySelectorAll('[data-sound-choice]').forEach(b => b.addEventListener('click', () => {
   settings.sound = b.dataset.soundChoice === 'on';
   saveSettings();
