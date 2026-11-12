@@ -462,11 +462,13 @@ const SOUNDS = {
   fail: at => { tone({ freq: 220, type: 'sawtooth', dur: 0.4, vol: 0.12, at, slide: 70 }); },
 };
 
-// Anvil: kartu level + upgrade, lalu satu baris per alat dengan tingkat berikutnya
+// Anvil: skill Menempa, panel upgrade Anvil, lalu kartu resep (Alat | Senjata) dan baris NANTI
 const anvilUpgradeBtn = $('anvil-upgrade'), recipesEl = $('recipes');
 const FORGE_TIME = 1500; // animasi + suara sebelum hasil tempa keluar
 let forging = null; // alat yang sedang ditempa
+let forgingTier = null; // tingkat yang sedang ditempa + peluangnya (kartu dibekukan selama animasi)
 const forgeResults = {}; // tool → { ok, key, timer } hasil terakhir yang masih ditampilkan
+let anvilTab = 'tools'; // 'tools' | 'gear' (segmented control di bar atas)
 
 // Statistik singkat perlengkapan: serangan & interval untuk senjata, pertahanan & HP untuk armor
 const gearStats = key => {
@@ -475,65 +477,147 @@ const gearStats = key => {
     : `🛡️ ${num(it.armor.def)} · ❤️ +${num(it.armor.hp)}`) + (it.trait ? ' · ' + t(TRAITS[it.trait].desc) : '');
 };
 
-recipesEl.innerHTML = [...Object.entries(TOOLS).map(([key, def]) => [key, def.icon]), ...Object.keys(GEAR).map(key => [key, ITEM[key].icon])].map(([tool, icon]) =>
-  `<li class="recipe" data-recipe="${tool}"><span class="recipe-icon" aria-hidden="true">${icon}</span>` +
-  `<span class="recipe-info"><span class="recipe-name"></span><span class="recipe-meta recipe-cost"></span>` +
-  `<span class="recipe-meta recipe-chance"></span><span class="recipe-result" role="status"></span></span>` +
-  `<button class="forge-btn" data-forge="${tool}"></button></li>`).join('');
+// Area asal sebuah bahan, untuk baris tujuan "Kurang 110 Batu, Goa →"
+const ITEM_SOURCE = { kepeng: 'pasar' };
+for (const [k, n] of Object.entries(NODES)) for (const item of nodeDrops(k)) if (!ITEM_SOURCE[item] || item === n.main) ITEM_SOURCE[item] = n.area;
+for (const k of Object.keys(CROPS)) ITEM_SOURCE[k] = 'kebun';
+for (const it of ITEMS) if (!ITEM_SOURCE[it.key] && it.cat === 'loot') ITEM_SOURCE[it.key] = 'petualangan';
 
-function renderAnvil() {
-  const lv = state.anvil.level, cost = ANVIL.cost[lv + 1];
-  $('anvil-level').textContent = 'Lv. ' + lv;
-  $('anvil-desc').textContent = t('anvilCanForge')(lv + 1);
-  skillBar('smith', state.smithing);
-  $('quality-odds').innerHTML = qualityOdds().map(([q, p]) => `<span class="q-${q}">${t(QUALITY[q].name)} ${num(p * 100, 1)}%</span>`).join(' · ');
-  anvilUpgradeBtn.hidden = !cost;
-  if (cost) {
-    $('anvil-next').textContent = t('upgradeLv')(lv + 1);
-    $('anvil-cost').innerHTML = costHtml(cost);
-    anvilUpgradeBtn.disabled = !canAfford(cost);
-  }
-  for (const tool of Object.keys(TOOLS)) {
-    const row = recipesEl.querySelector(`[data-recipe="${tool}"]`), next = nextTier(tool);
-    const btn = row.querySelector('.forge-btn'), result = forgeResults[tool];
-    const cur = TOOLS[tool].tiers[state.tools[tool].tier], current = t(cur.key);
-    // Alat yang belum dimiliki (tingkat 0 = belum punya) cukup ditulis nama tingkat berikutnya
-    row.querySelector('.recipe-name').textContent = !next ? current : cur.none ? t(next.key) : current + ' → ' + t(next.key);
-    row.querySelector('.recipe-cost').innerHTML = next ? costHtml(next.cost) : t('topTier');
-    row.querySelector('.recipe-chance').textContent = !next ? ''
-      : lv < next.anvil ? t('needAnvil')(next.anvil) : t('chance')(num(forgeChance(tool) * 100));
-    const res = row.querySelector('.recipe-result');
-    res.innerHTML = result ? (result.ok ? t('forgeOk')(t(result.key)) : t('forgeFail')) + ` <small>${t('smithXp')(num(result.xp))}</small>` : '';
-    res.className = 'recipe-result' + (result ? (result.ok ? ' ok' : ' fail') : '');
-    res.hidden = !result;
-    btn.hidden = !next && forging !== tool;
-    btn.textContent = forging === tool ? t('forging') : t('forge');
-    btn.disabled = !!forging || !canForge(tool);
-    row.classList.toggle('forging', forging === tool);
-  }
-  for (const key of Object.keys(GEAR)) {
-    const row = recipesEl.querySelector(`[data-recipe="${key}"]`), g = GEAR[key], result = forgeResults[key];
-    // Jumlah dimiliki, semua kualitas, termasuk yang sedang dipakai
-    const mine = k => parseKey(k).base === key;
-    const owned = ownedKeys().filter(mine).reduce((n, k) => n + state.items[k], 0)
-      + ['weapon', 'armor'].filter(s => state.equip[s] && mine(state.equip[s])).length;
-    row.querySelector('.recipe-name').textContent = t(key) + (owned ? ` (${num(owned)})` : '');
-    row.querySelector('.recipe-cost').innerHTML = gearStats(key) + '<br>' + costHtml(g.cost);
-    row.querySelector('.recipe-chance').textContent = lv < g.anvil ? t('needAnvil')(g.anvil)
-      : usedSlots() >= houseCapacity() ? t('houseFull') : t('chance')(num(gearChance(key) * 100));
-    const res = row.querySelector('.recipe-result');
-    res.innerHTML = result ? (result.ok ? t('forgeOk')(nameOf(result.key)) : t('forgeFail')) + ` <small>${t('smithXp')(num(result.xp))}</small>` : '';
-    res.className = 'recipe-result' + (result ? (result.ok ? ' ok q-' + parseKey(result.key).q : ' fail') : '');
-    res.hidden = !result;
-    const btn = row.querySelector('.forge-btn');
-    btn.textContent = forging === key ? t('forging') : t('forge');
-    btn.disabled = !!forging || !canForgeGear(key);
-    row.classList.toggle('forging', forging === key);
-  }
+// Ikon anvil garis untuk animasi tempa, dan 6 percikan dengan arah berbeda
+const ANVIL_ART = '<span class="anvil-ic"><svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 2h16c0 3-2 4-4 4v3h3v5H6V9h3V6H6C4 6 2 4.5 2 2z" fill="none" stroke="#8c8c8c" stroke-width="1.4" stroke-linejoin="round"/></svg></span>';
+const SPARKS = [[-14, -10], [12, -12], [-8, -16], [16, -4], [-16, -2], [6, -18]]
+  .map(([x, y]) => `<span class="spark" style="--sx:${x}px;--sy:${y}px"></span>`).join('');
+const FORGE_ART = `<span class="forge-art" aria-hidden="true">${ANVIL_ART}<span class="hammer">🔨</span>${SPARKS}</span>`;
+
+// Meter per bahan: hijau kalau cukup, oranye kalau kurang
+const matsHtml = cost => Object.entries(cost).map(([k, n]) => {
+  const h = Math.floor(have(k)), ok = h >= n;
+  return `<div class="mat${ok ? ' ok' : ''}" title="${k === 'kepeng' ? t('kepeng') : nameOf(k)}"><span class="mat-ic" aria-hidden="true">${k === 'kepeng' ? KEPENG_ICON : icons[k]}</span>` +
+    `<span class="bar"><span class="fill${ok ? '' : ' short'}" style="width:${Math.min(100, h / n * 100)}%"></span></span>` +
+    `<span class="mat-n">${num(Math.min(h, 99999))}/${num(n)}</span></div>`;
+}).join('');
+// Baris tujuan untuk bahan pertama yang kurang (link ke area sumbernya; gembok kalau areanya terkunci)
+function goalHtml(cost) {
+  const miss = Object.entries(cost).find(([k, n]) => have(k) < n);
+  if (!miss) return '';
+  const [k, n] = miss, area = ITEM_SOURCE[k], open = area && areaOpen(area);
+  const what = k === 'kepeng' ? t('kepeng') : nameOf(k);
+  return `<button class="goal" ${open ? `data-go="${area}"` : 'disabled'}><span><span aria-hidden="true">${k === 'kepeng' ? KEPENG_ICON : icons[k]}</span>` +
+    `${t('shortOf')(num(Math.ceil(n - have(k))), what)}${area ? ', ' + pageName(area) : ''}</span><span class="mono">${open ? '→' : area ? LOCK_SVG : ''}</span></button>`;
+}
+const oddsHtml = () => {
+  const odds = qualityOdds();
+  return `<div class="odds-head"><span class="caps">${t('lblQuality')}</span><span class="caps">${odds.map(([, p]) => num(p * 100)).join(' · ')}</span></div>` +
+    `<div class="odds-bar" role="img" aria-label="${odds.map(([q, p]) => t(QUALITY[q].name) + ' ' + num(p * 100, 1) + '%').join(', ')}">` +
+    odds.map(([, p]) => `<span style="width:${p * 100}%"></span>`).join('') + '</div>';
+};
+function resultHtml(r) {
+  if (!r) return '';
+  if (!r.ok) return `<div class="forge-res fail" role="status"><span class="res-name">${t('forgeFail')}<small>${t('smithXp')(num(r.xp))}</small></span><span class="res-tag">${t('failTag')}</span></div>`;
+  const q = parseKey(r.key).q, gear = !TOOLS[r.tool];
+  return `<div class="forge-res${gear ? ' q-' + q : ''}" role="status"><span class="res-ic" aria-hidden="true">${gear ? iconOf(r.key) : TOOLS[r.tool].icon}</span>` +
+    `<span class="res-name">${gear ? nameOf(r.key) : t(r.key)}<small>${t('smithXp')(num(r.xp))}</small></span>` +
+    `<span class="res-tag"><span class="q-dot ${gear ? 'q-' + q : ''}"></span>${gear ? t(QUALITY[q].name) : t('okTag')}</span></div>`;
 }
 
+// Isi kartu dihitung per bagian; bagian hanya ditulis ulang kalau berubah, supaya animasi tempa tidak terulang
+function setHTML(el, html) { if (el._h !== html) { el._h = html; el.innerHTML = html; } }
+function recipeParts(key) {
+  const lv = state.anvil.level, result = forgeResults[key], busy = forging === key;
+  if (TOOLS[key]) {
+    const def = TOOLS[key], s = state.tools[key];
+    // Selama animasi kartu tetap menampilkan tingkat yang sedang ditempa (state sudah berubah saat diklik)
+    const idx = busy ? forgingTier.idx : nextTier(key) ? s.tier + 1 : s.tier;
+    const next = busy ? def.tiers[idx] : nextTier(key);
+    if (!next && !result && !busy) return null;
+    const cur = def.tiers[idx - 1] || def.tiers[0];
+    // Setelah tingkat terakhir ditempa, kartunya tetap tampil sampai hasilnya hilang
+    const shown = next || def.tiers[s.tier];
+    if (next && lv < next.anvil && !result && !busy) return { later: def.icon, title: t(next.key) + ' · ' + t('needAnvil')(next.anvil) };
+    const opens = Object.entries(NODES).filter(([, n]) => n.tool === key && n.tier === idx)
+      .map(([k, n]) => `<span>${n.icon} ${n.name ? t(AREA_TEXT[n.area]) : t(k)}</span>`).join('');
+    const old = cur.none || idx === 0 ? '' : `<span class="ibox old" aria-hidden="true">${def.icon}</span>${ARROW_SVG.replace('class="arrow"', 'class="r-arrow"')}`;
+    return {
+      ready: next && canForge(key),
+      head: `${old}<span class="ibox" aria-hidden="true">${def.icon}</span><div class="r-info"><div class="r-name">${t(shown.key)}</div>` +
+        (opens ? `<div class="r-sub"><span class="caps">${t('lblOpens')}</span>${opens}</div>` : '') + `</div><span class="r-tier">${tierLabel(key, idx)}</span>`,
+      mats: next && !busy ? matsHtml(next.cost) : '',
+      odds: '',
+      act: !next && !busy ? '' : actHtml(key, busy ? forgingTier.chance : forgeChance(key), busy || canForge(key), next && next.cost),
+      res: resultHtml(result),
+    };
+  }
+  const g = GEAR[key];
+  if (lv < g.anvil && !result && !busy) return { later: ITEM[key].icon, title: t(key) + ' · ' + t('needAnvil')(g.anvil) };
+  const mine = k => parseKey(k).base === key;
+  const owned = ownedKeys().filter(mine).reduce((n, k) => n + state.items[k], 0) + ['weapon', 'armor'].filter(s => state.equip[s] && mine(state.equip[s])).length;
+  const full = usedSlots() >= houseCapacity();
+  return {
+    ready: canForgeGear(key),
+    head: `<span class="ibox" aria-hidden="true">${ITEM[key].icon}</span><div class="r-info"><div class="r-name">${t(key)}${owned ? ` <span class="r-tier">×${num(owned)}</span>` : ''}</div>` +
+      `<div class="r-sub">${gearStats(key)}</div></div><span class="r-tier">T${g.tier}</span>`,
+    mats: busy ? '' : matsHtml(g.cost),
+    odds: oddsHtml(),
+    act: full && !busy ? `<button class="goal" data-go="rumah"><span>${t('houseFull')}</span><span class="mono">→</span></button>`
+      : actHtml(key, gearChance(key), busy || canForgeGear(key), g.cost),
+    res: resultHtml(result),
+  };
+}
+function actHtml(key, chance, can, cost) {
+  if (!can && cost && !canAfford(cost)) return goalHtml(cost);
+  const busy = forging === key;
+  return `<div class="r-act">${FORGE_ART}<button class="forge-btn" data-forge="${key}" ${forging || !can ? 'disabled' : ''}>` +
+    `<span>${busy ? t('forging') : t('forge')}</span><span class="mono">${num(chance * 100)}%</span></button></div>`;
+}
+
+function renderAnvil() {
+  const lv = state.anvil.level, cost = ANVIL.cost[lv + 1], sm = state.smithing, maxed = sm.level >= MAX_LEVEL;
+  $('smith-lv').textContent = sm.level;
+  $('smith-fill').style.width = (maxed ? 100 : sm.xp / xpNeeded(sm.level) * 100) + '%';
+  $('smith-xp').textContent = maxed ? t('max') : num(sm.xp) + '/' + num(xpNeeded(sm.level)) + ' XP';
+  $('anvil-level').textContent = t('anvil') + ' LV ' + lv;
+  $('anvil-desc').textContent = t('anvilUpTo')('T' + (lv + 1));
+  setHTML($('anvil-cost'), cost ? matsHtml(cost) : '');
+  anvilUpgradeBtn.hidden = !cost;
+  if (cost) {
+    anvilUpgradeBtn.disabled = !canAfford(cost);
+    setHTML(anvilUpgradeBtn, `<span>${t('upgradeLv')(lv + 1)}</span><span class="mono">${canAfford(cost) ? '↑' : ''}</span>`);
+  }
+  // Segmented Alat | Senjata di bar atas
+  $('top-extra').querySelectorAll('[data-anvil-tab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.anvilTab === anvilTab));
+
+  const keys = anvilTab === 'tools' ? Object.keys(TOOLS) : Object.keys(GEAR);
+  const parts = keys.map(k => [k, recipeParts(k)]).filter(([, p]) => p);
+  const cardsList = parts.filter(([, p]) => !p.later), later = parts.filter(([, p]) => p.later);
+  const listKey = anvilTab + '|' + cardsList.map(([k]) => k).join();
+  if (recipesEl._k !== listKey) {
+    recipesEl._k = listKey;
+    recipesEl.innerHTML = cardsList.map(([k], i) => `<li class="recipe" data-recipe="${k}" style="--i:${i}">` +
+      '<div class="r-head" data-part="head"></div><div class="r-sec mats" data-part="mats"></div><div class="r-sec" data-part="odds"></div>' +
+      '<div data-part="act"></div><div class="r-sec" data-part="res"></div></li>').join('');
+  }
+  for (const [k, p] of cardsList) {
+    const li = recipesEl.querySelector(`[data-recipe="${k}"]`);
+    li.classList.toggle('ready', !!p.ready);
+    li.classList.toggle('forging', forging === k);
+    for (const part of ['head', 'mats', 'odds', 'act', 'res']) setHTML(li.querySelector(`[data-part="${part}"]`), p[part]);
+    const act = li.querySelector('[data-part="act"]');
+    act.className = act.firstElementChild && act.firstElementChild.classList.contains('goal') ? '' : 'r-sec';
+    if (!p.act) act.className = '';
+  }
+  $('recipes-later').hidden = !later.length;
+  setHTML($('recipes-later'), `<span class="caps">${t('lblLater')}</span>` + later.map(([, p]) => `<span class="ic" title="${p.title}" role="img" aria-label="${p.title}">${p.later}</span>`).join(''));
+}
+$('top-extra').innerHTML = '<div class="seg" role="group"><button data-anvil-tab="tools" data-i18n="tabTools"></button><button data-anvil-tab="gear" data-i18n="tabGear"></button></div>';
+$('top-extra').addEventListener('click', e => {
+  const b = e.target.closest('[data-anvil-tab]');
+  if (!b || b.dataset.anvilTab === anvilTab) return;
+  anvilTab = b.dataset.anvilTab;
+  renderAnvil();
+});
+
 anvilUpgradeBtn.addEventListener('click', () => {
-  if (!upgradeAnvil()) return;
+  if (!upgradeAnvil()) { replay(anvilUpgradeBtn, 'nope'); return; }
   renderAnvil();
   renderKepeng();
 });
@@ -541,10 +625,15 @@ anvilUpgradeBtn.addEventListener('click', () => {
 // Tempa: bahan langsung terpakai dan hasil langsung diundi (supaya aman kalau halaman ditutup),
 // tapi baru ditampilkan setelah animasi & tiga dentang palu.
 recipesEl.addEventListener('click', e => {
+  const goal = e.target.closest('.goal[data-go]');
+  if (goal) { go(goal.dataset.go); return; }
   const btn = e.target.closest('.forge-btn');
   if (!btn || forging) return;
-  const tool = btn.dataset.forge, result = TOOLS[tool] ? forgeTool(tool) : forgeGear(tool);
+  const tool = btn.dataset.forge;
+  if (TOOLS[tool]) forgingTier = { idx: state.tools[tool].tier + 1, chance: forgeChance(tool) };
+  const result = TOOLS[tool] ? forgeTool(tool) : forgeGear(tool);
   if (!result) return;
+  result.tool = tool;
   forging = tool;
   clearTimeout(forgeResults[tool] && forgeResults[tool].timer);
   delete forgeResults[tool];
@@ -554,15 +643,11 @@ recipesEl.addEventListener('click', e => {
   setTimeout(() => {
     forging = null;
     (result.ok ? SOUNDS.success : SOUNDS.fail)(0);
-    result.timer = setTimeout(() => { delete forgeResults[tool]; renderAnvil(); }, 4000);
+    result.timer = setTimeout(() => { delete forgeResults[tool]; renderAnvil(); }, result.ok && !TOOLS[tool] ? 6000 : 4000);
     forgeResults[tool] = result;
-    const row = recipesEl.querySelector(`[data-recipe="${tool}"]`);
-    if (!result.ok) {
-      row.classList.remove('shake');
-      void row.offsetWidth;
-      row.classList.add('shake');
-    }
     renderAnvil();
+    const row = recipesEl.querySelector(`[data-recipe="${tool}"]`);
+    if (row && !result.ok) replay(row, 'nope');
     renderTools();
     renderNav();
     renderAdventure();
@@ -1183,6 +1268,7 @@ function showPage(name) {
   name = { inventory: 'rumah', pohon: 'hutan' }[name] || name;
   page = PAGES.includes(name) && areaOpen(name) ? name : 'hutan';
   lastInGroup[groupOf(page).key] = page;
+  document.body.dataset.page = page;
   $('lock-bar').hidden = true;
   PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
   document.querySelectorAll('.nav-item').forEach(n => {
