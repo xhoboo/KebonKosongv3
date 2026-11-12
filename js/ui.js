@@ -20,31 +20,88 @@ const AREA_NAMES = { goa: 'cave', sungai: 'river', danau: 'lake', laut: 'sea' };
 // Halaman tempat kartu sebuah kegiatan berada
 const activityArea = key => ADVENTURES[key] ? 'petualangan' : RECIPES[key] ? 'dapur' : NODES[key].area;
 
-// Buat kartu untuk tiap kegiatan: sumber daya (tebang/tambang/mancing) dan resep Dapur
+// Label tingkat alat: T1 = alat pertama. Joran tingkat 0 berarti belum punya, jadi joran pertama = T1.
+const tierLabel = (tool, i) => 'T' + (TOOLS[tool].tiers[0].none ? i : i + 1);
+// Ikon anvil garis (untuk petunjuk kunci) dan panah kecil
+const ANVIL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h14c0 3-2 4-4 4v3h3v3H6v-3h3v-3H7C5 11 3 9 3 7z" fill="none" stroke="#8c8c8c" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const ARROW_SVG = '<svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Item yang bisa keluar dari sebuah node (hasil utama + sampingan), untuk baris ikon drop tanpa teks
+const nodeDrops = key => NODES[key].drops(0, Math.max(1, NODES[key].tier)).map(([item]) => item).filter(Boolean);
+
+// Syarat sebuah kegiatan yang masih terkunci: chip pendek, teks lengkap, dan (kalau ada) halaman tujuannya
+function lockInfo(key) {
+  if (RECIPES[key]) {
+    const lv = RECIPES[key].kitchen;
+    return { chip: `<span class="ci">🍳</span>LV ${lv}`, text: t('needKitchen')(lv) };
+  }
+  if (ADVENTURES[key]) {
+    const req = ADVENTURES[key].req || {};
+    if (state.mastery.melee.level < (req.melee || 0)) return { chip: `<span class="ci">⚔️</span>LV ${req.melee}`, text: t('needMelee')(req.melee) };
+    return { chip: `${LOCK_SVG}${t(AREA_NAMES[req.area])}`, text: t('needArea')(t(AREA_NAMES[req.area])) };
+  }
+  const node = NODES[key], tool = TOOLS[node.tool], icon = tool.icon;
+  return {
+    chip: `<span class="ci">${icon}</span>${tierLabel(node.tool, node.tier)}`, text: t('needs')(t(tool.tiers[node.tier].key)),
+    path: `${ANVIL_SVG}${ARROW_SVG}<span>${icon}</span>`, to: 'anvil', go: t('openAnvil'),
+  };
+}
+
+// Buat kartu untuk tiap kegiatan: sumber daya (tebang/tambang/mancing), resep Dapur, dan petualangan
 const cards = {};
 for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES), ...Object.keys(ADVENTURES)]) {
   const node = NODES[key] || ADVENTURES[key], recipe = RECIPES[key];
+  const wrap = document.createElement('div');
+  wrap.className = 'card-wrap';
   const el = document.createElement('button');
   el.className = 'card';
   el.dataset.node = key;
-  el.innerHTML = `<span class="level"></span><span class="name" data-i18n="${node && node.name || key}"></span>` +
-    `<span class="duration"></span>${recipe ? '<span class="inputs"></span>' : ''}` +
-    `<span class="icon">${recipe ? icons[key] : node.icon}</span>` +
-    `<span class="bar"><span class="fill"></span></span>`;
-  document.querySelector(`.cards[data-area="${activityArea(key)}"]`).appendChild(el);
+  el.setAttribute('aria-describedby', 'req-' + key);
+  el.innerHTML = `<span class="card-head"><span class="name" data-i18n="${node && node.name || key}"></span><span class="card-tag"></span></span>` +
+    `<span class="card-art"><span class="icon" aria-hidden="true">${recipe ? icons[key] : node.icon}</span><span class="lock-chip" id="req-${key}"></span></span>` +
+    (recipe ? '<span class="inputs"></span>' : '') +
+    `<span class="card-foot"><span class="bar"><span class="fill"></span></span><span class="card-meta"><span class="duration"></span>` +
+    (NODES[key] ? `<span class="drops" aria-hidden="true">${nodeDrops(key).slice(0, 4).map(k => icons[k]).join('')}</span><span class="node-xp"><span></span></span>` : '') +
+    `</span></span>`;
+  const hint = document.createElement('div');
+  hint.className = 'lock-hint';
+  hint.hidden = true;
+  wrap.append(el, hint);
+  document.querySelector(`.cards[data-area="${activityArea(key)}"]`).appendChild(wrap);
   cards[key] = {
-    el, level: el.querySelector('.level'), duration: el.querySelector('.duration'), inputs: el.querySelector('.inputs'),
-    fill: el.querySelector('.fill'), icon: el.querySelector('.icon'),
+    el, hint, tag: el.querySelector('.card-tag'), name: el.querySelector('.name'), chip: el.querySelector('.lock-chip'),
+    duration: el.querySelector('.duration'), inputs: el.querySelector('.inputs'),
+    fill: el.querySelector('.fill'), icon: el.querySelector('.icon'), xp: el.querySelector('.node-xp span'),
   };
   el.addEventListener('click', () => {
-    if (!nodeOpen(key)) return;
+    // Terkunci: goyang, lalu buka/tutup petunjuk jalannya
+    if (!nodeOpen(key)) { replay(el, 'nope'); toggleHint(key, true); return; }
     // Resep yang bahannya kurang tidak bisa dimulai
-    if (recipe && state.active !== key && !canAfford(recipe.input)) { popup(key, null, t('outOfIngredients')); return; }
-    if (ADVENTURES[key] && !state.equip.weapon) { popup(key, null, t('needWeapon')); return; }
+    if (recipe && state.active !== key && !canAfford(recipe.input)) { replay(el, 'nope'); popup(key, null, t('outOfIngredients')); return; }
+    if (ADVENTURES[key] && !state.equip.weapon) { replay(el, 'nope'); popup(key, null, t('needWeapon')); return; }
     setActive(state.active === key ? null : key);
+    replay(el, 'sel');
     render();
     renderAdventure();
+    renderActivity();
   });
+  hint.addEventListener('click', e => {
+    const b = e.target.closest('.hint-go');
+    toggleHint(key, false);
+    if (b) go(b.dataset.go);
+  });
+}
+// Klik kartu terkunci membuka petunjuk; klik lagi menutup. Hanya satu petunjuk terbuka.
+function toggleHint(key, open) {
+  const { hint } = cards[key];
+  if (open && !hint.hidden) open = false;
+  if (open) for (const c of Object.values(cards)) c.hint.hidden = true;
+  hint.hidden = !open;
+  if (open) fillHint(key);
+}
+function fillHint(key) {
+  const info = lockInfo(key);
+  cards[key].hint.innerHTML = (info.path ? `<div class="hint-path">${info.path}</div>` : `<div class="hint-path">${info.chip.replace('class="ci"', '')}</div>`) +
+    `<div class="hint-text">${info.text}</div>` + (info.to ? `<button class="hint-go" data-go="${info.to}">${info.go}</button>` : '');
 }
 
 // Popup hasil di posisi acak di dalam kartu; kalau aksinya cepat, popup menumpuk dan menyebar
@@ -54,12 +111,13 @@ function popup(key, got, text, cls) {
   const el = document.createElement('span');
   el.className = text ? 'pop' + (cls ? ' ' + cls : '') : !got ? 'pop miss' : got.lost ? 'pop full' : 'pop';
   el.innerHTML = text || (!got ? t('miss') : got.lost ? icons[got.item] + ' ' + t('houseFull') : '+' + got.qty + ' ' + icons[got.item]);
-  card.el.appendChild(el);
-  // Tetap di dalam kartu sepanjang animasi (mulai 6px lebih rendah, berakhir 8px lebih tinggi), jarak tepi 6px
-  const x0 = 6, x1 = card.el.clientWidth - el.offsetWidth - 6;
-  const y0 = 6 + 8, y1 = card.el.clientHeight - el.offsetHeight - 6 - 6;
+  // Chip hasil naik di area ikon kartu (mulai 6px lebih rendah, berakhir 8px lebih tinggi), jarak tepi 6px
+  const box = card.el.querySelector('.card-art');
+  box.appendChild(el);
+  const x0 = 6, x1 = box.clientWidth - el.offsetWidth - 6;
+  const y0 = 6 + 8, y1 = box.clientHeight - el.offsetHeight - 6 - 6;
   // Dari beberapa posisi acak, ambil yang paling jauh dari popup lain supaya tumpukan menyebar dan tetap terbaca
-  const others = [...card.el.querySelectorAll('.pop')].filter(p => p !== el).map(p => [p.offsetLeft, p.offsetTop]);
+  const others = [...box.querySelectorAll('.pop')].filter(p => p !== el).map(p => [p.offsetLeft, p.offsetTop]);
   let best, bestDist = -1;
   for (let i = 0; i < 8; i++) {
     const x = x0 + Math.random() * Math.max(0, x1 - x0), y = y0 + Math.random() * Math.max(0, y1 - y0);
@@ -144,69 +202,85 @@ document.querySelectorAll('[data-sort-choice]').forEach(b => b.addEventListener(
   renderHouse();
 }));
 
+// Dipanggil tiap frame: hanya menulis ke DOM kalau nilainya berubah
+const setText = (el, v) => { if (el.textContent !== v) el.textContent = v; };
 function render() {
   for (const [key, card] of Object.entries(cards)) {
-    const on = state.active === key;
-    card.el.classList.toggle('locked', !nodeOpen(key));
-    card.fill.style.width = (on ? state.progress / actionTime(key) * 100 : 0) + '%';
-    if (RECIPES[key]) {
-      // Resep tidak punya level sendiri: tampilkan HP yang dipulihkan
-      card.level.textContent = '❤️ ' + heals[key];
-    } else if (ADVENTURES[key]) {
-      card.level.textContent = on ? '❤️ ' + num(state.hp) + ' / ' + num(maxHp()) : '';
-    } else {
+    const on = state.active === key, open = nodeOpen(key);
+    card.el.classList.toggle('locked', !open);
+    card.fill.style.width = (on ? Math.min(100, state.progress / actionTime(key) * 100) : 0) + '%';
+    let tag;
+    if (!open) tag = '';
+    else if (on) tag = '● ' + t('activeTag');
+    else if (RECIPES[key]) tag = '❤️ ' + heals[key]; // resep tidak punya level sendiri: HP yang dipulihkan
+    else if (ADVENTURES[key]) tag = '';
+    else tag = 'LV ' + state.nodes[key].level;
+    setText(card.tag, tag);
+    card.tag.classList.toggle('live', on);
+    if (card.xp) {
       const n = state.nodes[key];
-      card.level.textContent = t('level') + ' ' + n.level;
-      card.el.style.setProperty('--lv', (n.level >= MAX_LEVEL ? 100 : n.xp / xpNeeded(n.level) * 100) + '%');
+      card.xp.style.width = (n.level >= MAX_LEVEL ? 100 : n.xp / xpNeeded(n.level) * 100) + '%';
     }
     card.el.classList.toggle('on', on);
     card.el.setAttribute('aria-pressed', on);
   }
 }
 
-// Kartu alat (kapak di Hutan, beliung di Goa), plus teks waktu & exp di kartu node
-// (keduanya ikut berubah saat alat naik level atau tingkat)
+// Baris alat (kapak di Hutan, beliung di Goa, joran di Sungai): kotak LV alat, nama tingkat + T, exp alat.
+// Level alat selalu berlabel alatnya; level pohon/batu ada di kartu node masing-masing.
 for (const [tool, def] of Object.entries(TOOLS)) {
   const box = document.querySelector(`.tool[data-tool="${tool}"]`);
-  box.classList.add('tool-split');
   box.innerHTML =
-    `<div class="tool-body"><div class="tool-top"><span class="tool-icon" aria-hidden="true">${def.icon}</span><div class="tool-main">` +
-    `<div class="tool-title"><span class="level"></span><span class="name"></span></div>` +
-    `<span class="bar"><span class="fill"></span></span><span class="tool-xp"></span></div></div></div>` +
-    `<div class="tool-side"><dl class="stats"><div class="row-cut"><dt data-i18n="${def.interval}"></dt><dd></dd></div>` +
+    `<div class="tool-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b></b></div><div class="tool-main">` +
+    `<div class="tool-title"><span class="tool-icon" aria-hidden="true">${def.icon}</span><span class="name"></span><span class="tier"></span>` +
+    `<span class="tool-xp"></span></div><span class="bar"><span class="fill"></span></span></div></div>` +
+    `<div class="tool-foot"><dl class="stats"><div class="row-cut"><dt data-i18n="${def.interval}"></dt><dd></dd></div>` +
     `<div class="row-double"><dt data-i18n="${def.doubleText}"></dt><dd></dd></div></dl>` +
-    `<span class="tool-hint" data-i18n="toolHint"></span></div>`;
+    `<button class="tool-link" data-go="anvil"></button></div>`;
+  box.querySelector('.tool-link').addEventListener('click', () => go('anvil'));
 }
 
 function renderTools() {
   for (const [tool, def] of Object.entries(TOOLS)) {
     const el = document.querySelector(`.tool[data-tool="${tool}"]`), s = state.tools[tool];
-    const tier = def.tiers[s.tier], maxed = s.level >= MAX_LEVEL;
-    el.querySelector('.level').textContent = 'Lv. ' + s.level;
+    const tier = def.tiers[s.tier], maxed = s.level >= MAX_LEVEL, next = nextTier(tool);
+    el.querySelector('.lv-box b').textContent = s.level;
     el.querySelector('.name').textContent = t(tier.key);
+    el.querySelector('.tier').textContent = tierLabel(tool, s.tier);
     el.querySelector('.fill').style.width = (maxed ? 100 : s.xp / toolXpNeeded(s.level) * 100) + '%';
-    el.querySelector('.tool-xp').textContent = maxed ? t('max') : num(s.xp) + ' / ' + num(toolXpNeeded(s.level));
+    el.querySelector('.tool-xp').textContent = maxed ? t('max') : num(s.xp) + '/' + num(toolXpNeeded(s.level)) + ' XP';
+    el.querySelector('.tool-row').title = t(tier.key) + ' LV ' + s.level + ' · ' + t('toolEffect');
+    el.querySelector('.tool-row').setAttribute('aria-label', t(tier.key) + ', LV ' + s.level);
     // Baris bonus hanya tampil kalau bonusnya ada
     el.querySelector('.row-cut').hidden = !s.level;
     el.querySelector('.row-cut dd').textContent = '−' + num(TOOL_CUT * s.level * 100, 2) + '%';
     el.querySelector('.row-double').hidden = !tier.double;
     el.querySelector('.row-double dd').textContent = num(tier.double * 100) + '%';
     el.querySelector('.stats').hidden = !s.level && !tier.double;
-    el.querySelector('.tool-hint').hidden = !nextTier(tool);
+    const link = el.querySelector('.tool-link');
+    link.hidden = !next;
+    if (next) link.textContent = t('forgeAt')(tierLabel(tool, s.tier + 1));
   }
   for (const [key, card] of Object.entries(cards)) {
-    const node = NODES[key] || RECIPES[key];
+    const node = NODES[key] || RECIPES[key], open = nodeOpen(key);
+    if (!open) {
+      const info = lockInfo(key);
+      card.chip.innerHTML = info.chip;
+      card.el.setAttribute('aria-label', t(NODES[key] && NODES[key].name || key) + ', ' + t('lockedWord'));
+      card.chip.title = info.text;
+      if (!card.hint.hidden) fillHint(key);
+    } else {
+      card.el.removeAttribute('aria-label');
+      card.hint.hidden = true;
+    }
     if (ADVENTURES[key]) {
-      // Petualangan: musuhnya beserta peluang menang dengan senjata sekarang, atau syarat yang belum terpenuhi
-      const req = ADVENTURES[key].req || {}, enemies = ADVENTURES[key].events.filter(e => e.enemy).map(e => e.enemy);
-      card.duration.innerHTML = nodeOpen(key)
-        ? enemies.map(e => ENEMIES[e].icon + (state.equip.weapon ? ' ' + num(winChance(e) * 100) + '%' : '')).join(' · ')
-        : '🔒 ' + (state.mastery.melee.level < (req.melee || 0) ? t('needMelee')(req.melee) : t('needArea')(t(AREA_NAMES[req.area])));
+      // Petualangan: musuhnya beserta peluang menang dengan senjata sekarang
+      const enemies = ADVENTURES[key].events.filter(e => e.enemy).map(e => e.enemy);
+      card.duration.innerHTML = open ? enemies.map(e => ENEMIES[e].icon + (state.equip.weapon ? ' ' + num(winChance(e) * 100) + '%' : '')).join(' · ') : '—';
       continue;
     }
-    card.duration.innerHTML = nodeOpen(key) ? num(actionTime(key) / 1000, 2) + ' ' + t('seconds') + ` · ${node.xp} Exp`
-      : RECIPES[key] ? '🔒 ' + t('needKitchen')(node.kitchen)
-      : '🔒 ' + t('needs')(t(TOOLS[node.tool].tiers[node.tier].key));
+    card.duration.textContent = open ? (actionTime(key) / 1000).toFixed(1) + 's' : '—';
+    card.duration.title = open ? `${node.xp} Exp` : '';
     if (card.inputs) card.inputs.innerHTML = costHtml(node.input);
   }
   renderKitchen();
@@ -287,11 +361,37 @@ function renderSubtabs() {
   if (cur && !el.hidden && cur.offsetLeft + cur.offsetWidth > el.scrollLeft + el.clientWidth) el.scrollLeft = cur.offsetLeft - 8;
 }
 
+// Syarat area terkunci sebagai chip + jalan ke sana (bar petunjuk saat sub-tab/sidebar terkunci diklik)
+function areaReq(area) {
+  const rod = i => ({ chip: `<span class="ci">${TOOLS.rod.icon}</span>${tierLabel('rod', i)}`, to: 'anvil' });
+  const req = {
+    goa: { chip: `<span class="ci">${NODES.acacia.icon}</span>LV 10`, to: 'hutan' },
+    sungai: rod(1), danau: rod(2), laut: rod(3),
+    petualangan: { chip: '<span class="ci">⚔️</span>T1', to: 'anvil' },
+  }[area];
+  return { ...req, text: t(LOCK_TEXT[area]), go: req.to === 'anvil' ? t('openAnvil') : pageName(req.to) + ' →' };
+}
+let lockBarTimer;
+function showLockBar(area) {
+  const bar = $('lock-bar'), r = areaReq(area);
+  bar.innerHTML = `<span class="lock-chip">${r.chip}</span><span class="hint-text"><b>${pageName(area)}</b> · ${r.text}</span>` +
+    `<button class="hint-go" data-go="${r.to}">${r.go}</button>`;
+  bar.hidden = false;
+  replay(bar, 'pop-in');
+  clearTimeout(lockBarTimer);
+  lockBarTimer = setTimeout(() => { bar.hidden = true; }, 5000);
+}
+$('lock-bar').addEventListener('click', e => {
+  const b = e.target.closest('.hint-go');
+  $('lock-bar').hidden = true;
+  if (b) go(b.dataset.go);
+});
+
 // Area terkunci: item sidebar nonaktif + gembok (syarat di title); tab Tarung abu-abu sampai Petualangan terbuka
 function renderNav() {
   for (const area of Object.keys(AREA_UNLOCKS)) {
     const btn = document.querySelector(`.nav-item[data-page="${area}"]`), open = areaOpen(area);
-    btn.disabled = !open;
+    if (open) btn.removeAttribute('aria-disabled'); else btn.setAttribute('aria-disabled', 'true');
     btn.title = open ? '' : t(LOCK_TEXT[area]);
     btn.querySelector('.lock-svg').hidden = open;
     btn.querySelector('.nav-lv').hidden = !open;
@@ -925,6 +1025,7 @@ function showPage(name) {
   name = { inventory: 'rumah', pohon: 'hutan' }[name] || name;
   page = PAGES.includes(name) && areaOpen(name) ? name : 'hutan';
   lastInGroup[groupOf(page).key] = page;
+  $('lock-bar').hidden = true;
   PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
@@ -941,17 +1042,22 @@ function showPage(name) {
 }
 
 const go = p => { if (location.hash.slice(1) === p) showPage(p); else location.hash = p; };
-$('drawer').addEventListener('click', e => { const n = e.target.closest('.nav-item'); if (n && !n.disabled) go(n.dataset.page); });
+$('drawer').addEventListener('click', e => {
+  const n = e.target.closest('.nav-item');
+  if (!n) return;
+  if (n.getAttribute('aria-disabled')) { replay(n, 'nope'); showLockBar(n.dataset.page); return; }
+  go(n.dataset.page);
+});
 $('subtabs').addEventListener('click', e => {
   const b = e.target.closest('.subtab');
   if (!b) return;
-  if (b.getAttribute('aria-disabled')) { replay(b, 'nope'); return; }
+  if (b.getAttribute('aria-disabled')) { replay(b, 'nope'); showLockBar(b.dataset.page); return; }
   go(b.dataset.page);
 });
 $('tabbar').addEventListener('click', e => {
   const b = e.target.closest('.tab');
   if (!b) return;
-  if (b.getAttribute('aria-disabled')) { replay(b, 'nope'); return; }
+  if (b.getAttribute('aria-disabled')) { replay(b, 'nope'); showLockBar(TAB_GROUPS.find(x => x.key === b.dataset.tab).pages[0]); return; }
   const g = TAB_GROUPS.find(x => x.key === b.dataset.tab);
   go([lastInGroup[g.key], ...g.pages].find(p => p && PAGES.includes(p) && areaOpen(p)));
 });
