@@ -1294,6 +1294,7 @@ function showPage(name) {
   document.body.dataset.page = page;
   $('lock-bar').hidden = true;
   PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
+  enterPage($('page-' + page));
   document.querySelectorAll('.nav-item').forEach(n => {
     if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
     else n.removeAttribute('aria-current');
@@ -1307,6 +1308,24 @@ function showPage(name) {
   if (page === 'kebun') renderFarm();
   if (page === 'petualangan') renderAdventure();
 }
+
+// Animasi masuk halaman: container naik + isi muncul bertahap, sekali per showPage (render tiap tick tidak memutarnya lagi)
+let enterTimer;
+function enterPage(main) {
+  document.querySelectorAll('main.entered').forEach(m => m.classList.remove('entered', 'page-in'));
+  const groups = main.querySelectorAll(':scope > *, .cards, .plots, .recipes, .items, .market');
+  for (const g of groups) [...g.children].forEach((el, i) => el.style.setProperty('--i', Math.min(i, 8)));
+  replay(main, 'page-in');
+  main.classList.add('entered');
+  clearTimeout(enterTimer);
+  enterTimer = setTimeout(() => main.classList.remove('entered'), 700);
+  // Goyang pelan hanya kalau kartunya sedikit
+  main.querySelectorAll('.cards').forEach(c => c.classList.toggle('sway', c.children.length <= 12));
+}
+// Class animasi sekali jalan dicabut setelah selesai, supaya animasi lain (mis. sway) bisa lanjut
+const ONE_SHOT = ['bump', 'sel', 'nope', 'harvest', 'shake'];
+document.addEventListener('animationend', e => { for (const c of ONE_SHOT) if (e.target.classList && e.target.classList.contains(c)) e.target.classList.remove(c); });
+document.addEventListener('visibilitychange', () => document.body.classList.toggle('paused', document.hidden));
 
 const go = p => { if (location.hash.slice(1) === p) showPage(p); else location.hash = p; };
 $('drawer').addEventListener('click', e => {

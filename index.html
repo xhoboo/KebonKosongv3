@@ -834,6 +834,30 @@
     #page-petualangan > .tool { grid-column: 1 / -1; }
     #page-petualangan > .equip { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
   }
+
+  /* ---------- Motion: animasi mengikuti input, tidak pernah menahan input ---------- */
+  .btn2, .forge-btn, .sell-btn, .notice-btn, .upgrade-btn, .tab, .subtab, .seg button, .goal, .hint-go, .act-stop, .chip, .item, .seed-row, .reset-btn, .tool-link, .nav-item {
+    transition: transform 80ms ease, background-color .15s, border-color .15s, color .15s;
+  }
+  .btn2:not(:disabled):active, .forge-btn:not(:disabled):active, .sell-btn:not(:disabled):active, .notice-btn:not(:disabled):active,
+  .upgrade-btn:not(:disabled):active, .tab:not([aria-disabled]):active, .subtab:not([aria-disabled]):active, .seg button:active,
+  .goal:not(:disabled):active, .hint-go:active, .act-stop:active, .chip:not(:disabled):active, .item:active, .seed-row:not(.off):active, .reset-btn:active { transform: scale(.97); }
+  .page-in { animation: page-in .28s var(--ease-out) both; }
+  @keyframes page-in { from { opacity: 0; transform: translateY(10px); } }
+  /* Muncul bertahap sekali per showPage (class entered dicabut setelah 700ms) */
+  .entered .card-wrap, .entered .plots > li, .entered .recipe, .entered .items > li, .entered .sell-row, .entered .tool, .entered .side-box, .entered .panel, .entered .setting {
+    animation: card-in .32s var(--ease-out) both; animation-delay: calc(60ms + min(var(--i, 0), 8) * 50ms);
+  }
+  @keyframes card-in { from { opacity: 0; transform: translateY(12px) scale(.98); } }
+  /* Node terbuka yang tidak aktif bergoyang pelan (hanya di grid ≤12 kartu) */
+  .cards.sway .card:not(.on):not(.locked) .icon:not(.bump) { animation: sway 4s ease-in-out infinite; }
+  @keyframes sway { 0%, 100% { transform: rotate(-1.2deg); } 50% { transform: rotate(1.2deg); } }
+  body.paused *, body.paused *::before, body.paused *::after { animation-play-state: paused !important; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    :active { transform: none !important; }
+    .plot-icon { transition: none; }
+  }
   /* ≥1280: panel kanan tampil; harus paling akhir supaya menang atas aturan 900px */
   @media (min-width: 1280px) {
     :root { --panel-w: 300px; }
@@ -1057,9 +1081,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-12.7"></script>
-<script src="js/game.js?v=2026-11-12.7"></script>
-<script src="js/ui.js?v=2026-11-12.7"></script>
-<script src="js/debug.js?v=2026-11-12.7"></script>
+<script src="js/data.js?v=2026-11-12.8"></script>
+<script src="js/game.js?v=2026-11-12.8"></script>
+<script src="js/ui.js?v=2026-11-12.8"></script>
+<script src="js/debug.js?v=2026-11-12.8"></script>
 </body>
 </html>
