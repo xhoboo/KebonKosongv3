@@ -64,7 +64,7 @@
   const nav = document.createElement('button');
   nav.className = 'nav-item';
   nav.dataset.page = 'debug';
-  nav.innerHTML = '<span>🛠️</span><span>Debug</span>';
+  nav.innerHTML = '<span class="nav-name">Debug</span>';
   document.querySelector('.nav-item[data-page="settings"]').before(nav);
   nav.addEventListener('click', () => { location.hash = 'debug'; setMenu(false); });
 

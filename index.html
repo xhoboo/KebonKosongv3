@@ -61,52 +61,73 @@
     color: var(--ink);
     font-family: var(--font);
     -webkit-tap-highlight-color: transparent;
-    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    /* ruang untuk tab bar (+ dock aktivitas) yang menempel di bawah */
+    padding: 0 0 calc(var(--tabbar-h) + var(--dock-h, 0px) + env(safe-area-inset-bottom));
   }
-  .app { max-width: 480px; margin: 0 auto; }
-
-  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 16px; }
-  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
-  .kepeng { margin-left: auto; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  :root { --tabbar-h: 62px; }
+  button { font-family: inherit; }
+  .mono, .counter, .crumb-group, .nav-group, .nav-lv, .tool-xp, .duration, .item-qty, .plot-time, .cost, .stats dd, .panel-meta, .journal time {
+    font-family: var(--mono); font-variant-numeric: tabular-nums;
+  }
+  .caps { font-family: var(--mono); font-size: 10px; letter-spacing: .06em; color: var(--muted); text-transform: uppercase; font-weight: 500; }
+  :focus-visible { outline: 1px solid var(--ink); outline-offset: 2px; }
+  .app { max-width: 640px; margin: 0 auto; }
+  main { padding: 14px 16px 24px; }
   h2 { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 12px; }
-  .menu-btn {
-    width: 40px; height: 40px; margin-right: -8px;
-    display: grid; place-items: center;
-    background: none; border: 0; border-radius: var(--r);
-    color: var(--ink); cursor: pointer;
-  }
-  .menu-btn:active { background: var(--track); }
+  .lock-svg { flex: none; width: 10px; height: 10px; }
 
-  .scrim {
-    position: fixed; inset: 0; z-index: 10;
-    background: transparent;
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
-    opacity: 0; pointer-events: none;
-    transition: opacity .25s;
+  /* ---------- Navigasi ponsel: bar atas + sub-tab (menempel di atas), tab bar di bawah ---------- */
+  .top { position: sticky; top: 0; z-index: 6; background: var(--bg); }
+  .topbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: max(16px, env(safe-area-inset-top)) 16px 12px;
+    border-bottom: 1px solid var(--line);
   }
-  .drawer {
-    position: fixed; top: 0; bottom: 0; right: 0; z-index: 11;
-    width: min(260px, 75vw);
-    background: var(--card);
-    border-left: 1px solid var(--line);
-    padding: max(16px, env(safe-area-inset-top)) 12px 16px;
-    transform: translateX(100%);
-    visibility: hidden;
-    transition: transform .25s ease, visibility .25s;
+  .brand { display: none; }
+  .crumb { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .crumb-group { font-size: 11px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+  .page-title { font-size: 20px; font-weight: 700; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .counter {
+    display: inline-flex; align-items: center; gap: 6px; flex: none;
+    border: 1px solid var(--line); border-radius: var(--r); padding: 6px 9px;
+    font-size: 13px; font-weight: 500; white-space: nowrap;
   }
-  body.menu-open .scrim { opacity: 1; pointer-events: auto; }
-  body.menu-open .drawer { transform: none; visibility: visible; }
-  .drawer .brand { font-weight: 700; padding: 10px 12px 16px; }
-  .nav-item {
-    display: flex; align-items: center; gap: 12px;
-    width: 100%; padding: 12px;
-    background: none; border: 0; border-radius: var(--r);
-    font: inherit; font-size: 15px; color: var(--ink); text-align: left;
-    cursor: pointer;
+  .counter-icon { display: inline-block; line-height: 1; }
+  .counter-icon.bump { animation: bump .3s ease-out; }
+  .subtabs { display: flex; overflow-x: auto; padding: 0 8px; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+  .subtabs::-webkit-scrollbar { display: none; }
+  .subtab {
+    flex: none; display: flex; align-items: center; gap: 5px; min-height: 44px; padding: 0 10px; margin-bottom: -1px;
+    background: none; border: 0; border-bottom: 1px solid transparent; border-radius: 0;
+    font: inherit; font-size: 13px; color: #a3a3a3; cursor: pointer;
   }
-  .nav-item:active { background: var(--track); }
-  .nav-item[aria-current="page"] { background: var(--track); font-weight: 600; }
+  .subtab[aria-current="page"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--ink); }
+  .subtab[aria-disabled="true"] { color: var(--dim); cursor: default; }
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 8;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+    border-top: 1px solid var(--line); background: var(--bg);
+    padding: 4px 4px max(10px, env(safe-area-inset-bottom));
+  }
+  .tab {
+    position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    min-height: 48px; padding: 7px 0; background: none; border: 0;
+    font: inherit; font-size: 10px; font-weight: 500; color: var(--muted); cursor: pointer;
+  }
+  .tab svg { width: 22px; height: 22px; }
+  .tab[aria-current="page"] { color: var(--ink); font-weight: 600; }
+  .tab[aria-current="page"]::before {
+    content: ""; position: absolute; top: -5px; left: 22%; right: 22%; height: 1px; background: var(--ink);
+    animation: tab-line .3s var(--ease-out) both;
+  }
+  .tab[aria-disabled="true"] { color: var(--off); cursor: default; }
+  .drawer { display: none; }
+  @keyframes tab-line { from { transform: scaleX(0); } }
+  @keyframes nav-line { from { transform: scaleY(0); } }
+  @keyframes blink { 50% { opacity: .25; } }
+  @keyframes nope { 20% { transform: translateX(-6px); } 40% { transform: translateX(5px); } 60% { transform: translateX(-3px); } 80% { transform: translateX(2px); } }
+  .nope { animation: nope .32s ease-out; }
+  .live { animation: blink 1.4s ease-in-out infinite; }
 
   .items { list-style: none; margin: 0; padding: 0 0 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 20px 8px; }
   .item {
@@ -179,11 +200,6 @@
   .emoji-fish.catfish { filter: grayscale(1) brightness(.65); }
   .emoji-fish.snakehead { filter: sepia(1) saturate(2.2) hue-rotate(-25deg) brightness(.75); }
 
-  /* Area terkunci di menu */
-  .nav-text { display: flex; flex-direction: column; }
-  .nav-lock { font-size: 11px; color: var(--muted); font-weight: 400; }
-  .nav-item:disabled { cursor: default; opacity: .6; }
-  .nav-item:disabled:active { background: none; }
 
   /* Node terkunci: tidak bisa diklik, ikon pudar, syarat ditampilkan */
   .card.locked { cursor: default; }
@@ -456,68 +472,49 @@
     to { transform: translateY(-8px); opacity: 0; }
   }
 
-  /* Grup & level menu dan judul halaman hanya tampil di layout desktop */
-  .nav-group, .nav-lv, .page-title { display: none; }
 
   /* Desktop: sidebar tetap di kiri dengan grup kegiatan dan level skill, bar atas berisi judul halaman,
      konten melebar dengan grid kartu beberapa kolom. Ponsel tetap memakai drawer. */
   @media (min-width: 900px) {
-    :root { --side-w: 232px; --side-ink: var(--ink); --side-muted: var(--muted); }
-    body { padding: 0 0 0 var(--side-w); }
-    .scrim, .menu-btn, header h1 { display: none; }
+    :root { --side-w: 232px; --panel-w: 0px; --top-h: 52px; }
+    body { padding: var(--top-h) var(--panel-w) 0 var(--side-w); }
+    .tabbar, .subtabs { display: none; }
+    .top { position: fixed; left: 0; right: 0; top: 0; height: var(--top-h); }
+    .topbar { height: var(--top-h); padding: 0 16px; gap: 16px; }
+    .brand { display: block; width: 200px; flex: none; font-weight: 700; font-size: 15px; }
+    .crumb { flex-direction: row; align-items: baseline; gap: 6px; font-family: var(--mono); }
+    .crumb-group { font-size: 12px; }
+    .page-title { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--ink); line-height: inherit; }
+    .counter { padding: 5px 9px; }
+    /* Sidebar: hanya teks, grup mono, level LV n di kanan */
     .drawer {
-      transform: none; visibility: visible; transition: none;
-      left: 0; right: auto; width: var(--side-w);
-      background: var(--side-bg); color: var(--side-ink); border: 0;
-      padding: 0 0 24px; overflow-y: auto;
-      scrollbar-width: thin; scrollbar-color: var(--side-hover) transparent;
+      display: block; position: fixed; top: var(--top-h); left: 0; bottom: 0; z-index: 5; width: var(--side-w);
+      background: var(--side-bg); border-right: 1px solid var(--line);
+      padding: 12px 0 24px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
     }
-    .drawer .brand {
-      position: sticky; top: 0; z-index: 1;
-      height: 56px; display: flex; align-items: center; padding: 0 20px;
-      background: var(--side-bg); border-bottom: 1px solid var(--line);
-      font-size: 17px; letter-spacing: .01em;
-    }
-    .nav-group {
-      display: block; padding: 18px 20px 6px;
-      font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--side-muted);
-    }
+    .nav-group { display: block; padding: 6px 16px; margin-top: 14px; font-size: 10px; letter-spacing: .08em; color: var(--dim); text-transform: uppercase; }
+    .nav-group:first-child { margin-top: 0; }
     .nav-item {
-      position: relative; gap: 12px; padding: 7px 16px 7px 20px; border-radius: 0;
-      font-size: 14px; color: var(--side-ink);
+      position: relative; display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 0 16px;
+      background: none; border: 0; border-radius: 0; text-align: left;
+      font: inherit; font-size: 13px; color: #a3a3a3; cursor: pointer;
     }
     .nav-item:hover { background: var(--side-hover); }
-    .nav-item:active { background: var(--side-cur); }
-    .nav-item[aria-current="page"] { background: var(--side-cur); }
-    .nav-item[aria-current="page"]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+    .nav-item[aria-current="page"] { background: var(--side-cur); color: var(--ink); font-weight: 600; }
+    .nav-item[aria-current="page"]::before {
+      content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 2px; background: var(--ink);
+      animation: nav-line .22s var(--ease-out) both;
+    }
+    .nav-item:disabled { color: var(--off); cursor: default; }
     .nav-item:disabled:hover { background: none; }
-    .nav-item > span:first-child { flex: none; width: 24px; text-align: center; font-size: 18px; }
-    .nav-text { flex: 1; min-width: 0; }
-    .nav-lock { color: var(--side-muted); }
-    .nav-lv {
-      display: block; margin-left: auto; flex: none;
-      font-size: 12px; font-weight: 600; color: var(--side-muted); font-variant-numeric: tabular-nums;
-    }
-    .nav-item[aria-current="page"] .nav-lv { color: var(--side-ink); }
-    .nav-item:disabled .nav-lv { display: none; }
-    /* Titik hijau berdenyut di kegiatan yang sedang berjalan */
-    .nav-item.running > span:first-child { position: relative; }
-    .nav-item.running > span:first-child::after {
-      content: ""; position: absolute; right: -3px; top: -1px; width: 8px; height: 8px;
-      border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 2px var(--side-bg);
-      animation: pulse 1.6s ease-in-out infinite;
-    }
-    @keyframes pulse { 50% { opacity: .35; } }
+    .nav-name { flex: 1; min-width: 0; }
+    .nav-meta { display: flex; align-items: center; gap: 6px; }
+    .nav-lv { font-size: 10px; color: var(--muted); }
+    .nav-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
 
     .app { max-width: none; margin: 0; }
-    header {
-      position: sticky; top: 0; z-index: 4;
-      height: 56px; margin: 0; padding: 0 32px;
-      background: var(--card); border-bottom: 1px solid var(--line);
-    }
-    .page-title { display: block; font-size: 18px; font-weight: 700; }
-    .kepeng { padding: 6px 14px; background: var(--track); border-radius: 999px; font-size: 15px; }
-    main { max-width: 1280px; padding: 24px 32px 48px; }
+    main { padding: 20px 24px 32px; }
     main > :first-child { margin-top: 0; }
 
     .tool, .panel { border-radius: var(--r); padding: 18px 20px; }
@@ -564,37 +561,19 @@
 </style>
 </head>
 <body>
-<div class="scrim" id="scrim"></div>
-<nav class="drawer" id="drawer" aria-label="Menu">
-  <div class="brand">Kebon Kosong</div>
-  <div class="nav-group" data-i18n="navGather"></div>
-  <button class="nav-item" data-page="kebun"><span class="nav-icon">🌾</span><span data-i18n="farm"></span><span class="nav-lv"></span></button>
-  <button class="nav-item" data-page="hutan"><span class="nav-icon">🌳</span><span data-i18n="forest"></span><span class="nav-lv"></span></button>
-  <button class="nav-item" data-page="goa"><span class="nav-icon">⛰️</span><span class="nav-text"><span data-i18n="cave"></span><small class="nav-lock" data-i18n="caveLocked"></small></span><span class="nav-lv"></span></button>
-  <button class="nav-item" data-page="sungai"><span class="nav-icon">🏞️</span><span class="nav-text"><span data-i18n="river"></span><small class="nav-lock" data-i18n="riverLocked"></small></span><span class="nav-lv"></span></button>
-  <button class="nav-item" data-page="danau"><span class="nav-icon">🌊</span><span class="nav-text"><span data-i18n="lake"></span><small class="nav-lock" data-i18n="lakeLocked"></small></span></button>
-  <button class="nav-item" data-page="laut"><span class="nav-icon">⛵</span><span class="nav-text"><span data-i18n="sea"></span><small class="nav-lock" data-i18n="seaLocked"></small></span></button>
-  <div class="nav-group" data-i18n="navCraft"></div>
-  <button class="nav-item" data-page="dapur"><span class="nav-icon">🍳</span><span data-i18n="kitchen"></span><span class="nav-lv"></span></button>
-  <button class="nav-item" data-page="anvil"><span class="nav-icon">⚒️</span><span data-i18n="anvil"></span><span class="nav-lv"></span></button>
-  <div class="nav-group" data-i18n="navCombat"></div>
-  <button class="nav-item" data-page="petualangan"><span class="nav-icon">⚔️</span><span class="nav-text"><span data-i18n="adventure"></span><small class="nav-lock" data-i18n="advLocked"></small></span><span class="nav-lv"></span></button>
-  <div class="nav-group" data-i18n="navOther"></div>
-  <button class="nav-item" data-page="rumah"><span class="nav-icon">🏠</span><span data-i18n="house"></span></button>
-  <button class="nav-item" data-page="pasar"><span class="nav-icon">🏪</span><span data-i18n="market"></span></button>
-  <button class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span data-i18n="settings"></span></button>
-</nav>
+<div class="top">
+  <header class="topbar">
+    <span class="brand">Kebon Kosong</span>
+    <div class="crumb"><span class="crumb-group" id="crumb-group"></span><span class="page-title" id="page-title"></span></div>
+    <div class="top-extra" id="top-extra"></div>
+    <span class="counter" id="main-counter" hidden></span>
+    <span class="counter" id="kepeng"></span>
+  </header>
+  <nav class="subtabs" id="subtabs"></nav>
+</div>
+<nav class="drawer" id="drawer"></nav>
 
 <div class="app">
-  <header>
-    <h1>Kebon Kosong</h1>
-    <span class="page-title" id="page-title"></span>
-    <span class="kepeng" id="kepeng"></span>
-    <button class="menu-btn" id="menu-btn" aria-controls="drawer" aria-expanded="false">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
-    </button>
-  </header>
-
   <main id="page-kebun" hidden>
     <section class="tool tool-split">
       <div class="tool-body">
@@ -786,7 +765,6 @@
   </main>
 
   <main id="page-settings" hidden>
-    <h2 data-i18n="settings"></h2>
     <div class="setting">
       <span class="setting-label" data-i18n="language"></span>
       <div class="segment">
@@ -807,11 +785,12 @@
     </div>
   </main>
 </div>
+<nav class="tabbar" id="tabbar"></nav>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-12.1"></script>
-<script src="js/game.js?v=2026-11-12.1"></script>
-<script src="js/ui.js?v=2026-11-12.1"></script>
-<script src="js/debug.js?v=2026-11-12.1"></script>
+<script src="js/data.js?v=2026-11-12.2"></script>
+<script src="js/game.js?v=2026-11-12.2"></script>
+<script src="js/ui.js?v=2026-11-12.2"></script>
+<script src="js/debug.js?v=2026-11-12.2"></script>
 </body>
 </html>

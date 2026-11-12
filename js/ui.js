@@ -236,16 +236,76 @@ kitchenUpgradeBtn.addEventListener('click', () => {
   renderKepeng();
 });
 
-// Menu: area terkunci tidak bisa dibuka dan menampilkan syaratnya
-function renderNav() {
-  for (const area of Object.keys(AREA_UNLOCKS)) {
-    const btn = document.querySelector(`.nav-item[data-page="${area}"]`);
-    btn.disabled = !areaOpen(area);
-    btn.querySelector('.nav-lock').hidden = areaOpen(area);
-  }
+// ---------- Navigasi ----------
+// Ponsel: 5 tab di bawah (grup) + sub-tab per grup di atas. Desktop: sidebar teks per grup.
+const PAGE_TEXT = {
+  kebun: 'farm', hutan: 'forest', goa: 'cave', sungai: 'river', danau: 'lake', laut: 'sea', dapur: 'kitchen', anvil: 'anvil',
+  petualangan: 'adventure', rumah: 'house', pasar: 'market', settings: 'settings',
+};
+const pageName = p => PAGE_TEXT[p] ? t(PAGE_TEXT[p]) : p === 'debug' ? 'Debug' : p;
+// Teks syarat area terkunci (title/aria)
+const LOCK_TEXT = { goa: 'caveLocked', sungai: 'riverLocked', danau: 'lakeLocked', laut: 'seaLocked', petualangan: 'advLocked' };
+// Grup tab bar ponsel; urutan = urutan tab. Ikon garis khusus.
+const TAB_GROUPS = [
+  { key: 'gather', text: 'grpGather', pages: ['kebun', 'hutan', 'goa', 'sungai', 'danau', 'laut'],
+    icon: '<path d="M12 21v-8"/><path d="M12 13c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 15c0-3-2.5-5.5-6-5.5 0 3 2.5 5.5 6 5.5z"/>' },
+  { key: 'craft', text: 'grpCraft', pages: ['dapur', 'anvil'], icon: '<path d="M3 7h14c0 3-2 4-4 4v3h3v4H6v-4h3v-3H7C5 11 3 9 3 7z"/>' },
+  { key: 'home', text: 'grpHome', pages: ['rumah', 'settings', 'debug'], icon: '<path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/>' },
+  { key: 'market', text: 'grpMarket', pages: ['pasar'], icon: '<path d="M3 9h18l-2-5H5z"/><path d="M5 9v11h14V9"/><path d="M10 20v-6h4v6"/>' },
+  { key: 'combat', text: 'grpCombat', pages: ['petualangan'], icon: '<path d="M5 19 19 5"/><path d="M15 5h4v4"/><path d="M19 19 5 5"/><path d="M9 5H5v4"/>' },
+];
+// Grup sidebar desktop
+const SIDE_GROUPS = [['grpGather', TAB_GROUPS[0].pages], ['grpCraft', ['dapur', 'anvil']], ['grpCombat', ['petualangan']], ['navOther', ['rumah', 'pasar', 'settings']]];
+const groupOf = p => TAB_GROUPS.find(g => g.pages.includes(p)) || TAB_GROUPS[2];
+const LOCK_SVG = '<svg class="lock-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.6"/></svg>';
+const lastInGroup = {}; // halaman terakhir per grup (tab kembali ke sana)
+
+$('drawer').innerHTML = SIDE_GROUPS.map(([text, pages]) => `<div class="nav-group" data-i18n="${text}"></div>` +
+  pages.map(p => `<button class="nav-item" data-page="${p}"><span class="nav-name" data-i18n="${PAGE_TEXT[p]}"></span>` +
+    `<span class="nav-meta"><span class="nav-dot live" hidden></span><span class="nav-lv"></span>${p in AREA_UNLOCKS ? LOCK_SVG : ''}</span></button>`).join('')).join('');
+$('drawer').setAttribute('aria-label', 'Menu');
+$('tabbar').innerHTML = TAB_GROUPS.map(g => `<button class="tab" data-tab="${g.key}">` +
+  `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${g.icon}</svg>` +
+  `<span data-i18n="${g.text}"></span></button>`).join('');
+
+// Putar ulang animasi CSS pada elemen yang sama
+function replay(el, cls) { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+
+// Sub-tab grup halaman sekarang (ponsel). Disembunyikan kalau grupnya cuma satu halaman.
+function renderSubtabs() {
+  const g = groupOf(page), pages = g.pages.filter(p => PAGES.includes(p)), el = $('subtabs');
+  el.hidden = pages.length < 2;
+  el.setAttribute('aria-label', t(g.text));
+  el.innerHTML = pages.map(p => {
+    const open = areaOpen(p), lock = LOCK_TEXT[p] && t(LOCK_TEXT[p]);
+    return `<button class="subtab" data-page="${p}"${p === page ? ' aria-current="page"' : ''}` +
+      (open ? '' : ` aria-disabled="true" title="${lock}" aria-label="${pageName(p)}, ${lock}"`) +
+      `><span>${pageName(p)}</span>${open ? '' : LOCK_SVG}</button>`;
+  }).join('');
+  const cur = el.querySelector('[aria-current]');
+  // Geser hanya kalau sub-tab aktif tidak terlihat
+  if (cur && !el.hidden && cur.offsetLeft + cur.offsetWidth > el.scrollLeft + el.clientWidth) el.scrollLeft = cur.offsetLeft - 8;
 }
 
-// Status di menu (terlihat di sidebar desktop): level skill tiap area dan titik kegiatan yang berjalan.
+// Area terkunci: item sidebar nonaktif + gembok (syarat di title); tab Tarung abu-abu sampai Petualangan terbuka
+function renderNav() {
+  for (const area of Object.keys(AREA_UNLOCKS)) {
+    const btn = document.querySelector(`.nav-item[data-page="${area}"]`), open = areaOpen(area);
+    btn.disabled = !open;
+    btn.title = open ? '' : t(LOCK_TEXT[area]);
+    btn.querySelector('.lock-svg').hidden = open;
+    btn.querySelector('.nav-lv').hidden = !open;
+  }
+  document.querySelectorAll('.tab').forEach(tab => {
+    const g = TAB_GROUPS.find(x => x.key === tab.dataset.tab), open = g.pages.some(p => PAGES.includes(p) && areaOpen(p));
+    if (open) tab.removeAttribute('aria-disabled'); else tab.setAttribute('aria-disabled', 'true');
+    tab.title = open ? '' : t(LOCK_TEXT[g.pages[0]]);
+    if (groupOf(page) === g) tab.setAttribute('aria-current', 'page'); else tab.removeAttribute('aria-current');
+  });
+  renderSubtabs();
+}
+
+// Status di sidebar: level skill tiap area (LV n) dan titik putih berkedip di kegiatan yang berjalan.
 // Hanya menulis ke DOM kalau nilainya berubah karena dipanggil tiap frame.
 const NAV_SKILL = {
   kebun: () => state.farm, hutan: () => state.tools.axe, goa: () => state.tools.pickaxe, sungai: () => state.tools.rod,
@@ -254,22 +314,24 @@ const NAV_SKILL = {
 let navStatusKey = '';
 function renderNavStatus() {
   const running = state.active ? activityArea(state.active) : null;
-  const levels = Object.entries(NAV_SKILL).map(([p, s]) => s().level);
+  const levels = Object.values(NAV_SKILL).map(s => s().level);
   const key = running + '|' + levels.join(',');
   if (key === navStatusKey) return;
   navStatusKey = key;
   Object.keys(NAV_SKILL).forEach((p, i) => {
     const el = document.querySelector(`.nav-item[data-page="${p}"] .nav-lv`);
-    if (el) el.textContent = levels[i] + ' / ' + MAX_LEVEL;
+    if (el) el.textContent = 'LV ' + levels[i];
   });
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('running', n.dataset.page === running));
+  document.querySelectorAll('.nav-item').forEach(n => {
+    const dot = n.querySelector('.nav-dot');
+    if (dot) dot.hidden = n.dataset.page !== running;
+  });
 }
 
 function renderPageTitle() {
-  const nav = document.querySelector(`.nav-item[data-page="${page}"]`);
-  if (!nav) return;
-  const label = nav.querySelector('[data-i18n]') || nav.lastElementChild;
-  $('page-title').textContent = nav.firstElementChild.textContent + ' ' + label.textContent;
+  $('crumb-group').textContent = t(groupOf(page).text) + ' /';
+  $('page-title').textContent = pageName(page);
+  document.title = pageName(page) + ' · Kebon Kosong';
 }
 
 // Suara dibuat langsung dengan Web Audio (tanpa file), hanya setelah pemain menyentuh layar
@@ -625,7 +687,6 @@ function applySettings() {
   renderTools();
   renderNav();
   renderAnvil();
-  $('menu-btn').setAttribute('aria-label', t('openMenu'));
   document.querySelectorAll('[data-sound-choice]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.soundChoice === 'on') === settings.sound));
   document.querySelectorAll('[data-lang-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.langChoice === settings.lang));
   renderHouse();
@@ -636,10 +697,31 @@ function applySettings() {
   renderPageTitle();
 }
 
-const kepengEl = $('kepeng');
+// Counter di bar atas: Kepeng, dan item utama kegiatan yang sedang berjalan
+const kepengEl = $('kepeng'), counterEl = $('main-counter');
+kepengEl.innerHTML = `<span class="counter-icon" aria-hidden="true">${KEPENG_ICON}</span><span></span>`;
+counterEl.innerHTML = '<span class="counter-icon" aria-hidden="true"></span><span></span>';
+let kepengShown = null;
 function renderKepeng() {
-  kepengEl.textContent = KEPENG_ICON + ' ' + num(state.kepeng);
-  kepengEl.setAttribute('aria-label', t('kepeng') + ': ' + num(state.kepeng));
+  if (kepengShown !== null && state.kepeng > kepengShown) replay(kepengEl.firstChild, 'bump');
+  kepengShown = state.kepeng;
+  kepengEl.lastChild.textContent = num(state.kepeng);
+  kepengEl.setAttribute('aria-label', t('kepeng') + ', ' + num(state.kepeng));
+}
+// Item utama sebuah kegiatan: kayu/batu dari node, masakan dari resep; memancing & petualangan tidak punya
+const mainItem = key => key && (RECIPES[key] ? key : NODES[key] ? NODES[key].main : null);
+let counterShown = { key: null, n: 0 };
+function renderCounter() {
+  const key = page === 'anvil' ? null : mainItem(state.active);
+  counterEl.hidden = !key;
+  if (!key) { counterShown.key = null; return; }
+  const n = Math.floor(state.items[key] || 0);
+  if (counterShown.key === key && counterShown.n === n) return;
+  if (counterShown.key !== key) counterEl.firstChild.innerHTML = iconOf(key);
+  else if (n > counterShown.n) replay(counterEl.firstChild, 'bump');
+  counterShown = { key, n };
+  counterEl.lastChild.textContent = num(n);
+  counterEl.setAttribute('aria-label', nameOf(key) + ', ' + num(n));
 }
 
 // Pasar: satu baris per item yang dimiliki. Baris hanya dibangun ulang kalau daftar itemnya berubah,
@@ -763,30 +845,30 @@ function loop(now) {
   }
   render();
   renderNavStatus();
+  renderCounter();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
 // Menu & halaman
 const PAGES = ['kebun', 'hutan', 'goa', 'sungai', 'danau', 'laut', 'dapur', 'petualangan', 'rumah', 'pasar', 'anvil', 'settings'];
-const menuBtn = $('menu-btn'), navItems = document.querySelectorAll('.nav-item');
-
-function setMenu(open) {
-  document.body.classList.toggle('menu-open', open);
-  menuBtn.setAttribute('aria-expanded', open);
-}
+// Dulu menutup drawer ponsel; tetap ada karena dipanggil mode uji
+function setMenu() {}
 
 function showPage(name) {
   if (openItem) showTip(null);
   // Tautan lama: Inventory jadi Rumah, Pohon jadi Hutan
   name = { inventory: 'rumah', pohon: 'hutan' }[name] || name;
   page = PAGES.includes(name) && areaOpen(name) ? name : 'hutan';
+  lastInGroup[groupOf(page).key] = page;
   PAGES.forEach(p => { $('page-' + p).hidden = p !== page; });
-  navItems.forEach(n => {
+  document.querySelectorAll('.nav-item').forEach(n => {
     if (n.dataset.page === page) n.setAttribute('aria-current', 'page');
     else n.removeAttribute('aria-current');
   });
   renderPageTitle();
+  renderNav();
+  renderCounter();
   if (page === 'rumah') renderHouse();
   if (page === 'pasar') { renderMarket(); renderSeedShop(); }
   if (page === 'anvil') renderAnvil();
@@ -794,13 +876,21 @@ function showPage(name) {
   if (page === 'petualangan') renderAdventure();
 }
 
-menuBtn.addEventListener('click', () => setMenu(!document.body.classList.contains('menu-open')));
-$('scrim').addEventListener('click', () => setMenu(false));
-document.addEventListener('keydown', e => { if (e.key === 'Escape') setMenu(false); });
-navItems.forEach(n => n.addEventListener('click', () => {
-  location.hash = n.dataset.page;
-  setMenu(false);
-}));
+const go = p => { if (location.hash.slice(1) === p) showPage(p); else location.hash = p; };
+$('drawer').addEventListener('click', e => { const n = e.target.closest('.nav-item'); if (n && !n.disabled) go(n.dataset.page); });
+$('subtabs').addEventListener('click', e => {
+  const b = e.target.closest('.subtab');
+  if (!b) return;
+  if (b.getAttribute('aria-disabled')) { replay(b, 'nope'); return; }
+  go(b.dataset.page);
+});
+$('tabbar').addEventListener('click', e => {
+  const b = e.target.closest('.tab');
+  if (!b) return;
+  if (b.getAttribute('aria-disabled')) { replay(b, 'nope'); return; }
+  const g = TAB_GROUPS.find(x => x.key === b.dataset.tab);
+  go([lastInGroup[g.key], ...g.pages].find(p => p && PAGES.includes(p) && areaOpen(p)));
+});
 window.addEventListener('hashchange', () => showPage(location.hash.slice(1)));
 
 document.querySelectorAll('[data-sound-choice]').forEach(b => b.addEventListener('click', () => {
