@@ -64,7 +64,7 @@
     /* ruang untuk tab bar (+ dock aktivitas) yang menempel di bawah */
     padding: 0 0 calc(var(--tabbar-h) + var(--dock-h, 0px) + env(safe-area-inset-bottom));
   }
-  :root { --tabbar-h: 62px; }
+  :root { --tabbar-h: 62px; --panel-w: 0px; }
   button { font-family: inherit; }
   .mono, .counter, .crumb-group, .nav-group, .nav-lv, .tool-xp, .duration, .item-qty, .plot-time, .cost, .stats dd, .panel-meta, .journal time {
     font-family: var(--mono); font-variant-numeric: tabular-nums;
@@ -473,10 +473,44 @@
   }
 
 
+
+  /* ---------- Aktivitas: dock ponsel (di atas tab bar), strip di atas konten (900–1279), panel kanan (≥1280) ---------- */
+  .dock { position: fixed; left: 10px; right: 10px; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 8px); z-index: 7;
+    background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r); overflow: hidden; animation: dock-in .22s var(--ease-out); }
+  body.has-dock { --dock-h: 60px; }
+  .act-row { display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; }
+  .act-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+  .act-main { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .act-name { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .act-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .act-stop { flex: none; width: 44px; height: 36px; display: grid; place-items: center; background: var(--bg); border: 1px solid var(--line-strong); border-radius: var(--r-sm); cursor: pointer; }
+  .act-stop span { width: 12px; height: 12px; border-radius: 2px; background: var(--ink); }
+  .act-bar { height: 3px; background: var(--track); }
+  .act-bar .fill { border-radius: 0; }
+  .act-idle { padding: 12px; font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  @keyframes dock-in { from { opacity: 0; transform: translateY(20px); } }
+  .side-panel { display: none; }
+  .side-box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .side-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .side-head .live { color: var(--ink); }
+  @media (min-width: 900px) {
+    body.has-dock { --dock-h: 0px; }
+    .dock { position: sticky; top: calc(var(--top-h) + 8px); left: auto; right: auto; bottom: auto; margin: 16px 24px -4px; }
+    .act-main { flex-direction: column; gap: 2px; }
+  }
+  @media (min-width: 1280px) {
+    :root { --panel-w: 300px; }
+    .dock { display: none; }
+    .side-panel {
+      display: flex; flex-direction: column; gap: 14px; position: fixed; top: var(--top-h); right: 0; bottom: 0; z-index: 5; width: var(--panel-w);
+      padding: 16px; border-left: 1px solid var(--line); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
+    }
+    .side-panel .act-stop { width: 36px; height: 32px; }
+  }
   /* Desktop: sidebar tetap di kiri dengan grup kegiatan dan level skill, bar atas berisi judul halaman,
      konten melebar dengan grid kartu beberapa kolom. Ponsel tetap memakai drawer. */
   @media (min-width: 900px) {
-    :root { --side-w: 232px; --panel-w: 0px; --top-h: 52px; }
+    :root { --side-w: 232px; --top-h: 52px; }
     body { padding: var(--top-h) var(--panel-w) 0 var(--side-w); }
     .tabbar, .subtabs { display: none; }
     .top { position: fixed; left: 0; right: 0; top: 0; height: var(--top-h); }
@@ -574,6 +608,7 @@
 <nav class="drawer" id="drawer"></nav>
 
 <div class="app">
+  <section class="dock activity" id="dock" hidden></section>
   <main id="page-kebun" hidden>
     <section class="tool tool-split">
       <div class="tool-body">
@@ -785,12 +820,18 @@
     </div>
   </main>
 </div>
+<aside class="side-panel" id="side-panel">
+  <section class="side-box">
+    <div class="side-head"><span class="caps" data-i18n="lblActivity"></span><span class="caps live" id="side-running" data-i18n="lblRunning" hidden></span></div>
+    <div class="activity" id="side-activity"></div>
+  </section>
+</aside>
 <nav class="tabbar" id="tabbar"></nav>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-12.2"></script>
-<script src="js/game.js?v=2026-11-12.2"></script>
-<script src="js/ui.js?v=2026-11-12.2"></script>
-<script src="js/debug.js?v=2026-11-12.2"></script>
+<script src="js/data.js?v=2026-11-12.3"></script>
+<script src="js/game.js?v=2026-11-12.3"></script>
+<script src="js/ui.js?v=2026-11-12.3"></script>
+<script src="js/debug.js?v=2026-11-12.3"></script>
 </body>
 </html>

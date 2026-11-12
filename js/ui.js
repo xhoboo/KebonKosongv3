@@ -808,6 +808,69 @@ document.addEventListener('click', e => {
 window.addEventListener('scroll', () => openItem && showTip(null), { passive: true });
 window.addEventListener('resize', () => openItem && showTip(null));
 
+// ---------- Aktivitas (dock ponsel, strip tablet, panel kanan desktop) ----------
+// Penghitung sesi "+N kayu" hanya hidup di tampilan (tidak disimpan); mulai dari 0 tiap kegiatan berganti.
+const session = { key: null, n: 0 };
+const AREA_TEXT = { sungai: 'river', danau: 'lake', laut: 'sea' };
+function activityName(key) {
+  if (ADVENTURES[key]) return t('actAdv')(t(key));
+  if (RECIPES[key]) return t('actCook')(t(key));
+  const node = NODES[key];
+  if (node.tool === 'rod') return t('actFish')(t(AREA_TEXT[node.area]));
+  return t(node.tool === 'axe' ? 'actChop' : 'actMine')(t(key));
+}
+// Hitung hasil satu aksi ke sesi: item utama (kayu/batu), semua ikan, atau masakan
+function tally(key, got) {
+  if (session.key !== key || !got || !got.item || got.lost) return;
+  const node = NODES[key];
+  if (RECIPES[key] || (node && (node.main ? got.item === node.main : true))) session.n += got.qty;
+}
+function activityMeta(key) {
+  if (ADVENTURES[key]) return '❤️ ' + num(state.hp) + ' / ' + num(maxHp());
+  const what = RECIPES[key] ? nameOf(key) : NODES[key].main ? nameOf(NODES[key].main) : t('catFish');
+  return '+' + num(session.n) + ' ' + what.toLowerCase();
+}
+const activityEls = [$('dock'), $('side-activity')];
+let activityKey = '';
+function renderActivity() {
+  const key = state.active;
+  if (session.key !== key) { session.key = key; session.n = 0; }
+  const text = key ? activityName(key) + '|' + activityMeta(key) + '|' + settings.lang : '';
+  if (text !== activityKey) {
+    const had = !!activityKey;
+    activityKey = text;
+    $('dock').hidden = !key;
+    document.body.classList.toggle('has-dock', !!key);
+    $('side-running').hidden = !key;
+    for (const el of activityEls) {
+      if (!key) { el.innerHTML = `<div class="act-idle">${t('idle')}</div>`; continue; }
+      if (!had || !el.querySelector('.act-row')) {
+        el.innerHTML = `<div class="act-row"><span class="act-dot live" aria-hidden="true"></span>` +
+          `<button class="act-main"><span class="act-name"></span><span class="act-meta"></span></button>` +
+          `<button class="act-stop"><span aria-hidden="true"></span></button></div>` +
+          `<div class="act-bar"><span class="fill"></span></div>`;
+      }
+      el.querySelector('.act-name').textContent = activityName(key);
+      el.querySelector('.act-meta').textContent = activityMeta(key) + (el.id === 'side-activity' && !ADVENTURES[key] ? ' · ' + (actionTime(key) / 1000).toFixed(1) + 's' : '');
+      el.querySelector('.act-stop').setAttribute('aria-label', t('stop'));
+      el.querySelector('.act-main').setAttribute('aria-label', activityName(key) + ', ' + pageName(activityArea(key)));
+    }
+  }
+  if (key) {
+    const w = Math.min(100, state.progress / actionTime(key) * 100) + '%';
+    for (const el of activityEls) el.querySelector('.act-bar .fill').style.width = w;
+  }
+}
+for (const el of activityEls) el.addEventListener('click', e => {
+  if (!state.active) return;
+  if (e.target.closest('.act-stop')) {
+    setActive(null);
+    render();
+    renderAdventure();
+    renderActivity();
+  } else if (e.target.closest('.act-main')) go(activityArea(state.active));
+});
+
 let last = performance.now(), timeScale = 1;
 function loop(now) {
   // Tab yang lama tersembunyi juga dibatasi 24 jam; timeScale > 1 hanya dari mode uji
@@ -818,7 +881,7 @@ function loop(now) {
     state.progress += dt;
     if (state.progress >= actionTime(key)) {
       let got;
-      for (let time; state.active && state.progress >= (time = actionTime(key)); state.progress -= time) got = act(key);
+      for (let time; state.active && state.progress >= (time = actionTime(key)); state.progress -= time) tally(key, got = act(key));
       if (got && got.stopped) save();
       const opened = checkUnlocks();
       if (opened.length) {
@@ -846,6 +909,7 @@ function loop(now) {
   render();
   renderNavStatus();
   renderCounter();
+  renderActivity();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
