@@ -695,70 +695,227 @@ function fmtDur(ms) {
   if (h) return `${h}${t('hours')} ${m % 60}${t('minutes')}`;
   return `${m}${t('minutes')}`;
 }
+// Timer petak: 01:23:45 / 23:45 di bawah sehari, lebih dari itu "4h 3j"
+function fmtClock(ms) {
+  if (ms >= 24 * HOUR) return fmtDur(ms);
+  const sec = Math.max(0, Math.ceil(ms / 1000)), h = Math.floor(sec / 3600), m = Math.floor(sec / 60) % 60, x = sec % 60;
+  const p = n => String(n).padStart(2, '0');
+  return (h ? p(h) + ':' : '') + p(m) + ':' + p(x);
+}
 
-let selectedCrop = null; // benih yang dipilih untuk ditanam
-const harvestFx = {}; // petak → { text, until } hasil panen yang sedang ditampilkan
+let selectedCrop = null; // benih terakhir yang dipilih (dipakai Tanam semua)
+let sheetPlot = null; // petak yang sedang dipilihkan benih di sheet ponsel
+let buyArmed = false, buyTimer; // beli petak butuh dua ketukan
+const PLUS_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const isDesktop = () => matchMedia('(min-width: 900px)').matches;
+const cropKeys = Object.keys(CROPS).sort((a, b) => CROPS[a].level - CROPS[b].level || CROPS[a].grow - CROPS[b].grow);
 
+// Benih bisa ditanam kalau tanamannya terbuka dan benihnya ada, atau bisa dibeli langsung (benih biasa)
+function seedState(k) {
+  const c = CROPS[k], have = state.items[c.seed] >= 1;
+  const buyable = !!c.shop && state.kepeng >= c.shop && canStore(c.seed);
+  return { have, ok: cropOpen(k) && (have || buyable) };
+}
+// Tanam benih k di petak i; benih biasa yang belum dimiliki dibeli dulu (harga Pasar yang sama)
+function plantSeed(k, i) {
+  if (i == null || state.farm.plots[i] || !seedState(k).ok) return false;
+  if (!(state.items[CROPS[k].seed] >= 1) && !buySeed(k, 1)) return false;
+  if (!plant(i, k)) return false;
+  selectedCrop = k;
+  save();
+  renderKepeng();
+  return true;
+}
+
+function seedRows(target) {
+  return cropKeys.map((k, i) => {
+    const c = CROPS[k], st = seedState(k), n = state.items[c.seed] || 0, open = cropOpen(k);
+    return `<button class="seed-row row-in${st.ok ? '' : ' off'}${k === selectedCrop ? ' cur' : ''}" style="--i:${i}" data-seed="${k}" data-target="${target}"` +
+      ` aria-label="${nameOf(c.seed)}, ${fmtDur(c.grow)}${c.shop ? ', ' + num(c.shop) + ' ' + t('kepeng') : ''}${open ? '' : ', ' + t('needFarm')(c.level)}"${st.ok ? '' : ' aria-disabled="true"'}>` +
+      `<span class="seed-ic" aria-hidden="true">${iconOf(c.seed)}</span>` +
+      `<span class="seed-name">${t(k)}${n >= 1 ? `<small>×${num(n)}</small>` : ''}</span>` +
+      `<span>${fmtDur(c.grow)}</span>` +
+      `<span>${c.shop ? KEPENG_ICON + ' ' + num(c.shop) : '—'}</span>` +
+      `<span>${open ? '' : 'LV ' + c.level}</span></button>`;
+  }).join('');
+}
+
+function openSheet(i) {
+  sheetPlot = i;
+  $('sheet-plot').textContent = t('plotNo')(i + 1);
+  $('sheet-rows').innerHTML = seedRows('sheet');
+  $('seed-sheet').hidden = false;
+  const first = $('sheet-rows').querySelector('.seed-row:not(.off)');
+  (first || $('sheet-rows').querySelector('.seed-row')).focus({ preventScroll: true });
+}
+function closeSheet() {
+  if ($('seed-sheet').hidden) return;
+  $('seed-sheet').hidden = true;
+  const plot = $('plots').querySelector(`[data-plot="${sheetPlot}"]`);
+  sheetPlot = null;
+  if (plot) plot.focus({ preventScroll: true });
+}
+$('seed-sheet').addEventListener('click', e => {
+  const row = e.target.closest('.seed-row');
+  if (!row) { if (!e.target.closest('.sheet')) closeSheet(); return; }
+  if (row.classList.contains('off')) { replay(row, 'nope'); return; }
+  const i = sheetPlot;
+  if (plantSeed(row.dataset.seed, i)) { closeSheet(); renderFarm(); replay($('plots').querySelector(`[data-plot="${i}"]`), 'sel'); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+// Tabel benih desktop: klik baris langsung menanam di petak kosong pertama
+$('seed-table-rows').addEventListener('click', e => {
+  const row = e.target.closest('.seed-row');
+  if (!row) return;
+  const i = state.farm.plots.findIndex(p => !p);
+  if (row.classList.contains('off') || i < 0) { replay(row, 'nope'); return; }
+  if (plantSeed(row.dataset.seed, i)) { renderFarm(); replay($('plots').querySelector(`[data-plot="${i}"]`), 'sel'); }
+});
+
+// Petak dibangun ulang hanya kalau jumlah/status/tanamannya berubah; tiap detik cukup bar, ukuran ikon, dan timer
+let plotsKey = '', seedKey = '';
 function renderFarm() {
-  const f = state.farm, now = Date.now();
-  skillBar('farm', f);
-  const used = f.plots.filter(Boolean).length;
-  $('farm-plots').textContent = t('plots')(num(used), num(f.plots.length));
+  const f = state.farm, now = Date.now(), maxed = f.level >= MAX_LEVEL;
+  $('farm-lv').textContent = f.level;
+  $('farm-fill').style.width = (maxed ? 100 : f.xp / xpNeeded(f.level) * 100) + '%';
+  $('farm-xp').textContent = maxed ? t('max') : num(f.xp) + '/' + num(xpNeeded(f.level)) + ' XP';
+  $('farm-plots').textContent = num(f.plots.length) + '/' + num(FARM.maxSlots);
   const cost = nextSlotCost();
-  $('farm-buy').hidden = cost == null;
-  if (cost != null) {
-    $('farm-buy-text').textContent = t('buySlot')(f.plots.length + 1, FARM.maxSlots);
-    $('farm-buy-cost').textContent = `${KEPENG_ICON} ${num(state.kepeng)}/${num(cost)}`;
-    $('farm-buy').disabled = state.kepeng < cost;
-  }
-  // Pilihan benih: semua benih yang dimiliki
-  const seeds = Object.entries(CROPS).filter(([, c]) => state.items[c.seed] >= 1);
-  if (!seeds.some(([k]) => k === selectedCrop)) selectedCrop = (seeds.find(([k]) => cropOpen(k)) || [])[0] || null;
-  $('farm-seeds').innerHTML = seeds.map(([k, c]) =>
-    `<button class="chip${k === selectedCrop ? ' selected' : ''}" data-crop="${k}" ${cropOpen(k) ? '' : 'disabled'} ` +
-    `title="${cropOpen(k) ? t('grows')(fmtDur(c.grow)) : t('needFarm')(c.level)}">${iconOf(c.seed)} ${t(k)} ×${num(state.items[c.seed])}` +
-    `<small>${cropOpen(k) ? fmtDur(c.grow) : '🔒 Lv. ' + c.level}</small></button>`).join('');
-  $('farm-no-seeds').hidden = seeds.length > 0;
+
+  // Benih terpilih untuk Tanam semua: yang terakhir dipakai, atau benih pertama yang dimiliki
+  const owned = cropKeys.filter(k => cropOpen(k) && state.items[CROPS[k].seed] >= 1);
+  if (!owned.includes(selectedCrop)) selectedCrop = owned[0] || null;
+  $('farm-plant-all').innerHTML = (selectedCrop ? `<span aria-hidden="true">${iconOf(CROPS[selectedCrop].seed)}</span>` : '') + t('plantAll');
   $('farm-plant-all').disabled = !selectedCrop || !f.plots.some(p => !p);
   $('farm-harvest-all').disabled = !f.plots.some(p => ['ready', 'wilted'].includes(plotStatus(p, now)));
 
-  // Petak
-  $('plots').innerHTML = f.plots.map((p, i) => {
-    const status = plotStatus(p, now), fx = harvestFx[i] && harvestFx[i].until > now ? harvestFx[i].text : '';
-    let body;
-    if (status === 'empty') body = `<span class="plot-icon empty-icon">${selectedCrop ? iconOf(CROPS[selectedCrop].seed) : '＋'}</span>`;
-    else if (status === 'growing') {
-      const grow = CROPS[p.crop].grow, left = p.at + grow - now;
-      body = `<span class="plot-icon">${iconOf(p.crop)}</span><span class="plot-bar"><span style="width:${(1 - left / grow) * 100}%"></span></span><span class="plot-time">${fmtDur(left)}</span>`;
-    } else if (status === 'ready') {
+  const statuses = f.plots.map(p => plotStatus(p, now));
+  const key = statuses.map((st, i) => st + (f.plots[i] ? f.plots[i].crop : '')).join() + '|' + (cost != null) + '|' + settings.lang;
+  if (key !== plotsKey) {
+    plotsKey = key;
+    $('plots').innerHTML = f.plots.map((p, i) => {
+      const st = statuses[i];
+      const icon = st === 'empty' ? PLUS_SVG : iconOf(p.crop);
+      return `<li><button class="plot ${st}" data-plot="${i}" aria-label="${t('plotNo')(i + 1)}${p ? ', ' + t(p.crop) : ''}">` +
+        `<span class="plot-art"><span class="plot-icon" aria-hidden="true">${icon}</span></span>` +
+        `<span class="plot-foot">${st === 'growing' ? '<span class="plot-bar"><span></span></span>' : ''}<span class="plot-time"></span></span></button></li>`;
+    }).join('') + (cost == null ? '' :
+      `<li><button class="plot buy" data-buy-slot="1"><span class="plot-art"><span class="plot-icon" aria-hidden="true">${LOCK_SVG}</span></span>` +
+      `<span class="plot-foot"><span class="plot-time"></span></span></button></li>`);
+  }
+  // Isi yang berubah tiap detik
+  f.plots.forEach((p, i) => {
+    const el = $('plots').querySelector(`[data-plot="${i}"]`), st = statuses[i], time = el.querySelector('.plot-time');
+    let label;
+    if (st === 'empty') label = t('stEmpty');
+    else if (st === 'growing') {
+      const grow = CROPS[p.crop].grow, left = p.at + grow - now, frac = Math.min(1, Math.max(0, 1 - left / grow));
+      el.querySelector('.plot-bar span').style.width = frac * 100 + '%';
+      el.querySelector('.plot-icon').style.setProperty('--s', (0.45 + 0.55 * frac).toFixed(3));
+      label = fmtClock(left);
+    } else if (st === 'ready') {
       const left = p.at + CROPS[p.crop].grow + FARM.wilt - now;
-      body = `<span class="plot-icon">${iconOf(p.crop)}</span><span class="plot-time">${left < 6 * HOUR ? t('wiltsIn')(fmtDur(left)) : t('ready')}</span>`;
-    } else body = `<span class="plot-icon">🥀</span><span class="plot-time">${t('wilted')}</span>`;
-    return `<li><button class="plot ${status}" data-plot="${i}" aria-label="${p ? t(p.crop) : ''}">${body}${fx ? `<span class="plot-fx">${fx}</span>` : ''}</button></li>`;
-  }).join('');
+      label = left < 6 * HOUR ? t('wiltsIn')(fmtDur(left)) : t('ready');
+    } else label = t('wilted');
+    setText(time, label);
+  });
+  const buy = $('plots').querySelector('[data-buy-slot]');
+  if (buy) {
+    setText(buy.querySelector('.plot-time'), buyArmed ? t('sure') : num(cost) + ' ' + t('kepeng'));
+    buy.classList.toggle('armed', buyArmed);
+    buy.setAttribute('aria-label', t('buySlot')(f.plots.length + 1, FARM.maxSlots) + ', ' + num(cost) + ' ' + t('kepeng'));
+  }
+  // Tabel benih (desktop) dibangun ulang kalau isinya berubah
+  const sk = cropKeys.map(k => { const st = seedState(k); return st.ok + ':' + (state.items[CROPS[k].seed] || 0); }).join() + selectedCrop + settings.lang;
+  if (sk !== seedKey) { seedKey = sk; $('seed-table-rows').innerHTML = seedRows('table'); }
 }
 
 $('page-kebun').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b || b.disabled) return;
-  if (b.dataset.crop) selectedCrop = b.dataset.crop;
-  else if (b.id === 'farm-buy') { buySlot(); renderKepeng(); }
-  else if (b.id === 'farm-plant-all') plantAll(selectedCrop);
-  else if (b.id === 'farm-harvest-all') harvestAll();
-  else if (b.dataset.plot) {
+  if (b.id === 'farm-plant-all') plantAll(selectedCrop);
+  else if (b.id === 'farm-harvest-all') {
+    const ready = state.farm.plots.map((p, i) => plotStatus(p) === 'ready' ? i : -1).filter(i => i >= 0);
+    const got = harvestAll();
+    renderFarm();
+    ready.forEach(i => { const el = $('plots').querySelector(`[data-plot="${i}"]`); if (el) replay(el, 'harvest'); });
+    for (const [item, qty] of Object.entries(got)) harvestPop(ready[0], `+${num(qty)} ${iconOf(item)}`);
+    return;
+  } else if (b.dataset.buySlot) {
+    clearTimeout(buyTimer);
+    if (state.kepeng < nextSlotCost()) { buyArmed = false; replay(b, 'nope'); }
+    else if (!buyArmed) { buyArmed = true; buyTimer = setTimeout(() => { buyArmed = false; renderFarm(); }, 3000); }
+    else { buyArmed = false; buySlot(); renderKepeng(); }
+  } else if (b.dataset.plot) {
     const i = +b.dataset.plot, status = plotStatus(state.farm.plots[i]);
-    if (status === 'empty' && selectedCrop) { plant(i, selectedCrop); save(); }
-    else if (status === 'ready' || status === 'wilted') {
+    if (status === 'empty') {
+      replay(b, 'sel');
+      if (!isDesktop()) { openSheet(i); return; }
+      // Desktop: tanam benih terpilih; kalau tidak ada, arahkan ke tabel benih
+      if (!selectedCrop || !plantSeed(selectedCrop, i)) { $('seed-table').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); return; }
+    } else if (status === 'ready' || status === 'wilted') {
       const r = harvest(i);
       save();
-      if (r && r.item) harvestFx[i] = { text: `+${r.qty} ${iconOf(r.item)}`, until: Date.now() + 1500 };
-      else if (!r) harvestFx[i] = { text: t('houseFull'), until: Date.now() + 1500 };
-    } else return;
+      renderFarm();
+      const el = $('plots').querySelector(`[data-plot="${i}"]`);
+      if (r && r.item) { replay(el, 'harvest'); harvestPop(i, `+${num(r.qty)} ${iconOf(r.item)}`); }
+      else if (!r) { replay(el, 'nope'); harvestPop(i, t('houseFull')); }
+      return;
+    } else { replay(b, 'nope'); return; }
   } else return;
   renderFarm();
 });
+// Chip hasil panen yang naik di atas petak
+function harvestPop(i, html) {
+  const el = i != null && $('plots').querySelector(`[data-plot="${i}"] .plot-art`);
+  if (!el) return;
+  const chip = document.createElement('span');
+  chip.className = 'pop plot-pop';
+  chip.innerHTML = html;
+  chip.addEventListener('animationend', () => chip.remove());
+  el.appendChild(chip);
+}
 // Petak dihitung dari jam nyata: perbarui tiap detik selama halaman Kebun terbuka
 setInterval(() => { if (page === 'kebun') renderFarm(); }, 1000);
+
+// ---------- Berikutnya: rantai loop pertama (daun → Kepeng → benih → tanaman) ----------
+const NEXT_STEPS = [
+  { icon: () => icons.leaf, text: 'nextLeaf', to: 'hutan' },
+  { icon: () => KEPENG_ICON, text: 'nextSell', to: 'pasar' },
+  { icon: () => icons.kangkungSeed, text: 'nextPlant', to: 'kebun' },
+  { icon: () => icons.kangkung, text: 'nextHarvest', to: 'kebun' },
+];
+const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10" fill="none" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round"/></svg>';
+const NEXT_ARROW = '<svg class="next-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+let nextKey = '', onboardPrev = state.onboard, onboardDoneUntil = 0;
+function renderNext() {
+  const ob = state.onboard;
+  // "Loop pertama selesai" tampil sekali (beberapa detik) saat langkah terakhir selesai, lalu strip hilang
+  if (ob === 4 && onboardPrev < 4) onboardDoneUntil = Date.now() + 6000;
+  onboardPrev = ob;
+  const show = ob < 4 || Date.now() < onboardDoneUntil;
+  const leaf = Math.min(5, Math.floor(state.items.leaf || 0));
+  const key = show + '|' + ob + '|' + (ob === 0 ? leaf : '') + '|' + settings.lang;
+  if (key === nextKey) return;
+  nextKey = key;
+  document.querySelectorAll('.next-strip').forEach(el => {
+    el.hidden = !show;
+    if (!show) return;
+    const step = NEXT_STEPS[ob];
+    el.innerHTML = `<div class="side-head"><span class="caps" id="next-h">${t('lblNext')}</span><span class="caps">${Math.min(ob, 4)}/4</span></div>` +
+      `<div class="next-chain" aria-hidden="true">${NEXT_STEPS.map((s, i) =>
+        `<span class="next-step ${i < ob ? 'done' : i === ob ? 'cur' : 'todo'}"><span class="ni">${s.icon()}</span>${i < ob ? `<span class="next-check">${CHECK_SVG}</span>` : ''}</span>` +
+        (i < 3 ? NEXT_ARROW : '')).join('')}</div>` +
+      (step ? `<button class="next-text" data-go="${step.to}"><span>${t(step.text)}</span><span class="mono">${ob === 0 ? leaf + '/5' : '→'}</span></button>`
+        : `<div class="next-text"><span>${t('nextDone')}</span><span class="mono">✓</span></div>`);
+    el.setAttribute('aria-label', t('lblNext') + ': ' + (step ? t(step.text) : t('nextDone')));
+  });
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.next-text[data-go]');
+  if (b) go(b.dataset.go);
+});
 
 // Pasar: beli benih biasa
 function renderSeedShop() {
@@ -1010,6 +1167,7 @@ function loop(now) {
   renderNavStatus();
   renderCounter();
   renderActivity();
+  renderNext();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

@@ -27,10 +27,12 @@ const freshState = () => ({
   active: null, // hanya satu aksi yang berjalan dalam satu waktu
   progress: 0,
   lastTick: Date.now(),
+  onboard: 0, // langkah loop pertama: 0 kumpul daun, 1 jual daun, 2 tanam, 3 panen, 4 selesai
   // 2: exp sumber daya per exp, bukan per aksi; 3: Kepeng; 4: Rumah; 5: alat generik (kapak + beliung), Anvil, area terkunci;
   // 6: joran + Sungai; 7: Dapur + Memasak; 8: Petualangan; 9: kualitas tempa + Menempa (semuanya cukup diisi bawaan;
-  // item lama otomatis berkualitas Biasa karena key-nya tidak berubah); 10: Kebun; 11: tingkat 3–4, Danau, Laut, petualangan lanjutan
-  version: 11,
+  // item lama otomatis berkualitas Biasa karena key-nya tidak berubah); 10: Kebun; 11: tingkat 3–4, Danau, Laut, petualangan lanjutan;
+  // 12: langkah loop pertama (onboard)
+  version: 12,
 });
 const state = freshState();
 // equipOpen: daftar pilihan perlengkapan per slot dibuka (true), dilipat (false), atau ikut bawaan (null)
@@ -84,10 +86,16 @@ function loadState(saved) {
   if (!(saved.version >= 5) && (state.nodes.rock.level > 0 || state.nodes.rock.xp > 0 || state.items.stone > 0 || state.items.pebble > 0)) {
     state.unlocked.goa = true;
   }
+  // Sebelum versi 12 belum ada onboard: pemain yang sudah pernah memanen dianggap selesai
+  state.onboard = typeof saved.onboard === 'number' ? saved.onboard : state.farm.xp > 0 || state.farm.level > 0 ? 4 : 0;
+  checkOnboardLeaf();
   // Kurva exp alat pernah berubah; exp yang sudah melebihi kebutuhan langsung jadi level
   for (const k in TOOLS) gainXp(state.tools[k], 0, toolXpNeeded);
   checkUnlocks();
 }
+// Loop pertama (hanya tampilan, tidak mengubah balance): naik satu langkah kalau sedang di langkah `from`
+const stepOnboard = from => { if (state.onboard === from) state.onboard = from + 1; };
+const checkOnboardLeaf = () => { if (state.items.leaf >= 5) stepOnboard(0); };
 try { loadState(JSON.parse(localStorage.getItem(SAVE_KEY))); } catch {}
 try {
   const saved = JSON.parse(localStorage.getItem(SETTINGS_KEY));
@@ -164,6 +172,7 @@ function addItem(key, qty) {
     return false;
   }
   state.items[key] = (state.items[key] || 0) + qty;
+  if (key === 'leaf') checkOnboardLeaf();
   return true;
 }
 
@@ -252,6 +261,7 @@ function plant(i, crop) {
   if (state.farm.plots[i] || !cropOpen(crop) || !(state.items[c.seed] >= 1)) return false;
   state.items[c.seed]--;
   state.farm.plots[i] = { crop, at: Date.now() };
+  stepOnboard(2);
   return true;
 }
 // Tanam benih yang sama di semua petak kosong (sebanyak benih yang ada)
@@ -273,6 +283,7 @@ function harvest(i) {
   addItem(plot.crop, qty);
   gainXp(state.farm, c.xp, xpNeeded);
   state.farm.plots[i] = null;
+  stepOnboard(3);
   return { item: plot.crop, qty };
 }
 function harvestAll() {
@@ -543,6 +554,7 @@ function sell(key, qty) {
   if (!(qty > 0)) return 0;
   state.items[key] -= qty;
   state.kepeng += qty * itemDef(key).price;
+  if (key === 'leaf') stepOnboard(1);
   save();
   return qty;
 }
