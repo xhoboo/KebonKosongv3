@@ -167,16 +167,18 @@ function renderHouse() {
   emptyEl.hidden = owned.length > 0;
   document.querySelectorAll('[data-sort-choice]').forEach(b => b.setAttribute('aria-pressed', b.dataset.sortChoice === settings.sort));
 
+  // Panel kapasitas: bar slot terpakai, meter bahan upgrade, tombol upgrade
   const used = usedSlots(), cap = houseCapacity(), lv = state.house.level;
-  $('house-level').textContent = 'Lv. ' + lv;
+  $('house-level').textContent = t('house') + ' LV ' + lv;
   $('house-fill').style.width = Math.min(100, used / cap * 100) + '%';
-  $('house-fill').classList.toggle('full', used >= cap);
+  $('house-fill').classList.toggle('short', used >= cap);
   $('house-slots').textContent = t('slotsUsed')(num(used), num(cap));
   houseUpgradeBtn.hidden = lv >= HOUSE.maxLevel;
+  $('house-cost').hidden = lv >= HOUSE.maxLevel;
   if (lv < HOUSE.maxLevel) {
     const cost = HOUSE.cost(lv);
-    $('house-next').textContent = t('houseUpgrade')(lv + 1, HOUSE.perLevel);
-    $('house-cost').innerHTML = costHtml(cost);
+    setHTML($('house-cost'), matsHtml(cost));
+    setHTML(houseUpgradeBtn, `<span>${t('houseUpgrade')(lv + 1, HOUSE.perLevel)}</span><span class="mono">${canAfford(cost) ? '↑' : ''}</span>`);
     houseUpgradeBtn.disabled = !canAfford(cost);
   }
 
@@ -186,7 +188,7 @@ function renderHouse() {
 }
 
 houseUpgradeBtn.addEventListener('click', () => {
-  if (!upgradeHouse()) return;
+  if (!upgradeHouse()) { replay(houseUpgradeBtn, 'nope'); return; }
   renderHouse();
   renderKepeng();
   renderTools();
@@ -281,7 +283,7 @@ function renderTools() {
     }
     card.duration.textContent = open ? (actionTime(key) / 1000).toFixed(1) + 's' : '—';
     card.duration.title = open ? `${node.xp} Exp` : '';
-    if (card.inputs) card.inputs.innerHTML = costHtml(node.input);
+    if (card.inputs) setHTML(card.inputs, matsHtml(node.input));
   }
   renderKitchen();
 }
@@ -289,23 +291,22 @@ function renderTools() {
 // Dapur: kartu level + skill Memasak + upgrade
 const kitchenUpgradeBtn = $('kitchen-upgrade');
 function renderKitchen() {
-  const lv = state.kitchen.level, cost = KITCHEN.cost[lv + 1], c = state.cooking, maxed = c.level >= MAX_LEVEL;
-  $('kitchen-level').textContent = 'Lv. ' + lv;
+  const lv = state.kitchen.level, cost = KITCHEN.cost[lv + 1], c = state.cooking;
+  $('kitchen-level').textContent = t('kitchen') + ' LV ' + lv;
   $('kitchen-desc').textContent = t('kitchenRecipes')(Object.values(RECIPES).filter(r => r.kitchen <= lv).length);
-  $('cooking-level').textContent = t('cooking') + ' Lv. ' + c.level;
-  $('cooking-fill').style.width = (maxed ? 100 : c.xp / xpNeeded(c.level) * 100) + '%';
-  $('cooking-xp').textContent = maxed ? t('max') : num(c.xp) + ' / ' + num(xpNeeded(c.level));
+  skillBar('cooking', c);
   $('cook-speed-row').hidden = !c.level;
   $('cook-speed').textContent = '−' + num(COOK_CUT * c.level * 100, 2) + '%';
   kitchenUpgradeBtn.hidden = !cost;
+  $('kitchen-cost').hidden = !cost;
   if (cost) {
-    $('kitchen-next').textContent = t('upgradeLv')(lv + 1);
-    $('kitchen-cost').innerHTML = costHtml(cost);
+    setHTML($('kitchen-cost'), matsHtml(cost));
+    setHTML(kitchenUpgradeBtn, `<span>${t('upgradeLv')(lv + 1)}</span><span class="mono">${canAfford(cost) ? '↑' : ''}</span>`);
     kitchenUpgradeBtn.disabled = !canAfford(cost);
   }
 }
 kitchenUpgradeBtn.addEventListener('click', () => {
-  if (!upgradeKitchen()) return;
+  if (!upgradeKitchen()) { replay(kitchenUpgradeBtn, 'nope'); return; }
   renderTools();
   renderKepeng();
 });
@@ -393,7 +394,7 @@ function renderNav() {
     const btn = document.querySelector(`.nav-item[data-page="${area}"]`), open = areaOpen(area);
     if (open) btn.removeAttribute('aria-disabled'); else btn.setAttribute('aria-disabled', 'true');
     btn.title = open ? '' : t(LOCK_TEXT[area]);
-    btn.querySelector('.lock-svg').hidden = open;
+    btn.querySelector('.lock-svg').toggleAttribute('hidden', open); // SVG tidak punya properti .hidden
     btn.querySelector('.nav-lv').hidden = !open;
   }
   document.querySelectorAll('.tab').forEach(tab => {
@@ -492,9 +493,9 @@ const FORGE_ART = `<span class="forge-art" aria-hidden="true">${ANVIL_ART}<span 
 // Meter per bahan: hijau kalau cukup, oranye kalau kurang
 const matsHtml = cost => Object.entries(cost).map(([k, n]) => {
   const h = Math.floor(have(k)), ok = h >= n;
-  return `<div class="mat${ok ? ' ok' : ''}" title="${k === 'kepeng' ? t('kepeng') : nameOf(k)}"><span class="mat-ic" aria-hidden="true">${k === 'kepeng' ? KEPENG_ICON : icons[k]}</span>` +
+  return `<span class="mat${ok ? ' ok' : ''}" title="${k === 'kepeng' ? t('kepeng') : nameOf(k)}"><span class="mat-ic" aria-hidden="true">${k === 'kepeng' ? KEPENG_ICON : icons[k]}</span>` +
     `<span class="bar"><span class="fill${ok ? '' : ' short'}" style="width:${Math.min(100, h / n * 100)}%"></span></span>` +
-    `<span class="mat-n">${num(Math.min(h, 99999))}/${num(n)}</span></div>`;
+    `<span class="mat-n">${num(Math.min(h, 99999))}/${num(n)}</span></span>`;
 }).join('');
 // Baris tujuan untuk bahan pertama yang kurang (link ke area sumbernya; gembok kalau areanya terkunci)
 function goalHtml(cost) {
@@ -656,12 +657,13 @@ recipesEl.addEventListener('click', e => {
 
 // ---------- Petualangan ----------
 
-const skillBar = (prefix, s) => {
+// Skill dengan kotak LV: angka level, bar exp, "xp/butuh XP"
+function skillBar(prefix, s) {
   const maxed = s.level >= MAX_LEVEL;
-  $(prefix + '-level').textContent = 'Lv. ' + s.level;
+  $(prefix + '-level').textContent = s.level;
   $(prefix + '-fill').style.width = (maxed ? 100 : s.xp / xpNeeded(s.level) * 100) + '%';
-  $(prefix + '-xp').textContent = maxed ? t('max') : num(s.xp) + ' / ' + num(xpNeeded(s.level));
-};
+  $(prefix + '-xp').textContent = maxed ? t('max') : num(s.xp) + '/' + num(xpNeeded(s.level)) + ' XP';
+}
 const lootText = loot => loot.map(([k, n]) => (k === 'kepeng' ? KEPENG_ICON : icons[k]) + ' ' + num(n)).join(', ');
 
 function journalText(e) {
@@ -686,7 +688,7 @@ function renderAdventure() {
   // Status: HP, mastery, statistik
   $('adv-hp-fill').style.width = Math.min(100, hp / max * 100) + '%';
   $('adv-hp-fill').classList.toggle('low', hp <= max * ADV.eatBelow);
-  $('adv-hp').textContent = t('hp') + ' ' + num(hp) + ' / ' + num(max);
+  $('adv-hp').textContent = num(hp) + '/' + num(max);
   skillBar('melee', state.mastery.melee);
   skillBar('armor', state.mastery.armor);
   $('adv-atk').textContent = num(meleeAtk(), 1);
@@ -705,7 +707,7 @@ function renderAdventure() {
     return `<div class="equip-slot"><div class="equip-head"><span class="equip-label">${t(slot)}</span>` +
       (options.length ? `<button class="equip-toggle" data-toggle-equip="${slot}" aria-expanded="${open}">` +
         `${open ? t('equipHide') : t('equipShow')(num(options.length))}<span class="caret" aria-hidden="true"></span></button>` : '') + `</div>` +
-      `<div class="equip-cur">${cur ? `<span class="equip-icon">${iconOf(cur)}</span><span class="equip-name q-${parseKey(cur).q}">${nameOf(cur)}<small>${gearStats(cur)}</small></span>` +
+      `<div class="equip-cur">${cur ? `<span class="equip-icon">${iconOf(cur)}</span><span class="equip-name q-${parseKey(cur).q}"><b>${nameOf(cur)}</b><small>${gearStats(cur)}</small></span>` +
         `<button class="chip" data-unequip="${slot}" ${busy ? 'disabled' : ''}>${t('unequip')}</button>` : `<span class="equip-none">${t('none')}</span>`}</div>` +
       (open ? `<div class="equip-options">${options.map(k =>
         `<button class="chip q-${parseKey(k).q}" data-equip="${slot}" data-key="${k}" ${busy ? 'disabled' : ''}>${iconOf(k)} ${nameOf(k)} ×${num(state.items[k])}</button>`).join('')}</div>` : '') +
@@ -714,7 +716,7 @@ function renderAdventure() {
 
   // Tas
   const bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1);
-  $('bag-level').textContent = 'Lv. ' + state.bag.level;
+  $('bag-level').textContent = 'LV ' + state.bag.level;
   $('bag-slots').textContent = t('bagSlots')(num(bagKeys.length), num(bagCapacity()));
   const bagCost = state.bag.level < BAG.maxLevel && BAG.cost(state.bag.level);
   $('bag-upgrade').hidden = !bagCost;
@@ -1128,7 +1130,9 @@ function showTip(key) {
   if (!key) { tipEl.hidden = true; return; }
   const r = itemsEl.querySelector(`[data-item="${key}"]`).getBoundingClientRect();
   const def = itemDef(key);
-  tipEl.textContent = nameOf(key) + (heals[key] ? ' · ❤️ ' + heals[key] : '') + (def.weapon || def.armor ? ' · ' + gearStats(key) : '');
+  // Nama berwarna tier hanya di tooltip
+  tipEl.innerHTML = `<span class="tip-name q-${parseKey(key).q}">${nameOf(key)}</span>` + (heals[key] ? ' <span class="tip-meta">❤️ ' + heals[key] + '</span>' : '') +
+    (def.weapon || def.armor ? ' <span class="tip-meta">' + gearStats(key) + '</span>' : '');
   tipEl.hidden = false;
   // Jaga popup tetap di dalam layar walau namanya panjang
   const half = tipEl.offsetWidth / 2;
@@ -1141,6 +1145,8 @@ function showTip(key) {
 
 // Klik item: munculkan nama; klik item yang sama atau di luar item: tutup
 document.addEventListener('click', e => {
+  const side = e.target.closest('.side-items button');
+  if (side) { go('rumah'); return; }
   const item = e.target.closest('.item');
   if (item) {
     showTip(openItem === item.dataset.item ? null : item.dataset.item);
@@ -1173,13 +1179,13 @@ function activityMeta(key) {
   return '+' + num(session.n) + ' ' + what.toLowerCase();
 }
 const activityEls = [$('dock'), $('side-activity')];
-let activityKey = '';
+let activityKey = null;
 function renderActivity() {
   const key = state.active;
   if (session.key !== key) { session.key = key; session.n = 0; }
   const text = key ? activityName(key) + '|' + activityMeta(key) + '|' + settings.lang : '';
   if (text !== activityKey) {
-    const had = !!activityKey;
+    const had = activityKey !== null && activityKey !== '';
     activityKey = text;
     $('dock').hidden = !key;
     document.body.classList.toggle('has-dock', !!key);
@@ -1212,6 +1218,22 @@ for (const el of activityEls) el.addEventListener('click', e => {
     renderActivity();
   } else if (e.target.closest('.act-main')) go(activityArea(state.active));
 });
+
+// Panel kanan desktop: isi Rumah ringkas (15 item pertama + sisanya)
+let sideItemsKey = '', sideItemsAt = 0;
+function renderSideItems(now) {
+  if (now - sideItemsAt < 500 || innerWidth < 1280) return;
+  sideItemsAt = now;
+  const owned = ownedKeys(), shown = owned.length > 16 ? owned.slice(0, 15) : owned;
+  const key = shown.map(k => k + ':' + Math.floor(state.items[k])).join() + '|' + owned.length + '|' + houseCapacity() + settings.lang;
+  if (key === sideItemsKey) return;
+  sideItemsKey = key;
+  $('side-house-slots').textContent = num(usedSlots()) + '/' + num(houseCapacity());
+  $('side-items').innerHTML = shown.map(k => `<li><button class="item q-${parseKey(k).q}" title="${nameOf(k)}" aria-label="${nameOf(k)}, ${num(Math.floor(state.items[k]))}">` +
+    `<span class="item-icon" aria-hidden="true">${iconOf(k)}</span><span class="item-qty" aria-hidden="true">${num(Math.floor(state.items[k]))}</span></button></li>`).join('') +
+    (owned.length > shown.length ? `<li><button class="more" aria-label="${t('house')}">+${num(owned.length - shown.length)}</button></li>` : '') +
+    (owned.length ? '' : `<li class="note" style="grid-column:1/-1">${t('empty')}</li>`);
+}
 
 let last = performance.now(), timeScale = 1;
 function loop(now) {
@@ -1253,6 +1275,7 @@ function loop(now) {
   renderCounter();
   renderActivity();
   renderNext();
+  renderSideItems(now);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

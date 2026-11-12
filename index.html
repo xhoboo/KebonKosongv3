@@ -656,6 +656,92 @@
     .dock { position: sticky; top: calc(var(--top-h) + 8px); left: auto; right: auto; bottom: auto; margin: 16px 24px -4px; }
     .act-main { flex-direction: column; gap: 2px; }
   }
+  /* ---------- Rumah / Tas / Pasar / Dapur / Petualangan / Pengaturan: pola yang sama ---------- */
+  /* Kotak item: ikon berwarna, jumlah mono di kanan bawah; glow tipis hanya untuk Istimewa & Pusaka */
+  .items { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; padding: 0 0 12px; }
+  .item { display: grid; place-items: center; gap: 0; padding: 0; background: transparent; border: 1px solid var(--line-2); border-radius: var(--r); }
+  .item[aria-expanded="true"] { border-color: var(--ink); }
+  .item-icon { font-size: 28px; }
+  .item-qty {
+    left: auto; right: 4px; bottom: 2px; transform: none; min-width: 0; padding: 0;
+    background: none; border: 0; border-radius: 0; font-size: 10px; font-weight: 500; color: var(--ink-2);
+  }
+  .item.zero { opacity: .35; }
+  .item.q-great, .item.q-legend, .forge-res.q-great, .forge-res.q-legend { box-shadow: none; border-color: var(--line-2); animation: pop-in .22s ease-out; }
+  .item.q-great::after, .item.q-legend::after, .forge-res.q-great::after, .forge-res.q-legend::after {
+    content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; animation: shimmer 2.4s ease-in-out infinite;
+  }
+  .forge-res { position: relative; }
+  .item.q-great::after, .forge-res.q-great::after { border: 1px solid rgba(91, 156, 255, .55); box-shadow: var(--glow-great); }
+  .item.q-legend::after, .forge-res.q-legend::after { border: 1px solid rgba(242, 181, 68, .6); box-shadow: var(--glow-legend); }
+  .item { animation: none; }
+  .group { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 4px 0 8px; }
+  .tip { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--r-sm); font-weight: 500; }
+  .tip::after { border-top-color: var(--line-strong); }
+  .tip-name { font-weight: 600; }
+  .tip-name.q-good, .tip-name.q-great, .tip-name.q-legend { color: var(--q); }
+  .tip-meta { color: var(--muted); font-family: var(--mono); font-size: 11px; }
+  .sort { margin-bottom: 14px; display: inline-flex; }
+  .empty { color: var(--muted); font-size: 13px; margin: 0; padding: 12px; }
+  .notice { margin-bottom: 12px; border-style: dashed; }
+  .notice-btn { min-height: 36px; padding: 0 12px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-sm); }
+  /* Tingkat kualitas di nama: kotak kecil warna tier (nama sendiri tetap putih) */
+  .sell-name.q-good, .sell-name.q-great, .sell-name.q-legend, .equip-name.q-good, .equip-name.q-great, .equip-name.q-legend,
+  .chip.q-good, .chip.q-great, .chip.q-legend { color: inherit; }
+  .sell-name[class*="q-"]:not(.q-common)::after, .equip-name[class*="q-"]:not(.q-common) > b::after, .chip[class*="q-"]:not(.q-common)::after {
+    content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 6px; border-radius: 1px; background: var(--q); vertical-align: middle;
+  }
+  /* Panel + baris tabel bergaris: ikon · nama · meta mono · tombol sekunder */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 0; margin: 0 0 12px; overflow: hidden; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+  .panel-head .caps:last-child:not(:first-child) { text-align: right; }
+  .panel-hint { font-size: 12px; color: var(--muted); margin: 0; padding: 8px 12px 0; }
+  .panel > .notice-btn, .panel > .upgrade-btn { margin: 10px 12px 12px; width: calc(100% - 24px); }
+  .panel > .notice-btn + .upgrade-btn { margin-top: 0; }
+  .market { display: block; list-style: none; margin: 0; padding: 0; }
+  .sell-row { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 12px; background: none; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+  .market > .sell-row:last-child { border-bottom: 0; }
+  .panel .sell-row { padding: 6px 12px; }
+  .sell-icon { font-size: 24px; }
+  .sell-name { font-weight: 500; font-size: 14px; }
+  .sell-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .sell-btn { min-height: 36px; min-width: 44px; padding: 0 10px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-sm); font-size: 12px; }
+  .sell-btn:disabled { opacity: 1; color: var(--dim); border-color: var(--line); }
+  .upgrade-btn { min-height: 44px; }
+  .upgrade-btn .cost { font-family: var(--mono); font-size: 11px; color: var(--muted); font-weight: 500; }
+  /* Jurnal: daftar mono kecil, waktu redup */
+  .journal { font-size: 12px; padding: 4px 12px 8px; }
+  .journal li { border-top-color: var(--line); }
+  .journal time { color: var(--dim); font-size: 11px; }
+  .journal .j-lose, .journal .j-home, .journal .j-bagFull { color: var(--ink-2); }
+  .journal .j-lose time + span::before, .journal .j-home time + span::before { content: "− "; color: var(--danger); }
+  .journal .j-start, .journal .j-stop { font-weight: 600; }
+  /* Petualangan: HP & skill sebagai bar */
+  .adv-status .hp-head { display: flex; justify-content: space-between; align-items: baseline; }
+  .adv-status .hp-bar { margin: 6px 0 4px; }
+  .tool .fill.hp { background: var(--bar-hp); }
+  .tool .fill.hp.low { background: var(--danger); }
+  .adv-skill { margin-top: 12px; }
+  .adv-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 12px; }
+  .adv-stats dd { font-family: var(--mono); }
+  .equip-slot { background: var(--panel); border-radius: var(--r); }
+  .equip-label { font-family: var(--mono); font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .chip { min-height: 32px; background: var(--panel); border: 1px solid var(--line-strong); border-radius: var(--r-sm); font-size: 12px; }
+  .chip:disabled { opacity: 1; color: var(--dim); border-color: var(--line); }
+  /* Pengaturan: baris label + segmented control */
+  .setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; margin-bottom: 8px; }
+  .setting-label { margin: 0; font-size: 14px; font-weight: 500; }
+  .setting .reset-btn { width: auto; min-height: 36px; padding: 0 12px; font-size: 13px; border-width: 1px; border-radius: var(--r-sm); }
+  .seg button { min-height: 36px; }
+  /* Panel kanan: isi Rumah ringkas */
+  .note.pad { margin: 0; padding: 8px 12px 10px; border-top: 1px solid var(--line); }
+  .card .inputs { display: flex; flex-direction: column; gap: 6px; padding: 0 10px 10px; }
+  .card .inputs .mat-n { min-width: 56px; }
+  .card .inputs .mat-ic { font-size: 14px; }
+  .house-fill-short, .fill.short { background: var(--bar-short); }
+  .side-items { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 10px 12px; }
+  .side-items .item-icon { font-size: 22px; }
+  .side-items .more { display: grid; place-items: center; aspect-ratio: 1; font-family: var(--mono); font-size: 11px; color: var(--muted); border: 1px dashed var(--line-2); border-radius: var(--r); background: none; cursor: pointer; }
   /* Desktop: sidebar tetap di kiri dengan grup kegiatan dan level skill, bar atas berisi judul halaman,
      konten melebar dengan grid kartu beberapa kolom. Ponsel tetap memakai drawer. */
   @media (min-width: 900px) {
@@ -701,8 +787,6 @@
     main > :first-child { margin-top: 0; }
 
     .tool, .panel { border-radius: var(--r); padding: 18px 20px; }
-    .tool .stats { max-width: 440px; }
-    .upgrade-btn { display: inline-block; width: auto; min-width: 280px; }
     /* Kartu alat/skill: exp & level di kiri, statistik + tombol upgrade di kanan dengan garis pemisah */
     .tool-split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); gap: 0 32px; align-items: center; }
     .tool-side { padding-left: 32px; border-left: 1px solid var(--line); align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
@@ -726,13 +810,13 @@
     .tool { padding: 12px 14px; }
     .lv-box { width: 48px; height: 48px; }
     .lv-box b { font-size: 20px; }
-    .market, .recipes { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
-    .items { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); }
+    .recipes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #page-pasar:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 16px; align-items: start; }
+    .items { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
     .plots { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
     .farm-actions { max-width: 420px; }
     .seed-table { display: block; }
     .seed-note { display: block; }
-    .sort { max-width: 420px; }
     .equip { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
     #page-settings { max-width: 640px; }
 
@@ -760,6 +844,7 @@
       padding: 16px; border-left: 1px solid var(--line); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
     }
     .side-panel .act-stop { width: 36px; height: 32px; }
+    .side-panel .side-items { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
 </style>
 </head>
@@ -824,58 +909,42 @@
   </main>
 
   <main id="page-dapur" hidden>
-    <section class="tool tool-split">
-      <div class="tool-body">
-      <div class="tool-top">
-        <span class="tool-icon" aria-hidden="true">🍳</span>
-        <div class="tool-main">
-          <div class="tool-title"><span class="level" id="kitchen-level"></span><span class="name" data-i18n="kitchen"></span></div>
-          <span class="tool-xp" id="kitchen-desc"></span>
-        </div>
-      </div>
-      <div class="skill">
-        <span class="level" id="cooking-level"></span>
-        <span class="bar"><span class="fill" id="cooking-fill"></span></span>
-        <span class="tool-xp" id="cooking-xp"></span>
-      </div>
-      </div>
-      <div class="tool-side">
-      <dl class="stats"><div id="cook-speed-row"><dt data-i18n="cookSpeed"></dt><dd id="cook-speed"></dd></div></dl>
-      <button class="upgrade-btn" id="kitchen-upgrade"><span id="kitchen-next"></span><span class="cost" id="kitchen-cost"></span></button>
-      </div>
+    <section class="tool">
+      <div class="tool-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b id="cooking-level"></b></div><div class="tool-main">
+        <div class="tool-title"><span class="tool-icon" aria-hidden="true">🍳</span><span class="name" data-i18n="cooking"></span><span class="tool-xp" id="cooking-xp"></span></div>
+        <span class="bar"><span class="fill" id="cooking-fill"></span></span></div></div>
+      <div class="tool-foot"><dl class="stats"><div id="cook-speed-row"><dt data-i18n="cookSpeed"></dt><dd id="cook-speed"></dd></div></dl></div>
+    </section>
+    <section class="side-box anvil-up">
+      <div class="side-head"><span class="caps" id="kitchen-level"></span><span class="caps" id="kitchen-desc"></span></div>
+      <div class="r-sec mats" id="kitchen-cost"></div>
+      <button class="goal" id="kitchen-upgrade"></button>
     </section>
     <div class="cards" data-area="dapur"></div>
   </main>
 
   <main id="page-petualangan" hidden>
-    <section class="tool tool-split">
-      <div class="tool-body">
-      <div class="tool-top">
-        <span class="tool-icon" aria-hidden="true">⚔️</span>
-        <div class="tool-main">
-          <div class="tool-title"><span class="name" id="adv-hp"></span></div>
-          <span class="bar"><span class="fill hp" id="adv-hp-fill"></span></span>
-        </div>
-      </div>
-      <div class="skill"><span class="level"><span data-i18n="melee"></span> <span id="melee-level"></span></span>
-        <span class="bar"><span class="fill" id="melee-fill"></span></span><span class="tool-xp" id="melee-xp"></span></div>
-      <div class="skill"><span class="level"><span data-i18n="armorSkill"></span> <span id="armor-level"></span></span>
-        <span class="bar"><span class="fill" id="armor-fill"></span></span><span class="tool-xp" id="armor-xp"></span></div>
-      </div>
-      <div class="tool-side">
-      <dl class="stats">
+    <section class="tool adv-status">
+      <div class="hp-head"><span class="caps" data-i18n="hp"></span><span class="tool-xp" id="adv-hp"></span></div>
+      <span class="bar hp-bar"><span class="fill hp" id="adv-hp-fill"></span></span>
+      <div class="tool-row adv-skill"><div class="lv-box" aria-hidden="true"><span>LV</span><b id="melee-level"></b></div><div class="tool-main">
+        <div class="tool-title"><span class="name" data-i18n="melee"></span><span class="tool-xp" id="melee-xp"></span></div>
+        <span class="bar"><span class="fill" id="melee-fill"></span></span></div></div>
+      <div class="tool-row adv-skill"><div class="lv-box" aria-hidden="true"><span>LV</span><b id="armor-level"></b></div><div class="tool-main">
+        <div class="tool-title"><span class="name" data-i18n="armorSkill"></span><span class="tool-xp" id="armor-xp"></span></div>
+        <span class="bar"><span class="fill" id="armor-fill"></span></span></div></div>
+      <dl class="stats adv-stats">
         <div><dt data-i18n="attack"></dt><dd id="adv-atk"></dd></div>
         <div><dt data-i18n="interval"></dt><dd id="adv-interval"></dd></div>
         <div><dt data-i18n="defense"></dt><dd id="adv-def"></dd></div>
         <div><dt data-i18n="winChance"></dt><dd id="adv-win"></dd></div>
       </dl>
-      </div>
     </section>
     <section class="equip" id="equip"></section>
     <div class="cards" data-area="petualangan"></div>
 
     <section class="panel">
-      <div class="panel-head"><span class="panel-title">🎒 <span data-i18n="bag"></span> <span class="level" id="bag-level"></span></span><span class="panel-meta" id="bag-slots"></span></div>
+      <div class="panel-head"><span class="caps"><span data-i18n="bag"></span> <span id="bag-level"></span></span><span class="caps" id="bag-slots"></span></div>
       <ul class="market" id="bag-items"></ul>
       <p class="empty" id="bag-empty" data-i18n="bagEmpty"></p>
       <button class="notice-btn" id="bag-store-all" data-i18n="storeAll"></button>
@@ -883,14 +952,14 @@
     </section>
 
     <section class="panel">
-      <div class="panel-head"><span class="panel-title" data-i18n="pack"></span></div>
+      <div class="panel-head"><span class="caps" data-i18n="pack"></span></div>
       <p class="panel-hint" data-i18n="packHint"></p>
       <ul class="market" id="pack"></ul>
       <p class="empty" id="pack-empty" data-i18n="noFood"></p>
     </section>
 
     <section class="panel">
-      <div class="panel-head"><span class="panel-title">📜 <span data-i18n="journal"></span></span></div>
+      <div class="panel-head"><span class="caps" data-i18n="journal"></span></div>
       <p class="panel-hint" id="adv-summary"></p>
       <ol class="journal" id="journal"></ol>
       <p class="empty" id="journal-empty" data-i18n="journalEmpty"></p>
@@ -898,27 +967,18 @@
   </main>
 
   <main id="page-rumah" hidden>
-    <section class="tool tool-split">
-      <div class="tool-body">
-      <div class="tool-top">
-        <span class="tool-icon" aria-hidden="true">🏠</span>
-        <div class="tool-main">
-          <div class="tool-title"><span class="level" id="house-level"></span><span class="name" data-i18n="house"></span></div>
-          <span class="bar"><span class="fill" id="house-fill"></span></span>
-          <span class="tool-xp" id="house-slots"></span>
-        </div>
-      </div>
-      </div>
-      <div class="tool-side">
-      <button class="upgrade-btn" id="house-upgrade"><span id="house-next"></span><span class="cost" id="house-cost"></span></button>
-      </div>
+    <section class="side-box anvil-up">
+      <div class="side-head"><span class="caps" id="house-level"></span><span class="caps" id="house-slots"></span></div>
+      <div class="r-sec"><span class="bar"><span class="fill" id="house-fill"></span></span></div>
+      <div class="r-sec mats" id="house-cost"></div>
+      <button class="goal" id="house-upgrade"></button>
     </section>
     <section class="notice" id="discarded" hidden>
       <span class="notice-title" data-i18n="discarded"></span>
       <div class="notice-list" id="discarded-list"></div>
       <button class="notice-btn" id="discarded-dismiss" data-i18n="dismiss"></button>
     </section>
-    <div class="segment three sort">
+    <div class="seg sort" role="group">
       <button data-sort-choice="cat" data-i18n="sortCat"></button>
       <button data-sort-choice="qty" data-i18n="sortQty"></button>
       <button data-sort-choice="name" data-i18n="sortName"></button>
@@ -930,13 +990,15 @@
 
   <main id="page-pasar" hidden>
     <section class="panel shop">
-      <div class="panel-head"><span class="panel-title">🌱 <span data-i18n="buySeeds"></span></span></div>
-      <p class="panel-hint" data-i18n="rareSeedHint"></p>
+      <div class="panel-head"><span class="caps" data-i18n="buySeeds"></span></div>
       <ul class="market" id="seed-shop"></ul>
+      <p class="note pad" data-i18n="rareSeedHint"></p>
     </section>
-    <h2 data-i18n="market"></h2>
-    <ul class="market" id="market"></ul>
-    <p class="empty" id="market-empty" data-i18n="marketEmpty"></p>
+    <section class="panel">
+      <div class="panel-head"><span class="caps" data-i18n="lblSell"></span></div>
+      <ul class="market" id="market"></ul>
+      <p class="empty" id="market-empty" data-i18n="marketEmpty"></p>
+    </section>
   </main>
 
   <main id="page-anvil" hidden>
@@ -957,14 +1019,14 @@
   <main id="page-settings" hidden>
     <div class="setting">
       <span class="setting-label" data-i18n="language"></span>
-      <div class="segment">
+      <div class="seg">
         <button data-lang-choice="id">Indonesia</button>
         <button data-lang-choice="en">English</button>
       </div>
     </div>
     <div class="setting">
       <span class="setting-label" data-i18n="sound"></span>
-      <div class="segment">
+      <div class="seg">
         <button data-sound-choice="on" data-i18n="on"></button>
         <button data-sound-choice="off" data-i18n="off"></button>
       </div>
@@ -981,6 +1043,10 @@
     <div class="activity" id="side-activity"></div>
   </section>
   <section class="next-strip side-box" hidden></section>
+  <section class="side-box">
+    <div class="side-head"><span class="caps" data-i18n="house"></span><span class="caps" id="side-house-slots"></span></div>
+    <ul class="items side-items" id="side-items"></ul>
+  </section>
 </aside>
 <nav class="tabbar" id="tabbar"></nav>
 <div class="sheet-scrim" id="seed-sheet" hidden>
@@ -991,9 +1057,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-12.6"></script>
-<script src="js/game.js?v=2026-11-12.6"></script>
-<script src="js/ui.js?v=2026-11-12.6"></script>
-<script src="js/debug.js?v=2026-11-12.6"></script>
+<script src="js/data.js?v=2026-11-12.7"></script>
+<script src="js/game.js?v=2026-11-12.7"></script>
+<script src="js/ui.js?v=2026-11-12.7"></script>
+<script src="js/debug.js?v=2026-11-12.7"></script>
 </body>
 </html>
