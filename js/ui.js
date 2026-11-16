@@ -727,10 +727,15 @@ for (const [region, r] of Object.entries(REGIONS)) {
     if (!e.target.matches('[data-eat]')) return;
     setEatAt(+e.target.value / 100);
     setText(wrap.querySelector('.eat-val'), Math.round(state.eatAt * 100) + '%');
-    e.target.style.setProperty('--v', Math.round(state.eatAt * 100) + '%');
+    eatFill(e.target);
   });
 }
 let exPick = null; // pilihan yang sedang dibuka: 'provision' atau 'slot:<slot>'
+// Isi bar slider mengikuti posisi tombol geser: posisi 0–1 di rentang min–max (bukan nilai persennya)
+function eatFill(input) {
+  const min = +input.min, max = +input.max;
+  input.style.setProperty('--f', ((+input.value - min) / (max - min)).toFixed(4));
+}
 
 // Tier yang dilihat: pilihan pemain; bawaannya area perjalanan yang berjalan di wilayah ini, atau tier tertinggi yang terbuka
 function selArea(region) {
@@ -872,7 +877,7 @@ function renderFolds(region, key) {
     (exPick === 'provision' ? picker(bagFoods.map(k => pickRow(k, state.bag.items[k], '❤️ ' + heals[k], `data-prov="${k}"`)), pv && pv.key, t('provNone'), 'data-unprov="1"') : ''));
   const eat = els.fold.provision.querySelector('[data-eat]'), pct = Math.round(state.eatAt * 100);
   if (document.activeElement !== eat) eat.value = pct;
-  eat.style.setProperty('--v', pct + '%');
+  eatFill(eat);
   setText(els.fold.provision.querySelector('.eat-val'), pct + '%');
   // Slot perlengkapan: Kepala, Badan, Tangan (alat wilayah), Celana, Kaki. Klik slot → ganti dengan item dari tas.
   const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], rank = toolRank(tool);
