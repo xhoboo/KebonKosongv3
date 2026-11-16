@@ -868,10 +868,35 @@
   .slot.empty .ibox { border-style: dashed; border-color: var(--line-2); }
   .slot.empty .r-name { color: var(--muted); font-weight: 500; }
   .slot.empty .r-sub { color: var(--dim); }
-  .slot .sell-btn { flex: none; }
+  .slot {
+    width: 100%; background: none; border: 0; border-radius: 0; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+  }
+  .slot:hover { background: var(--panel-2); }
+  .slot[aria-expanded="true"] { background: var(--panel-2); }
+  .slot .r-info > span { display: block; }
+  .slot .caret { flex: none; margin-left: 2px; color: var(--muted); }
+  .slot[aria-expanded="true"] .caret { transform: translateY(1px) rotate(-135deg); }
+  .slot + .slot, .picker + .slot { border-top: 1px solid var(--line); }
+  .picker { background: var(--sunken); border-top: 1px dashed var(--line-2); }
+  .picker .sell-row { min-height: 46px; }
+  .picker .empty { padding: 10px 12px; font-size: 12px; }
+  .picker .goal { border-radius: 0; }
+  /* Slider batas makan otomatis: bar HP yang bisa digeser */
+  .eat-at { display: block; padding: 10px 12px 12px; border-top: 1px solid var(--line); }
+  .eat-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+  .eat-head .mono { color: var(--ink); font-size: 12px; }
+  .eat-at input { --v: 50%; width: 100%; height: 22px; margin: 0; background: none; -webkit-appearance: none; appearance: none; cursor: pointer; }
+  .eat-at input::-webkit-slider-runnable-track { height: 6px; border-radius: 2px; background: linear-gradient(90deg, var(--bar-hp) var(--v), var(--track) var(--v)); }
+  .eat-at input::-moz-range-track { height: 6px; border-radius: 2px; background: linear-gradient(90deg, var(--bar-hp) var(--v), var(--track) var(--v)); }
+  .eat-at input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 18px; margin-top: -6px; border-radius: 3px; background: var(--ink); border: 0; }
+  .eat-at input::-moz-range-thumb { width: 14px; height: 18px; border-radius: 3px; background: var(--ink); border: 0; }
+  /* ≥1280: pilah tas Rumah ada di panel kanan */
+  @media (min-width: 1280px) { #bag-panel { display: none; } }
+  .side-bag .notice-btn, .side-bag .upgrade-btn, #bag-manage .notice-btn, #bag-manage .upgrade-btn { display: block; margin: 10px 12px; width: calc(100% - 24px); }
   .slot-ic { width: 22px; height: 22px; color: var(--off); }
   .slot .r-info { flex: 1; min-width: 0; }
-  .slot-stat { flex: none; font-family: var(--mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+  .slot-stat { flex: 0 1 auto; max-width: 45%; font-family: var(--mono); font-size: 12px; line-height: 1.5; color: var(--ink-2); text-align: right; }
+  .slot-stat > span { display: inline-block; white-space: nowrap; margin-left: 6px; }
   .ex-view { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; }
   .ex-col > .fold:last-child, .ex-folds > .fold:last-child { margin-bottom: 0; }
   .ex-scene { position: relative; height: 220px; border-bottom: 1px solid var(--line); overflow: hidden; }
@@ -1094,11 +1119,7 @@
     </section>
     <section class="panel" id="bag-panel">
       <div class="panel-head"><span class="caps"><span data-i18n="bag"></span> <span id="bag-level"></span></span><span class="caps" id="bag-slots"></span></div>
-      <p class="panel-hint" id="bag-busy" data-i18n="bagBusy" hidden></p>
-      <ul class="market" id="bag-items"></ul>
-      <p class="empty" id="bag-empty" data-i18n="bagEmpty"></p>
-      <button class="notice-btn" id="bag-store-all" data-i18n="storeAll"></button>
-      <button class="upgrade-btn" id="bag-upgrade"><span id="bag-next"></span><span class="cost" id="bag-cost"></span></button>
+      <div id="bag-manage"></div>
     </section>
     <div class="seg sort" role="group">
       <button data-sort-choice="cat" data-i18n="sortCat"></button>
@@ -1168,10 +1189,6 @@
     <div class="side-head"><span class="caps" data-i18n="bag"></span><span class="caps" id="side-bag-slots"></span></div>
     <div id="side-bag-body"></div>
   </section>
-  <section class="side-box">
-    <div class="side-head"><span class="caps" data-i18n="house"></span><span class="caps" id="side-house-slots"></span></div>
-    <ul class="items side-items" id="side-items"></ul>
-  </section>
 </aside>
 <nav class="tabbar" id="tabbar"></nav>
 <div class="sheet-scrim" id="seed-sheet" hidden>
@@ -1182,9 +1199,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-16.5"></script>
-<script src="js/game.js?v=2026-11-16.5"></script>
-<script src="js/ui.js?v=2026-11-16.5"></script>
-<script src="js/debug.js?v=2026-11-16.5"></script>
+<script src="js/data.js?v=2026-11-16.6"></script>
+<script src="js/game.js?v=2026-11-16.6"></script>
+<script src="js/ui.js?v=2026-11-16.6"></script>
+<script src="js/debug.js?v=2026-11-16.6"></script>
 </body>
 </html>

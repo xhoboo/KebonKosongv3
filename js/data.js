@@ -105,7 +105,8 @@ const TEXT = {
     actExplore: n => `Menjelajah ${n}`, armorMastery: 'Mastery Armor', toolAtk: 'Serangan', slotTool: 'Alat', slotSoon: 'Belum dipakai saat menjelajah', slotEmpty: 'Kosong',
     slotHead: 'Kepala', slotBody: 'Badan', slotHands: 'Tangan', slotLegs: 'Celana', slotFeet: 'Kaki',
     foldProvision: 'Perbekalan', foldMastery: 'Mastery', lblStats: 'Stat', provEquip: 'Pasang', provUnequip: 'Lepas',
-    provHint: 'Dimakan otomatis saat HP ≤ 50%. Pasang masakan dari tas.', provNone: 'Belum ada masakan di tas.',
+    provNone: 'Belum ada masakan di tas.', eatAtLabel: 'Makan otomatis saat HP ≤', pickGearNone: 'Tidak ada item di tas untuk slot ini.',
+    handsNote: 'Tangan memegang alat wilayah ini; ganti lewat Anvil.', tripShort: (m, w, l, k) => `${m} m · ${w} menang · ${l} kalah · ${k} Kepeng`, lastPrefix: 'Terakhir: ',
     jEmpty: 'Tidak menemukan apa-apa', jKepeng: n => `Menemukan ${n} Kepeng`,
     jWinHit: (e, d, loot) => `Mengalahkan ${e}, −${d} HP` + (loot ? `, dapat ${loot}` : ''),
     jBagFullFind: item => `Menemukan ${item}, tetapi tas penuh sehingga tidak bisa dibawa`,
@@ -230,7 +231,8 @@ const TEXT = {
     actExplore: n => `Exploring ${n}`, armorMastery: 'Armor Mastery', toolAtk: 'Attack', slotTool: 'Tool', slotSoon: 'Not used while exploring yet', slotEmpty: 'Empty',
     slotHead: 'Head', slotBody: 'Body', slotHands: 'Hands', slotLegs: 'Legs', slotFeet: 'Feet',
     foldProvision: 'Provisions', foldMastery: 'Mastery', lblStats: 'Stats', provEquip: 'Equip', provUnequip: 'Remove',
-    provHint: 'Eaten automatically at HP ≤ 50%. Equip food from your bag.', provNone: 'No food in the bag yet.',
+    provNone: 'No food in the bag yet.', eatAtLabel: 'Eat automatically at HP ≤', pickGearNone: 'No item in the bag fits this slot.',
+    handsNote: 'Hands hold this region\'s tool; upgrade it at the Anvil.', tripShort: (m, w, l, k) => `${m} m · ${w} won · ${l} lost · ${k} Kepeng`, lastPrefix: 'Last: ',
     jEmpty: 'Found nothing', jKepeng: n => `Found ${n} Kepeng`,
     jWinHit: (e, d, loot) => `Defeated ${e}, −${d} HP` + (loot ? `, got ${loot}` : ''),
     jBagFullFind: item => `Found ${item}, but the bag is full so you could not carry it`,
@@ -622,7 +624,7 @@ const GEAR = {
 // setelah itu tetap (meter terus berjalan). Musuh terkuat tiap tier di 0 m = 0,6 × serangan alat tier itu, jadi
 // alat yang pas menang ±50% di 250 m dan alat satu tingkat di atasnya menang ±50% di ±900 m.
 const EX = {
-  baseHp: 100, hpPerArmorLv: 2, defPerArmorLv: 1, eatBelow: 0.5, journalMax: 80,
+  baseHp: 100, hpPerArmorLv: 2, defPerArmorLv: 1, journalMax: 80,
   winDmg: 0.1, armorWin: 0.5, unlockLv: 25,
   depthCap: 1000, depthPower: 8 / 3, depthDmg: 1.5, depthLoot: 1, depthRare: 2,
   // Waktu per meter: auto 10 dtk (Lv. 0) → 2 dtk (Lv. 100), manual tetap 1 dtk

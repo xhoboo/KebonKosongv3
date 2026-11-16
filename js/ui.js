@@ -711,6 +711,10 @@ for (const [region, r] of Object.entries(REGIONS)) {
       `<p class="note ex-note" hidden></p>` +
     `</section>` + foldHtml('journal') + `</div>` +
     `<div class="ex-folds">${FOLDS.filter(f => f !== 'journal').map(foldHtml).join('')}</div>`;
+  // Slider batas makan dibuat sekali (bukan lewat setHTML) supaya tidak terganti saat digeser
+  wrap.querySelector('[data-fold="provision"] .fold-body').innerHTML = '<div class="prov-main"></div>' +
+    `<label class="eat-at"><span class="eat-head"><span data-i18n="eatAtLabel"></span><span class="mono eat-val"></span></span>` +
+    `<input type="range" min="10" max="90" step="5" data-eat></label>`;
   main.appendChild(wrap);
   const q = sel => wrap.querySelector(sel);
   exEls[region] = {
@@ -719,7 +723,14 @@ for (const [region, r] of Object.entries(REGIONS)) {
     fold: Object.fromEntries(FOLDS.map(f => [f, q(`[data-fold="${f}"]`)])),
   };
   wrap.addEventListener('click', e => onExploreClick(region, e));
+  wrap.addEventListener('input', e => {
+    if (!e.target.matches('[data-eat]')) return;
+    setEatAt(+e.target.value / 100);
+    setText(wrap.querySelector('.eat-val'), Math.round(state.eatAt * 100) + '%');
+    e.target.style.setProperty('--v', Math.round(state.eatAt * 100) + '%');
+  });
 }
+let exPick = null; // pilihan yang sedang dibuka: 'provision' atau 'slot:<slot>'
 
 // Tier yang dilihat: pilihan pemain; bawaannya area perjalanan yang berjalan di wilayah ini, atau tier tertinggi yang terbuka
 function selArea(region) {
@@ -810,7 +821,7 @@ function renderExploreLive(region) {
   setText(els.meter, num(here ? tr.meter : 0) + ' m');
   setText(els.hpN, num(hp) + '/' + num(max));
   els.hpFill.style.width = Math.min(100, hp / max * 100) + '%';
-  els.hpFill.classList.toggle('low', hp <= max * EX.eatBelow);
+  els.hpFill.classList.toggle('low', hp <= max * state.eatAt);
   els.step.style.width = (here && ticking() ? Math.min(100, state.progress / actionTime(key) * 100) : 0) + '%';
   let label, disabled = false;
   if (!here) label = t('enter');
@@ -831,38 +842,54 @@ function renderFolds(region, key) {
   }
   // Jurnal: ringkasan perjalanan + catatan
   const fmt = new Intl.DateTimeFormat(settings.lang === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' });
-  const sum = tr ? t('tripNow')(num(tr.meter), num(tr.wins), num(tr.losses), num(tr.kepeng))
-    : state.lastTrip ? t('tripLast')(num(state.lastTrip.meter), num(state.lastTrip.wins), num(state.lastTrip.losses), num(state.lastTrip.kepeng)) : '';
-  setText(els.fold.journal.querySelector('.fold-meta'), tr ? num(tr.meter) + ' m' : '');
-  setHTML(els.fold.journal.querySelector('.fold-body'), (sum ? `<p class="panel-hint">${sum}</p>` : '') +
+  // Ringkasan perjalanan sekarang (atau terakhir) di header kanan
+  const tripSum = x => t('tripShort')(num(x.meter), num(x.wins), num(x.losses), num(x.kepeng));
+  setText(els.fold.journal.querySelector('.fold-meta'), tr ? tripSum(tr) : state.lastTrip ? t('lastPrefix') + tripSum(state.lastTrip) : '');
+  setHTML(els.fold.journal.querySelector('.fold-body'),
     (state.journal.length ? `<ol class="journal">${state.journal.map(e =>
       `<li class="j-${e.k}"><time>${fmt.format(e.at)}</time><span class="j-where">${e.a ? areaShort(e.a) + (e.m ? ' · ' + num(e.m) + ' m' : '') : ''}</span><span>${journalText(e)}</span></li>`).join('')}</ol>`
       : `<p class="empty">${t('journalEmpty')}</p>`));
   // Tas (juga di panel kanan pada ≥1280px)
   setText(els.fold.bag.querySelector('.fold-meta'), t('bagSlots')(num(bagUsed()), num(bagCapacity())));
-  setHTML(els.fold.bag.querySelector('.fold-body'), bagHtml());
-  // Perbekalan: satu slot masakan (dimakan otomatis), plus masakan di tas yang bisa dipasang
+  setHTML(els.fold.bag.querySelector('.fold-body'), bagViewHtml());
+  // Perbekalan: satu slot masakan; klik slot → pilih masakan dari tas. Di bawahnya slider batas makan otomatis.
   const pv = state.provision, bagFoods = Object.keys(state.bag.items).filter(k => heals[k] && state.bag.items[k] >= 1).sort((a, b) => heals[b] - heals[a]);
-  // Slot: ikon · label + nama (+ keterangan) · nilai stat di ujung kanan
-  const slot = (label, icon, name, sub, stat, empty, act = '') => `<div class="slot${empty ? ' empty' : ''}"><span class="ibox" aria-hidden="true">${icon}</span>` +
-    `<div class="r-info"><div class="caps">${label}</div><div class="r-name">${name}</div>${sub ? `<div class="r-sub">${sub}</div>` : ''}</div>` +
-    (stat ? `<span class="slot-stat">${stat}</span>` : '') + act + '</div>';
+  // Slot (tombol): ikon · label + nama (+ keterangan) · nilai stat di ujung kanan
+  const slot = (pick, label, icon, name, sub, stat, empty) => `<button class="slot${empty ? ' empty' : ''}" data-pick="${pick}" aria-expanded="${exPick === pick}">` +
+    `<span class="ibox" aria-hidden="true">${icon}</span>` +
+    `<span class="r-info"><span class="caps">${label}</span><span class="r-name">${name}</span>${sub ? `<span class="r-sub">${sub}</span>` : ''}</span>` +
+    (stat ? `<span class="slot-stat">${stat}</span>` : '') + '<span class="caret" aria-hidden="true"></span></button>';
+  // Daftar pilihan di bawah slot yang dibuka
+  const pickRow = (k, qty, meta, attrs) => `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
+    `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">×${num(qty)}${meta ? ' · ' + meta : ''}</span></span>` +
+    `<button class="sell-btn" ${attrs}>${t('provEquip')}</button></li>`;
+  const picker = (rows, cur, empty, unAttr) => `<div class="picker">${rows.length ? `<ul class="market">${rows.join('')}</ul>` : `<p class="empty">${empty}</p>`}` +
+    (cur ? `<button class="goal" ${unAttr}><span>${t('provUnequip')} ${nameOf(cur)}</span><span class="mono">↩</span></button>` : '') + '</div>';
   setText(els.fold.provision.querySelector('.fold-meta'), pv ? '×' + num(pv.qty) : '');
-  setHTML(els.fold.provision.querySelector('.fold-body'),
-    (pv ? slot(t('catFood'), iconOf(pv.key), nameOf(pv.key), '×' + num(pv.qty), '❤️ ' + heals[pv.key], false,
-      `<button class="sell-btn" data-unprov="1">${t('provUnequip')}</button>`)
-      : slot(t('catFood'), FOOD_SLOT_ICON, t('slotEmpty'), '', '', true)) +
-    (bagFoods.length ? `<ul class="market">${bagFoods.map(k =>
-      `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
-      `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">${num(state.bag.items[k])} · ❤️ ${heals[k]}</span></span>` +
-      `<button class="sell-btn" data-prov="${k}">${t('provEquip')}</button></li>`).join('')}</ul>`
-      : pv ? '' : `<p class="empty">${t('provNone')}</p>`));
-  // Slot perlengkapan: Kepala, Badan, Tangan (alat wilayah), Celana, Kaki. Slot kosong = kotak dengan ikon garis redup.
+  setHTML(els.fold.provision.querySelector('.prov-main'),
+    (pv ? slot('provision', t('catFood'), iconOf(pv.key), nameOf(pv.key), '×' + num(pv.qty), '❤️ ' + heals[pv.key])
+      : slot('provision', t('catFood'), FOOD_SLOT_ICON, t('slotEmpty'), '', '', true)) +
+    (exPick === 'provision' ? picker(bagFoods.map(k => pickRow(k, state.bag.items[k], '❤️ ' + heals[k], `data-prov="${k}"`)), pv && pv.key, t('provNone'), 'data-unprov="1"') : ''));
+  const eat = els.fold.provision.querySelector('[data-eat]'), pct = Math.round(state.eatAt * 100);
+  if (document.activeElement !== eat) eat.value = pct;
+  eat.style.setProperty('--v', pct + '%');
+  setText(els.fold.provision.querySelector('.eat-val'), pct + '%');
+  // Slot perlengkapan: Kepala, Badan, Tangan (alat wilayah), Celana, Kaki. Klik slot → ganti dengan item dari tas.
   const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], rank = toolRank(tool);
   setText(els.fold.gear.querySelector('.fold-meta'), rank ? '⚔️ ' + toolAtk(tool) : '');
-  setHTML(els.fold.gear.querySelector('.fold-body'), GEAR_SLOTS.map(([k, label, icon]) =>
-    k === 'hands' && rank ? slot(t(label), def.icon, t(def.tiers[st.tier].key), '', '⚔️ ' + toolAtk(tool))
-      : slot(t(label), icon, t('slotEmpty'), k === 'hands' ? t('needs')(t(def.tiers[1].key)) : '', '', true)).join(''));
+  setHTML(els.fold.gear.querySelector('.fold-body'), GEAR_SLOTS.map(([k, label, icon]) => {
+    const pick = 'slot:' + k, cur = state.equip[k];
+    let html;
+    if (k === 'hands') html = rank ? slot(pick, t(label), def.icon, t(def.tiers[st.tier].key), '', '⚔️ ' + toolAtk(tool))
+      : slot(pick, t(label), icon, t('slotEmpty'), t('needs')(t(def.tiers[1].key)), '', true);
+    else if (cur) { const d = itemDef(cur); html = slot(pick, t(label), iconOf(cur), nameOf(cur), '', d.armor ? `<span>🛡️ ${num(d.armor.def)}</span><span>❤️ +${num(d.armor.hp)}</span>` : ''); }
+    else html = slot(pick, t(label), icon, t('slotEmpty'), '', '', true);
+    if (exPick !== pick) return html;
+    if (k === 'hands') return html + `<div class="picker"><p class="empty">${t('handsNote')}</p><button class="goal" data-go="anvil"><span>${t('openAnvil')}</span><span class="mono">→</span></button></div>`;
+    const options = Object.keys(state.bag.items).filter(x => state.bag.items[x] >= 1 && slotOf(x) === k).sort(compareKeys);
+    return html + picker(options.map(x => { const d = itemDef(x); return pickRow(x, state.bag.items[x], d.armor ? `🛡️ ${num(d.armor.def)} · ❤️ +${num(d.armor.hp)}` : '', `data-equip="${k}" data-key="${x}"`); }),
+      cur, t('pickGearNone'), `data-unequip="${k}"`);
+  }).join(''));
   // Mastery: atas = semua mastery + exp, bawah = stat yang sedang berlaku di wilayah ini
   setText(els.fold.mastery.querySelector('.fold-meta'), '');
   setHTML(els.fold.mastery.querySelector('.fold-body'),
@@ -877,14 +904,28 @@ function renderFolds(region, key) {
     `<div><dt>${t('defense')}</dt><dd>${num(playerDef())}</dd></div><div><dt>${t('maxHp')}</dt><dd>${num(maxHp())}</dd></div></dl>`);
 }
 
-// Isi tas (hanya lihat) + bawa bekal dari Rumah; dipakai bagian Tas halaman jelajah dan panel kanan
-function bagHtml() {
+// Isi tas (hanya lihat) + tautan ke Rumah; dipakai bagian Tas halaman jelajah dan panel kanan di luar Rumah
+function bagViewHtml() {
   const busy = exploring(), bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
-  const foods = ITEMS.filter(it => it.cat === 'food' && state.items[it.key] >= 1);
   return (bagKeys.length ? `<ul class="items bag-items">${bagKeys.map(k => `<li><span class="item" title="${nameOf(k)}" role="img" aria-label="${nameOf(k)}, ${num(state.bag.items[k])}">` +
       `<span class="item-icon" aria-hidden="true">${iconOf(k)}</span><span class="item-qty" aria-hidden="true">${num(state.bag.items[k])}</span></span></li>`).join('')}</ul>`
       : `<p class="empty">${t('bagEmpty')}</p>`) +
-    `<button class="goal" data-go="rumah"><span>${busy ? t('bagBusy') : t('bagSortHint')}</span><span class="mono">→</span></button>` +
+    `<button class="goal" data-go="rumah"><span>${busy ? t('bagBusy') : t('bagSortHint')}</span><span class="mono">→</span></button>`;
+}
+// Pilah tas di Rumah: simpan/buang per item, simpan semua, upgrade tas, bawa bekal dari Rumah.
+// Tampil di panel kanan (≥1280px, halaman Rumah) atau di isi halaman Rumah (layar lebih kecil).
+function bagManageHtml() {
+  const busy = exploring(), bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
+  const foods = ITEMS.filter(it => it.cat === 'food' && state.items[it.key] >= 1), cost = state.bag.level < BAG.maxLevel && BAG.cost(state.bag.level);
+  return (busy ? `<p class="panel-hint">${t('bagBusy')}</p>` : '') +
+    (bagKeys.length ? `<ul class="market">${bagKeys.map(k =>
+      `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
+      `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">${num(state.bag.items[k])}${heals[k] ? ' · ❤️ ' + heals[k] : ''}</span></span>` +
+      `<button class="sell-btn" data-store="${k}" ${busy || !canStore(k) ? 'disabled' : ''}>${canStore(k) ? t('store') : t('houseFull')}</button>` +
+      `<button class="sell-btn ${armedDiscard === k ? 'confirm' : ''}" data-discard="${k}" ${busy ? 'disabled' : ''}>${armedDiscard === k ? t('sure') : t('discard')}</button></li>`).join('')}</ul>` +
+      `<button class="notice-btn" data-store-all="1" ${busy ? 'disabled' : ''}>${t('storeAll')}</button>`
+      : `<p class="empty">${t('bagEmpty')}</p>`) +
+    (cost ? `<button class="upgrade-btn" data-bag-upgrade="1" ${canAfford(cost) ? '' : 'disabled'}><span>${t('houseUpgrade')(state.bag.level + 1, BAG.perLevel)}</span><span class="cost">${costHtml(cost)}</span></button>` : '') +
     `<div class="sub-head caps">${t('packFood')}</div>` +
     (foods.length ? `<ul class="market">${foods.map(it =>
       `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${it.icon}</span>` +
@@ -893,23 +934,35 @@ function bagHtml() {
       `<button class="sell-btn" data-pack="${it.key}" data-qty="all" ${busy ? 'disabled' : ''}>${t('all')}</button></li>`).join('')}</ul>`
       : `<p class="empty">${t('noFood')}</p>`);
 }
-// Panel kanan (≥1280px): kotak Tas di semua halaman
+// Panel kanan (≥1280px): kotak Tas di semua halaman; di Rumah berisi pilah tas
 let sideBagAt = 0;
 function renderSideBag(now = performance.now(), force) {
   if (!force && (now - sideBagAt < 500 || innerWidth < 1280)) return;
   sideBagAt = now;
-  setText($('side-bag-slots'), t('bagSlots')(num(bagUsed()), num(bagCapacity())));
-  setHTML($('side-bag-body'), bagHtml());
+  setText($('side-bag-slots'), (page === 'rumah' ? 'LV ' + state.bag.level + ' · ' : '') + t('bagSlots')(num(bagUsed()), num(bagCapacity())));
+  setHTML($('side-bag-body'), page === 'rumah' ? bagManageHtml() : bagViewHtml());
 }
-$('side-bag').addEventListener('click', e => {
+// Klik di panel Tas (Rumah atau panel kanan)
+function onBagClick(e) {
   const b = e.target.closest('button');
   if (!b || b.disabled) return;
-  if (b.dataset.go) { go(b.dataset.go); return; }
-  if (b.dataset.pack) packFood(b.dataset.pack, b.dataset.qty === 'all' ? Infinity : +b.dataset.qty);
+  const d = b.dataset;
+  if (d.go) { go(d.go); return; }
+  if (d.store) storeFromBag(d.store);
+  else if (d.discard) {
+    clearTimeout(discardTimer);
+    if (armedDiscard === d.discard) { discardFromBag(d.discard); armedDiscard = null; }
+    else { armedDiscard = d.discard; discardTimer = setTimeout(() => { armedDiscard = null; renderBag(); renderSideBag(performance.now(), true); }, 3000); }
+  } else if (d.storeAll) storeAllFromBag();
+  else if (d.bagUpgrade) { if (upgradeBag()) renderKepeng(); }
+  else if (d.pack) packFood(d.pack, d.qty === 'all' ? Infinity : +d.qty);
+  else return;
+  renderBag();
   renderSideBag(performance.now(), true);
+  renderHouse();
   renderExplore();
-  if (page === 'rumah') { renderHouse(); renderBag(); }
-});
+}
+$('side-bag').addEventListener('click', onBagClick);
 
 function onExploreClick(region, e) {
   const b = e.target.closest('button');
@@ -936,8 +989,11 @@ function onExploreClick(region, e) {
     settings.folds[f] = !settings.folds[f];
     saveSettings();
   } else if (b.dataset.pack) packFood(b.dataset.pack, b.dataset.qty === 'all' ? Infinity : +b.dataset.qty);
-  else if (b.dataset.prov) equipProvision(b.dataset.prov);
-  else if (b.dataset.unprov) { if (!unequipProvision()) { replay(b, 'nope'); return; } }
+  else if (b.dataset.pick) exPick = exPick === b.dataset.pick ? null : b.dataset.pick;
+  else if (b.dataset.prov) { equipProvision(b.dataset.prov); exPick = null; }
+  else if (b.dataset.unprov) { if (!unequipProvision()) { replay(b, 'nope'); return; } exPick = null; }
+  else if (b.dataset.equip) { if (!equipGear(b.dataset.equip, b.dataset.key)) { replay(b, 'nope'); return; } exPick = null; }
+  else if (b.dataset.unequip) { if (!unequipGear(b.dataset.unequip)) { replay(b, 'nope'); return; } exPick = null; }
   else return;
   renderSideBag(performance.now(), true);
   renderExplore(region);
@@ -1059,42 +1115,13 @@ function drawScene(region, now) {
   if (locked) { ctx.fillStyle = 'rgba(10,10,10,.6)'; ctx.fillRect(0, 0, w, h); }
 }
 
-// Panel Tas di Rumah: simpan/buang per item, simpan semua, upgrade tas
+// Panel Tas di isi halaman Rumah (layar < 1280px; di layar lebar ada di panel kanan)
 function renderBag() {
-  const busy = exploring(), bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
   $('bag-level').textContent = 'LV ' + state.bag.level;
-  $('bag-slots').textContent = t('bagSlots')(num(bagKeys.length), num(bagCapacity()));
-  const bagCost = state.bag.level < BAG.maxLevel && BAG.cost(state.bag.level);
-  $('bag-upgrade').hidden = !bagCost;
-  if (bagCost) {
-    $('bag-next').textContent = t('houseUpgrade')(state.bag.level + 1, BAG.perLevel);
-    $('bag-cost').innerHTML = costHtml(bagCost);
-    $('bag-upgrade').disabled = !canAfford(bagCost);
-  }
-  $('bag-busy').hidden = !busy;
-  $('bag-items').innerHTML = bagKeys.map(k =>
-    `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
-    `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">${num(state.bag.items[k])}${heals[k] ? ' · ❤️ ' + heals[k] : ''}</span></span>` +
-    `<button class="sell-btn" data-store="${k}" ${busy || !canStore(k) ? 'disabled' : ''}>${canStore(k) ? t('store') : t('houseFull')}</button>` +
-    `<button class="sell-btn ${armedDiscard === k ? 'confirm' : ''}" data-discard="${k}" ${busy ? 'disabled' : ''}>${armedDiscard === k ? t('sure') : t('discard')}</button></li>`).join('');
-  $('bag-empty').hidden = bagKeys.length > 0;
-  $('bag-store-all').hidden = !bagKeys.length;
-  $('bag-store-all').disabled = busy;
+  $('bag-slots').textContent = t('bagSlots')(num(bagUsed()), num(bagCapacity()));
+  setHTML($('bag-manage'), bagManageHtml());
 }
-$('bag-panel').addEventListener('click', e => {
-  const b = e.target.closest('button');
-  if (!b || b.disabled) return;
-  if (b.dataset.store) storeFromBag(b.dataset.store);
-  else if (b.dataset.discard) {
-    clearTimeout(discardTimer);
-    if (armedDiscard === b.dataset.discard) { discardFromBag(b.dataset.discard); armedDiscard = null; }
-    else { armedDiscard = b.dataset.discard; discardTimer = setTimeout(() => { armedDiscard = null; renderBag(); }, 3000); }
-  } else if (b.id === 'bag-store-all') storeAllFromBag();
-  else if (b.id === 'bag-upgrade') { if (upgradeBag()) renderKepeng(); }
-  else return;
-  renderBag();
-  renderHouse();
-});
+$('bag-panel').addEventListener('click', onBagClick);
 
 // ---------- Kebun ----------
 
@@ -1430,9 +1457,7 @@ function showTip(key) {
 
 // Klik item: munculkan nama; klik item yang sama atau di luar item: tutup
 document.addEventListener('click', e => {
-  const side = e.target.closest('.side-items button');
-  if (side) { go('rumah'); return; }
-  const item = e.target.closest('.item');
+  const item = e.target.closest('.item[data-item]');
   if (item) {
     showTip(openItem === item.dataset.item ? null : item.dataset.item);
     itemsEl.querySelector(`[data-item="${item.dataset.item}"]`).focus();
@@ -1504,22 +1529,6 @@ for (const el of activityEls) el.addEventListener('click', e => {
   } else if (e.target.closest('.act-main')) go(activityArea(state.active));
 });
 
-// Panel kanan desktop: isi Rumah ringkas (15 item pertama + sisanya)
-let sideItemsKey = '', sideItemsAt = 0;
-function renderSideItems(now) {
-  if (now - sideItemsAt < 500 || innerWidth < 1280) return;
-  sideItemsAt = now;
-  const owned = ownedKeys(), shown = owned.length > 16 ? owned.slice(0, 15) : owned;
-  const key = shown.map(k => k + ':' + Math.floor(state.items[k])).join() + '|' + owned.length + '|' + houseCapacity() + settings.lang;
-  if (key === sideItemsKey) return;
-  sideItemsKey = key;
-  $('side-house-slots').textContent = num(usedSlots()) + '/' + num(houseCapacity());
-  $('side-items').innerHTML = shown.map(k => `<li><button class="item q-${parseKey(k).q}" title="${nameOf(k)}" aria-label="${nameOf(k)}, ${num(Math.floor(state.items[k]))}">` +
-    `<span class="item-icon" aria-hidden="true">${iconOf(k)}</span><span class="item-qty" aria-hidden="true">${num(Math.floor(state.items[k]))}</span></button></li>`).join('') +
-    (owned.length > shown.length ? `<li><button class="more" aria-label="${t('house')}">+${num(owned.length - shown.length)}</button></li>` : '') +
-    (owned.length ? '' : `<li class="note" style="grid-column:1/-1">${t('empty')}</li>`);
-}
-
 let last = performance.now(), timeScale = 1;
 function loop(now) {
   // Tab yang lama tersembunyi juga dibatasi 24 jam; timeScale > 1 hanya dari mode uji
@@ -1563,7 +1572,6 @@ function loop(now) {
   renderNavStatus();
   renderCounter();
   renderActivity();
-  renderSideItems(now);
   renderSideBag(now);
   requestAnimationFrame(loop);
 }
@@ -1575,6 +1583,7 @@ const PAGES = ['hutan', 'goa', 'laut', 'kebun', 'sungai', 'danau', 'dapur', 'rum
 function setMenu() {}
 
 function showPage(name) {
+  exPick = null;
   if (openItem) showTip(null);
   // Tautan lama: Inventory jadi Rumah, Pohon jadi Hutan
   name = { inventory: 'rumah', pohon: 'hutan', petualangan: 'hutan' }[name] || name;
@@ -1596,6 +1605,7 @@ function showPage(name) {
   if (page === 'anvil') renderAnvil();
   if (page === 'kebun') renderFarm();
   if (REGIONS[page]) renderExplore(page);
+  renderSideBag(performance.now(), true);
 }
 
 // Animasi masuk halaman: container naik + isi muncul bertahap, sekali per showPage (render tiap tick tidak memutarnya lagi)

@@ -6,8 +6,8 @@ const SETTINGS_KEY = 'kebon-kosong-settings';
 try { ['idle-penebang-v1', 'kebon-kosong', 'kebon-kosong-v2'].forEach(k => localStorage.removeItem(k)); } catch {}
 
 // Versi bentuk state. Setiap perubahan bentuk state: naikkan SAVE_VERSION dan tambahkan MIGRATIONS[versi baru].
-// 14: slot Perbekalan (state.provision)
-const SAVE_VERSION = 14;
+// 14: slot Perbekalan (state.provision); 15: batas makan (eatAt) dan slot perlengkapan (equip), cukup diisi bawaan
+const SAVE_VERSION = 15;
 const freshState = () => ({
   items: Object.fromEntries(ITEMS.map(it => [it.key, 0])),
   nodes: Object.fromEntries(Object.keys(NODES).map(k => [k, { level: 0, xp: 0 }])), // node memancing
@@ -21,6 +21,8 @@ const freshState = () => ({
   armor: { level: 0, xp: 0 }, // Mastery Armor
   bag: { level: 0, items: {} },
   provision: null, // slot Perbekalan: { key, qty } satu jenis masakan; hanya ini yang dimakan otomatis saat jelajah
+  eatAt: 0.5, // makan otomatis saat HP ≤ eatAt × HP maks (diatur pemain, 10–90%)
+  equip: { head: null, body: null, legs: null, feet: null }, // perlengkapan yang dipakai (Tangan = alat wilayah)
   exMode: 'manual', // cara maju saat menjelajah: 'manual' (klik, 1 dtk/m) atau 'auto'
   trip: null, // perjalanan yang sedang berjalan: { area, meter, hp, walking, wins, losses, kepeng }
   lastTrip: null, // ringkasan perjalanan terakhir: { area, meter, wins, losses, kepeng }
@@ -357,8 +359,38 @@ function forgeGear(key) {
 // ---------- Jelajah ----------
 
 const exploring = () => !!EXPLORE[state.active];
-const maxHp = () => EX.baseHp + EX.hpPerArmorLv * state.armor.level;
-const playerDef = () => EX.defPerArmorLv * state.armor.level;
+// Slot perlengkapan sebuah item (armor → Badan). Senjata belum dipakai saat menjelajah, jadi tidak punya slot.
+const slotOf = key => itemDef(key).armor ? 'body' : null;
+const equipped = () => Object.values(state.equip).filter(Boolean).map(itemDef);
+const maxHp = () => EX.baseHp + EX.hpPerArmorLv * state.armor.level + equipped().reduce((n, d) => n + (d.armor ? d.armor.hp : 0), 0);
+const playerDef = () => EX.defPerArmorLv * state.armor.level + equipped().reduce((n, d) => n + (d.armor ? d.armor.def : 0), 0);
+// HP yang sedang berjalan tidak boleh melebihi HP maks baru (mis. setelah melepas armor)
+const clampHp = () => { if (state.trip) state.trip.hp = Math.min(state.trip.hp, maxHp()); };
+
+// Pakai item dari tas ke slot; item lama di slot kembali ke tas. Lepas = kembali ke tas (butuh tempat di tas).
+function equipGear(slot, key) {
+  if (!(slot in state.equip) || slotOf(key) !== slot || !(state.bag.items[key] >= 1)) return false;
+  const prev = state.equip[slot];
+  bagTake(key, 1);
+  if (prev && !bagAdd(prev, 1)) { bagAdd(key, 1); return false; }
+  state.equip[slot] = key;
+  clampHp();
+  save();
+  return true;
+}
+function unequipGear(slot) {
+  const prev = state.equip[slot];
+  if (!prev || !bagAdd(prev, 1)) return false;
+  state.equip[slot] = null;
+  clampHp();
+  save();
+  return true;
+}
+// Batas makan otomatis, 10–90% HP maks
+function setEatAt(v) {
+  state.eatAt = Math.min(0.9, Math.max(0.1, Math.round(v * 20) / 20));
+  save();
+}
 // Musuh makin kuat seiring meter (lurus sampai 1.000 m, lalu tetap)
 const enemyPower = (e, meter) => ENEMIES[e].power * (1 + EX.depthPower * depthOf(meter));
 const enemyDmg = (e, meter) => ENEMIES[e].dmg * (1 + EX.depthDmg * depthOf(meter));
@@ -468,10 +500,10 @@ const ticking = () => !!state.active && !(exploring() && state.exMode === 'manua
 
 const randInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
 
-// Makan otomatis selama HP ≤ batas, hanya dari slot Perbekalan (masakan di tas harus dipasang dulu)
+// Makan otomatis selama HP ≤ batas pemain (eatAt), hanya dari slot Perbekalan (masakan di tas harus dipasang dulu)
 function autoEat(at) {
   const tr = state.trip, max = maxHp(), p = state.provision;
-  while (p && p.qty >= 1 && tr.hp > 0 && tr.hp <= max * EX.eatBelow) {
+  while (p && p.qty >= 1 && tr.hp > 0 && tr.hp <= max * state.eatAt) {
     p.qty--;
     tr.hp = Math.min(max, tr.hp + heals[p.key]);
     log(at, { k: 'eat', a: tr.area, m: tr.meter, f: p.key, h: heals[p.key] });
