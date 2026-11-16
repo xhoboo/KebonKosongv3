@@ -17,8 +17,6 @@ function nameOf(key) {
 // Halaman tempat sebuah kegiatan berada
 const activityArea = key => EXPLORE[key] ? EXPLORE[key].region : RECIPES[key] ? 'dapur' : NODES[key].area;
 
-// Label tingkat alat: T1 = alat pertama. Joran/tombak tingkat 0 berarti belum punya, jadi yang pertama = T1.
-const tierLabel = (tool, i) => 'T' + (TOOLS[tool].tiers[0].none ? i : i + 1);
 // Ikon anvil garis (untuk petunjuk kunci) dan panah kecil
 const ANVIL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h14c0 3-2 4-4 4v3h3v3H6v-3h3v-3H7C5 11 3 9 3 7z" fill="none" stroke="#8c8c8c" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 const ARROW_SVG = '<svg class="arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -33,7 +31,7 @@ function lockInfo(key) {
   }
   const node = NODES[key], tool = TOOLS[node.tool], icon = tool.icon;
   return {
-    chip: `<span class="ci">${icon}</span>${tierLabel(node.tool, node.tier)}`, text: t('needs')(t(tool.tiers[node.tier].key)),
+    chip: `<span class="ci">${icon}</span>${LOCK_SVG}`, text: t('needs')(t(tool.tiers[node.tier].key)),
     path: `${ANVIL_SVG}${ARROW_SVG}<span>${icon}</span>`, to: 'anvil', go: t('openAnvil'),
   };
 }
@@ -237,7 +235,6 @@ function renderTools() {
     const tier = def.tiers[s.tier], maxed = s.level >= MAX_LEVEL, next = nextTier(tool);
     el.querySelector('.lv-box b').textContent = s.level;
     el.querySelector('.name').textContent = t(tier.key);
-    el.querySelector('.tier').textContent = tierLabel(tool, s.tier);
     el.querySelector('.fill').style.width = (maxed ? 100 : s.xp / toolXpNeeded(s.level) * 100) + '%';
     el.querySelector('.tool-xp').textContent = maxed ? t('max') : num(s.xp) + '/' + num(toolXpNeeded(s.level)) + ' XP';
     el.querySelector('.tool-row').title = t(tier.key) + ' LV ' + s.level + ' · ' + t('toolEffect');
@@ -248,7 +245,7 @@ function renderTools() {
     el.querySelector('.stats').hidden = !s.level;
     const link = el.querySelector('.tool-link');
     link.hidden = !next;
-    if (next) link.textContent = t('forgeAt')(tierLabel(tool, s.tier + 1));
+    if (next) link.textContent = t('forgeAt')(t(next.key));
   }
   for (const [key, card] of Object.entries(cards)) {
     const node = NODES[key] || RECIPES[key], open = nodeOpen(key);
@@ -347,8 +344,8 @@ function renderSubtabs() {
 
 // Syarat area terkunci sebagai chip + jalan ke sana (bar petunjuk saat sub-tab/sidebar terkunci diklik)
 function areaReq(area) {
-  const tool = (k, i) => ({ chip: `<span class="ci">${TOOLS[k].icon}</span>${tierLabel(k, i)}`, to: 'anvil' });
-  const req = { sungai: tool('rod', 1), danau: tool('rod', 2), laut: tool('harpoon', 1) }[area];
+  const tool = k => ({ chip: `<span class="ci">${TOOLS[k].icon}</span>${LOCK_SVG}`, to: 'anvil' });
+  const req = { sungai: tool('rod'), danau: tool('rod'), laut: tool('harpoon') }[area];
   return { ...req, text: t(LOCK_TEXT[area]), go: req.to === 'anvil' ? t('openAnvil') : pageName(req.to) + ' →' };
 }
 let lockBarTimer;
@@ -529,7 +526,7 @@ function recipeParts(key) {
     return {
       ready: next && canForge(key),
       head: `${old}<span class="ibox" aria-hidden="true">${def.icon}</span><div class="r-info"><div class="r-name">${t(shown.key)}</div>` +
-        (opens ? `<div class="r-sub"><span class="caps">${t('lblOpens')}</span>${opens}</div>` : '') + `</div><span class="r-tier">${tierLabel(key, idx)}</span>`,
+        (opens ? `<div class="r-sub"><span class="caps">${t('lblOpens')}</span>${opens}</div>` : '') + `</div>`,
       mats: next && !busy ? matsHtml(next.cost) : '',
       odds: '',
       act: !next && !busy ? '' : actHtml(key, busy ? forgingTier.chance : forgeChance(key), busy || canForge(key), next && next.cost),
@@ -544,7 +541,7 @@ function recipeParts(key) {
   return {
     ready: canForgeGear(key),
     head: `<span class="ibox" aria-hidden="true">${ITEM[key].icon}</span><div class="r-info"><div class="r-name">${t(key)}${owned ? ` <span class="r-tier">×${num(owned)}</span>` : ''}</div>` +
-      `<div class="r-sub">${gearStats(key)}</div></div><span class="r-tier">T${g.tier}</span>`,
+      `<div class="r-sub">${gearStats(key)}</div></div>`,
     mats: busy ? '' : matsHtml(g.cost),
     odds: oddsHtml(),
     act: full && !busy ? `<button class="goal" data-go="rumah"><span>${t('houseFull')}</span><span class="mono">→</span></button>`
@@ -565,7 +562,7 @@ function renderAnvil() {
   $('smith-fill').style.width = (maxed ? 100 : sm.xp / xpNeeded(sm.level) * 100) + '%';
   $('smith-xp').textContent = maxed ? t('max') : num(sm.xp) + '/' + num(xpNeeded(sm.level)) + ' XP';
   $('anvil-level').textContent = t('anvil') + ' LV ' + lv;
-  $('anvil-desc').textContent = t('anvilUpTo')('T' + (lv + 1));
+  $('anvil-desc').textContent = '';
   setHTML($('anvil-cost'), cost ? matsHtml(cost) : '');
   anvilUpgradeBtn.hidden = !cost;
   if (cost) {
@@ -645,8 +642,8 @@ function skillBar(prefix, s) {
   $(prefix + '-xp').textContent = maxed ? t('max') : num(s.xp) + '/' + num(xpNeeded(s.level)) + ' XP';
 }
 const lootText = loot => loot.map(([k, n]) => (k === 'kepeng' ? KEPENG_ICON : iconOf(k)) + ' ' + num(n)).join(', ');
-// Nama pendek area untuk label jurnal: "Hutan T1"
-const areaShort = key => t(PAGE_TEXT[EXPLORE[key].region]) + ' T' + EXPLORE[key].tier;
+// Label area di jurnal: nama area
+const areaShort = key => t(key);
 
 function journalText(e) {
   switch (e.k) {
@@ -667,7 +664,9 @@ function journalText(e) {
 // Jurnal di bawah kartu jelajah; Perbekalan, slot perlengkapan, Mastery Armor, dan Tas di kolom kanan.
 // Info area (level, exp, kecepatan) ada di kartu tier masing-masing. Tas pindah ke panel kanan di ≥1280px.
 const FOLDS = ['journal', 'provision', 'gear', 'mastery', 'bag'];
-const FOLD_TEXT = { journal: 'foldJournal', provision: 'foldProvision', bag: 'foldBag', gear: 'foldGear', mastery: 'armorMastery' };
+const FOLD_TEXT = { journal: 'foldJournal', provision: 'foldProvision', bag: 'foldBag', gear: 'foldGear', mastery: 'foldMastery' };
+// Semua mastery yang ada: [teks nama, state]. Tambahkan di sini kalau ada mastery baru.
+const MASTERIES = [['armorSkill', () => state.armor]];
 // Slot perlengkapan dan ikon garis redupnya saat kosong. Tangan memegang alat wilayah (kapak/beliung/tombak).
 const SLOT_ICON = d => `<svg class="slot-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
 const GEAR_SLOTS = [
@@ -693,7 +692,7 @@ for (const [region, r] of Object.entries(REGIONS)) {
   wrap.className = 'ex-wrap';
   wrap.innerHTML =
     `<nav class="ex-tiers">${r.areas.map(k => `<button class="ex-tier" data-area="${k}">` +
-      `<span class="t-top"><span class="t-tier">T${EXPLORE[k].tier}</span><span class="t-dot live" hidden></span><span class="t-lv"></span>${LOCK_SVG}</span>` +
+      `<span class="t-top"><span class="t-dot live" hidden></span><span class="t-lv"></span>${LOCK_SVG}</span>` +
       `<span class="t-name" data-i18n="${k}"></span>` +
       `<span class="t-info"><span class="bar"><span class="fill"></span></span><span class="t-xp mono"></span>` +
       `<span class="t-row"><span data-i18n="auto"></span><span class="mono t-auto"></span></span>` +
@@ -736,7 +735,7 @@ function exploreLock(key) {
   const rankIdx = a.tier - (def.tiers[0].none ? 0 : 1);
   const parts = [];
   if (toolRank(tool) < a.tier) parts.push({ icon: def.icon, text: t('needs')(t(def.tiers[rankIdx].key)), to: 'anvil', go: t('openAnvil') });
-  if (a.prev && state.areas[a.prev].level < EX.unlockLv) parts.push({ icon: 'T' + (a.tier - 1), text: t('needAreaLv')(t(a.prev), EX.unlockLv), area: a.prev });
+  if (a.prev && state.areas[a.prev].level < EX.unlockLv) parts.push({ icon: 'LV', text: t('needAreaLv')(t(a.prev), EX.unlockLv), area: a.prev });
   return parts;
 }
 
@@ -844,15 +843,15 @@ function renderFolds(region, key) {
   setHTML(els.fold.bag.querySelector('.fold-body'), bagHtml());
   // Perbekalan: satu slot masakan (dimakan otomatis), plus masakan di tas yang bisa dipasang
   const pv = state.provision, bagFoods = Object.keys(state.bag.items).filter(k => heals[k] && state.bag.items[k] >= 1).sort((a, b) => heals[b] - heals[a]);
-  const slot = (label, icon, name, sub, tier, empty, act = '') => `<div class="slot${empty ? ' empty' : ''}"><span class="ibox" aria-hidden="true">${icon}</span>` +
+  // Slot: ikon · label + nama (+ keterangan) · nilai stat di ujung kanan
+  const slot = (label, icon, name, sub, stat, empty, act = '') => `<div class="slot${empty ? ' empty' : ''}"><span class="ibox" aria-hidden="true">${icon}</span>` +
     `<div class="r-info"><div class="caps">${label}</div><div class="r-name">${name}</div>${sub ? `<div class="r-sub">${sub}</div>` : ''}</div>` +
-    (tier ? `<span class="r-tier">${tier}</span>` : '') + act + '</div>';
+    (stat ? `<span class="slot-stat">${stat}</span>` : '') + act + '</div>';
   setText(els.fold.provision.querySelector('.fold-meta'), pv ? '×' + num(pv.qty) : '');
   setHTML(els.fold.provision.querySelector('.fold-body'),
-    (pv ? slot(t('catFood'), iconOf(pv.key), nameOf(pv.key), `×${num(pv.qty)} · ❤️ ${heals[pv.key]}`, '', false,
+    (pv ? slot(t('catFood'), iconOf(pv.key), nameOf(pv.key), '×' + num(pv.qty), '❤️ ' + heals[pv.key], false,
       `<button class="sell-btn" data-unprov="1">${t('provUnequip')}</button>`)
       : slot(t('catFood'), FOOD_SLOT_ICON, t('slotEmpty'), '', '', true)) +
-    `<p class="note pad">${t('provHint')}</p>` +
     (bagFoods.length ? `<ul class="market">${bagFoods.map(k =>
       `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
       `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">${num(state.bag.items[k])} · ❤️ ${heals[k]}</span></span>` +
@@ -862,16 +861,20 @@ function renderFolds(region, key) {
   const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], rank = toolRank(tool);
   setText(els.fold.gear.querySelector('.fold-meta'), rank ? '⚔️ ' + toolAtk(tool) : '');
   setHTML(els.fold.gear.querySelector('.fold-body'), GEAR_SLOTS.map(([k, label, icon]) =>
-    k === 'hands' && rank ? slot(t(label), def.icon, t(def.tiers[st.tier].key), `${t('toolAtk')} ${toolAtk(tool)}`, 'T' + rank)
+    k === 'hands' && rank ? slot(t(label), def.icon, t(def.tiers[st.tier].key), '', '⚔️ ' + toolAtk(tool))
       : slot(t(label), icon, t('slotEmpty'), k === 'hands' ? t('needs')(t(def.tiers[1].key)) : '', '', true)).join(''));
-  // Mastery Armor
-  const ar = state.armor, arMax = ar.level >= MAX_LEVEL;
-  setText(els.fold.mastery.querySelector('.fold-meta'), 'LV ' + ar.level);
+  // Mastery: atas = semua mastery + exp, bawah = stat yang sedang berlaku di wilayah ini
+  setText(els.fold.mastery.querySelector('.fold-meta'), '');
   setHTML(els.fold.mastery.querySelector('.fold-body'),
-    `<div class="gear-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b>${ar.level}</b></div><div class="tool-main">` +
-      `<div class="tool-title"><span class="tool-xp">${arMax ? t('max') : num(ar.xp) + '/' + num(xpNeeded(ar.level)) + ' XP'}</span></div>` +
-      `<span class="bar"><span class="fill" style="width:${arMax ? 100 : ar.xp / xpNeeded(ar.level) * 100}%"></span></span></div></div>` +
-    `<dl class="stats gear-stats"><div><dt>${t('maxHp')}</dt><dd>${num(maxHp())}</dd></div><div><dt>${t('defense')}</dt><dd>${num(playerDef())}</dd></div></dl>`);
+    MASTERIES.map(([name, get]) => {
+      const m = get(), maxed = m.level >= MAX_LEVEL;
+      return `<div class="gear-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b>${m.level}</b></div><div class="tool-main">` +
+        `<div class="tool-title"><span class="name">${t(name)}</span><span class="tool-xp">${maxed ? t('max') : num(m.xp) + '/' + num(xpNeeded(m.level)) + ' XP'}</span></div>` +
+        `<span class="bar"><span class="fill" style="width:${maxed ? 100 : m.xp / xpNeeded(m.level) * 100}%"></span></span></div></div>`;
+    }).join('') +
+    `<div class="sub-head caps">${t('lblStats')}</div>` +
+    `<dl class="stats gear-stats"><div><dt>${t('attack')}</dt><dd>${num(toolAtk(tool))}</dd></div>` +
+    `<div><dt>${t('defense')}</dt><dd>${num(playerDef())}</dd></div><div><dt>${t('maxHp')}</dt><dd>${num(maxHp())}</dd></div></dl>`);
 }
 
 // Isi tas (hanya lihat) + bawa bekal dari Rumah; dipakai bagian Tas halaman jelajah dan panel kanan

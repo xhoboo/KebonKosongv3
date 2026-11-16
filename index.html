@@ -870,6 +870,8 @@
   .slot.empty .r-sub { color: var(--dim); }
   .slot .sell-btn { flex: none; }
   .slot-ic { width: 22px; height: 22px; color: var(--off); }
+  .slot .r-info { flex: 1; min-width: 0; }
+  .slot-stat { flex: none; font-family: var(--mono); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
   .ex-view { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; }
   .ex-col > .fold:last-child, .ex-folds > .fold:last-child { margin-bottom: 0; }
   .ex-scene { position: relative; height: 220px; border-bottom: 1px solid var(--line); overflow: hidden; }
@@ -950,9 +952,9 @@
     .ex-tiers { position: sticky; top: calc(var(--top-h) + 20px); flex-direction: column; margin: 0; padding: 0; overflow: visible; }
     .ex-tier { flex: none; }
     .ex-tier:not([aria-pressed="true"]):not(.locked):hover { border-color: var(--line-strong); }
-    /* Kotak sampai lebar 720px; tinggi juga dibatasi layar supaya tombol tetap terlihat */
+    /* Lebar = kolom (50% isi); tinggi maks 720px dan dibatasi layar, jadi di layar besar jadi landscape */
     .ex-view { container-type: inline-size; }
-    .ex-scene { height: min(100cqw, calc(100dvh - var(--top-h) - 250px)); min-height: 260px; }
+    .ex-scene { height: min(100cqw, 720px, calc(100dvh - var(--top-h) - 250px)); min-height: 260px; }
   }
   .gear-row .tool-title { flex-wrap: wrap; }
   .gear-row .tool-title .name { white-space: normal; }
@@ -961,7 +963,7 @@
   }
   @media (min-width: 1100px) {
     .ex-wrap { grid-template-columns: 180px minmax(0, 50%) minmax(0, 1fr); }
-    .ex-col { max-width: 720px; }
+    .ex-col { max-width: none; }
     .ex-folds { grid-column: 3; }
   }
   /* ≥1280: Tas ada di panel kanan, jadi bagian Tas di halaman jelajah disembunyikan */
@@ -1180,9 +1182,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-16.4"></script>
-<script src="js/game.js?v=2026-11-16.4"></script>
-<script src="js/ui.js?v=2026-11-16.4"></script>
-<script src="js/debug.js?v=2026-11-16.4"></script>
+<script src="js/data.js?v=2026-11-16.5"></script>
+<script src="js/game.js?v=2026-11-16.5"></script>
+<script src="js/ui.js?v=2026-11-16.5"></script>
+<script src="js/debug.js?v=2026-11-16.5"></script>
 </body>
 </html>
