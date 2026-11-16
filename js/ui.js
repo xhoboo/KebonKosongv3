@@ -664,9 +664,10 @@ function journalText(e) {
   return '';
 }
 
-// Jurnal di bawah kartu jelajah; Perlengkapan (yang dipakai), Tas, dan Area di kolom kanan
-const FOLDS = ['journal', 'gear', 'bag', 'area'];
-const FOLD_TEXT = { journal: 'foldJournal', bag: 'foldBag', gear: 'foldGear', area: 'foldArea' };
+// Jurnal di bawah kartu jelajah; slot perlengkapan, Mastery Armor, dan Tas di kolom kanan.
+// Info area (level, exp, kecepatan) ada di kartu tier masing-masing. Tas pindah ke panel kanan di ≥1280px.
+const FOLDS = ['journal', 'gear', 'mastery', 'bag'];
+const FOLD_TEXT = { journal: 'foldJournal', bag: 'foldBag', gear: 'foldGear', mastery: 'armorMastery' };
 const exSel = {}; // tier area yang sedang dilihat per wilayah
 const exEls = {}; // elemen tiap halaman wilayah
 const lastHit = {}; // encounter terakhir per area (untuk toast di pemandangan): { res, at }
@@ -683,7 +684,11 @@ for (const [region, r] of Object.entries(REGIONS)) {
   wrap.innerHTML =
     `<nav class="ex-tiers">${r.areas.map(k => `<button class="ex-tier" data-area="${k}">` +
       `<span class="t-top"><span class="t-tier">T${EXPLORE[k].tier}</span><span class="t-dot live" hidden></span><span class="t-lv"></span>${LOCK_SVG}</span>` +
-      `<span class="t-name" data-i18n="${k}"></span><span class="t-bar"><span class="fill"></span></span></button>`).join('')}</nav>` +
+      `<span class="t-name" data-i18n="${k}"></span>` +
+      `<span class="t-info"><span class="bar"><span class="fill"></span></span><span class="t-xp mono"></span>` +
+      `<span class="t-row"><span data-i18n="auto"></span><span class="mono t-auto"></span></span>` +
+      `<span class="t-row"><span data-i18n="manual"></span><span class="mono t-man"></span></span></span>` +
+      `<span class="t-req"></span></button>`).join('')}</nav>` +
     `<div class="ex-col">` +
     `<section class="ex-view">` +
       `<div class="ex-scene"><canvas aria-hidden="true"></canvas>` +
@@ -760,11 +765,16 @@ function renderExplore(region = REGIONS[page] ? page : null) {
     const k = btn.dataset.area, s = state.areas[k], o = exploreOpen(k);
     btn.classList.toggle('locked', !o);
     btn.setAttribute('aria-pressed', k === key);
-    setText(btn.querySelector('.t-lv'), o ? 'LV ' + s.level : '');
+    const maxed = s.level >= MAX_LEVEL, need = areaXpNeeded(k, s.level), req = o ? '' : exploreLock(k).map(p => p.text).join(' · ');
+    setText(btn.querySelector('.t-lv'), 'LV ' + s.level);
     btn.querySelector('.t-dot').hidden = !(tr && tr.area === k);
     btn.querySelector('.lock-svg').toggleAttribute('hidden', o);
-    btn.querySelector('.fill').style.width = (s.level >= MAX_LEVEL ? 100 : s.xp / areaXpNeeded(k, s.level) * 100) + '%';
-    btn.title = o ? '' : exploreLock(k).map(p => p.text).join(' · ');
+    btn.querySelector('.fill').style.width = (maxed ? 100 : s.xp / need * 100) + '%';
+    setText(btn.querySelector('.t-xp'), maxed ? t('max') : num(s.xp) + '/' + num(need) + ' XP');
+    setText(btn.querySelector('.t-auto'), t('secPerM')(num(autoStep(s.level) / 1000, 1)));
+    setText(btn.querySelector('.t-man'), t('secPerM')(num(EX.manual / 1000, 1)));
+    setText(btn.querySelector('.t-req'), req);
+    btn.title = req;
   }
   // Kartu jelajah
   setText(els.name, t(key) + (open ? ' · LV ' + state.areas[key].level : ''));
@@ -819,12 +829,35 @@ function renderFolds(region, key) {
     (state.journal.length ? `<ol class="journal">${state.journal.map(e =>
       `<li class="j-${e.k}"><time>${fmt.format(e.at)}</time><span class="j-where">${e.a ? areaShort(e.a) + (e.m ? ' · ' + num(e.m) + ' m' : '') : ''}</span><span>${journalText(e)}</span></li>`).join('')}</ol>`
       : `<p class="empty">${t('journalEmpty')}</p>`));
-  // Tas: isi (hanya lihat) + bawa bekal dari Rumah
-  const bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
-  setText(els.fold.bag.querySelector('.fold-meta'), t('bagSlots')(num(bagKeys.length), num(bagCapacity())));
+  // Tas (juga di panel kanan pada ≥1280px)
+  setText(els.fold.bag.querySelector('.fold-meta'), t('bagSlots')(num(bagUsed()), num(bagCapacity())));
+  setHTML(els.fold.bag.querySelector('.fold-body'), bagHtml());
+  // Slot perlengkapan: alat wilayah (terpasang), senjata & armor (kosong, belum dipakai saat menjelajah)
+  const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], rank = toolRank(tool);
+  const slot = (label, icon, name, sub, tier, empty) => `<div class="slot${empty ? ' empty' : ''}"><span class="ibox" aria-hidden="true">${icon}</span>` +
+    `<div class="r-info"><div class="caps">${label}</div><div class="r-name">${name}</div>${sub ? `<div class="r-sub">${sub}</div>` : ''}</div>` +
+    (tier ? `<span class="r-tier">${tier}</span>` : '') + '</div>';
+  setText(els.fold.gear.querySelector('.fold-meta'), rank ? '⚔️ ' + toolAtk(tool) : '');
+  setHTML(els.fold.gear.querySelector('.fold-body'),
+    (rank ? slot(t('slotTool'), def.icon, t(def.tiers[st.tier].key), `${t('toolAtk')} ${toolAtk(tool)}`, 'T' + rank)
+      : slot(t('slotTool'), '', t('slotEmpty'), t('needs')(t(def.tiers[1].key)), '', true)) +
+    slot(t('weapon'), '', t('slotEmpty'), t('slotSoon'), '', true) +
+    slot(t('armor'), '', t('slotEmpty'), t('slotSoon'), '', true));
+  // Mastery Armor
+  const ar = state.armor, arMax = ar.level >= MAX_LEVEL;
+  setText(els.fold.mastery.querySelector('.fold-meta'), 'LV ' + ar.level);
+  setHTML(els.fold.mastery.querySelector('.fold-body'),
+    `<div class="gear-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b>${ar.level}</b></div><div class="tool-main">` +
+      `<div class="tool-title"><span class="tool-xp">${arMax ? t('max') : num(ar.xp) + '/' + num(xpNeeded(ar.level)) + ' XP'}</span></div>` +
+      `<span class="bar"><span class="fill" style="width:${arMax ? 100 : ar.xp / xpNeeded(ar.level) * 100}%"></span></span></div></div>` +
+    `<dl class="stats gear-stats"><div><dt>${t('maxHp')}</dt><dd>${num(maxHp())}</dd></div><div><dt>${t('defense')}</dt><dd>${num(playerDef())}</dd></div></dl>`);
+}
+
+// Isi tas (hanya lihat) + bawa bekal dari Rumah; dipakai bagian Tas halaman jelajah dan panel kanan
+function bagHtml() {
+  const busy = exploring(), bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
   const foods = ITEMS.filter(it => it.cat === 'food' && state.items[it.key] >= 1);
-  setHTML(els.fold.bag.querySelector('.fold-body'),
-    (bagKeys.length ? `<ul class="items bag-items">${bagKeys.map(k => `<li><span class="item" title="${nameOf(k)}" role="img" aria-label="${nameOf(k)}, ${num(state.bag.items[k])}">` +
+  return (bagKeys.length ? `<ul class="items bag-items">${bagKeys.map(k => `<li><span class="item" title="${nameOf(k)}" role="img" aria-label="${nameOf(k)}, ${num(state.bag.items[k])}">` +
       `<span class="item-icon" aria-hidden="true">${iconOf(k)}</span><span class="item-qty" aria-hidden="true">${num(state.bag.items[k])}</span></span></li>`).join('')}</ul>`
       : `<p class="empty">${t('bagEmpty')}</p>`) +
     `<button class="goal" data-go="rumah"><span>${busy ? t('bagBusy') : t('bagSortHint')}</span><span class="mono">→</span></button>` +
@@ -834,38 +867,25 @@ function renderFolds(region, key) {
       `<span class="sell-info"><span class="sell-name">${t(it.key)}</span><span class="sell-meta">${num(state.items[it.key])} · ❤️ ${it.heal}</span></span>` +
       [1, 10].map(n => `<button class="sell-btn" data-pack="${it.key}" data-qty="${n}" ${busy ? 'disabled' : ''}>+${n}</button>`).join('') +
       `<button class="sell-btn" data-pack="${it.key}" data-qty="all" ${busy ? 'disabled' : ''}>${t('all')}</button></li>`).join('')}</ul>`
-      : `<p class="empty">${t('noFood')}</p>`));
-  // Perlengkapan: alat wilayah, Mastery Armor, statistik, peluang menang di meter sekarang
-  const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], next = nextTier(tool), ar = state.armor;
-  const meter = tr && tr.area === key ? tr.meter : 0;
-  const enemies = [...new Set(EXPLORE[key].events.filter(e => e.enemy).map(e => e.enemy))];
-  setText(els.fold.gear.querySelector('.fold-meta'), toolRank(tool) ? '⚔️ ' + toolAtk(tool) : '');
-  setHTML(els.fold.gear.querySelector('.fold-body'),
-    `<div class="gear-row"><span class="ibox" aria-hidden="true">${def.icon}</span><div class="r-info"><div class="r-name">${t(def.tiers[st.tier].key)}</div>` +
-      `<div class="r-sub">${toolRank(tool) ? `${t('toolAtk')} ${toolAtk(tool)}` : '—'}</div></div><span class="r-tier">${toolRank(tool) ? 'T' + toolRank(tool) : ''}</span></div>` +
-    (next ? `<button class="goal" data-go="anvil"><span>${t('forgeAt')(tierLabel(tool, st.tier + 1))}</span><span class="mono">→</span></button>` : '') +
-    `<div class="gear-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b>${ar.level}</b></div><div class="tool-main">` +
-      `<div class="tool-title"><span class="name">${t('armorMastery')}</span><span class="tool-xp">${ar.level >= MAX_LEVEL ? t('max') : num(ar.xp) + '/' + num(xpNeeded(ar.level)) + ' XP'}</span></div>` +
-      `<span class="bar"><span class="fill" style="width:${ar.level >= MAX_LEVEL ? 100 : ar.xp / xpNeeded(ar.level) * 100}%"></span></span></div></div>` +
-    `<dl class="stats gear-stats"><div><dt>${t('maxHp')}</dt><dd>${num(maxHp())}</dd></div><div><dt>${t('defense')}</dt><dd>${num(playerDef())}</dd></div></dl>` +
-    `<div class="sub-head caps">${t('winAt')(num(meter))}</div>` +
-    `<ul class="win-list">${enemies.map(e => `<li><span class="sell-icon" aria-hidden="true">${ENEMIES[e].icon}</span><span class="sell-name">${t(e)}</span>` +
-      `<span class="win-bar"><span class="bar"><span class="fill" style="width:${winChance(e, key, meter) * 100}%"></span></span></span>` +
-      `<span class="mono">${toolRank(tool) ? num(winChance(e, key, meter) * 100) + '%' : '—'}</span></li>`).join('')}</ul>`);
-  // Area: level, kecepatan, yang bisa ditemui
-  const s = state.areas[key], maxed = s.level >= MAX_LEVEL, need = areaXpNeeded(key, s.level);
-  const finds = [...new Set(EXPLORE[key].events.flatMap(e => e.find ? [e.find] : e.enemy ? ENEMIES[e.enemy].drops.map(d => d[0]) : []))];
-  setText(els.fold.area.querySelector('.fold-meta'), 'LV ' + s.level);
-  setHTML(els.fold.area.querySelector('.fold-body'),
-    `<div class="gear-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b>${s.level}</b></div><div class="tool-main">` +
-      `<div class="tool-title"><span class="name">${t(key)}</span><span class="tool-xp">${maxed ? t('max') : num(s.xp) + '/' + num(need) + ' XP'}</span></div>` +
-      `<span class="bar"><span class="fill" style="width:${maxed ? 100 : s.xp / need * 100}%"></span></span></div></div>` +
-    `<dl class="stats gear-stats"><div><dt>${t('autoSpeed')}</dt><dd>${t('secPerM')(num(autoStep(s.level) / 1000, 1))}</dd></div>` +
-      `<div><dt>${t('manualSpeed')}</dt><dd>${t('secPerM')(num(EX.manual / 1000, 1))}</dd></div></dl>` +
-    `<div class="sub-head caps">${t('encounters')}</div>` +
-    `<div class="enc-list">${enemies.map(e => `<span title="${t(e)}">${ENEMIES[e].icon}</span>`).join('')}<span class="sep"></span>${finds.map(k => `<span title="${nameOf(k)}">${iconOf(k)}</span>`).join('')}</div>` +
-    `<p class="note pad">${t('depthNote')}</p>`);
+      : `<p class="empty">${t('noFood')}</p>`);
 }
+// Panel kanan (≥1280px): kotak Tas di semua halaman
+let sideBagAt = 0;
+function renderSideBag(now = performance.now(), force) {
+  if (!force && (now - sideBagAt < 500 || innerWidth < 1280)) return;
+  sideBagAt = now;
+  setText($('side-bag-slots'), t('bagSlots')(num(bagUsed()), num(bagCapacity())));
+  setHTML($('side-bag-body'), bagHtml());
+}
+$('side-bag').addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.dataset.go) { go(b.dataset.go); return; }
+  if (b.dataset.pack) packFood(b.dataset.pack, b.dataset.qty === 'all' ? Infinity : +b.dataset.qty);
+  renderSideBag(performance.now(), true);
+  renderExplore();
+  if (page === 'rumah') { renderHouse(); renderBag(); }
+});
 
 function onExploreClick(region, e) {
   const b = e.target.closest('button');
@@ -1558,6 +1578,7 @@ function loop(now) {
   renderActivity();
   renderNext();
   renderSideItems(now);
+  renderSideBag(now);
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);

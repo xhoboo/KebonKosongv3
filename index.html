@@ -854,9 +854,11 @@
   .tint.moray { filter: hue-rotate(30deg) brightness(.6); }
   .tint.sword { filter: hue-rotate(170deg) saturate(1.5); }
   .emoji-fish.barracuda { filter: grayscale(.7) brightness(1.15); }
-  .ex-tiers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+  /* Kartu tier: info area (level, exp, kecepatan). Ponsel: baris yang bisa digeser; desktop: daftar di kiri. */
+  .ex-tiers { display: flex; gap: 8px; margin: 0 -16px 10px; padding: 0 16px 2px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .ex-tiers::-webkit-scrollbar { display: none; }
   .ex-tier {
-    display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 56px; padding: 7px 8px 0; overflow: hidden;
+    flex: 0 0 158px; display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 9px 10px 10px; scroll-snap-align: start;
     background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r);
     font: inherit; color: var(--ink); text-align: left; cursor: pointer;
   }
@@ -864,12 +866,27 @@
   .ex-tier.locked { background: var(--sunken); border-style: dashed; }
   .ex-tier.locked[aria-pressed="true"] { border-color: var(--muted); }
   .t-top { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  .t-lv { margin-left: auto; }
+  .t-lv { margin-left: auto; color: var(--ink-2); }
   .t-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
-  .t-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .ex-tier.locked .t-name { color: var(--dim); }
-  .t-bar { display: block; height: 2px; margin: auto -8px 0; background: var(--track); }
-  .t-bar .fill { background: var(--bar-xp); border-radius: 0; }
+  .ex-tier .lock-svg { color: var(--dim); }
+  .t-name { font-size: 13px; font-weight: 600; line-height: 1.25; }
+  .ex-tier.locked .t-name { color: var(--muted); }
+  .t-info { display: flex; flex-direction: column; gap: 3px; }
+  .t-info .bar { height: 3px; }
+  .t-info .fill { background: var(--bar-xp); }
+  .t-xp { font-size: 10px; color: var(--muted); text-align: right; }
+  .t-row { display: flex; justify-content: space-between; gap: 6px; font-size: 11px; color: var(--muted); }
+  .t-row .mono { color: var(--ink-2); font-size: 11px; }
+  .t-req { font-size: 11px; line-height: 1.35; color: var(--muted); }
+  .t-req:empty { display: none; }
+  .ex-tier.locked .t-info { display: none; }
+  .slot { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+  .slot + .slot { border-top: 1px solid var(--line); }
+  .slot .caps { font-size: 9px; }
+  .slot .r-name { font-size: 14px; }
+  .slot.empty .ibox { border-style: dashed; border-color: var(--line-2); }
+  .slot.empty .r-name { color: var(--muted); font-weight: 500; }
+  .slot.empty .r-sub { color: var(--dim); }
   .ex-view { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; }
   .ex-col > .fold:last-child, .ex-folds > .fold:last-child { margin-bottom: 0; }
   .ex-scene { position: relative; height: 220px; border-bottom: 1px solid var(--line); overflow: hidden; }
@@ -941,27 +958,15 @@
   .win-list .mono { flex: none; width: 40px; text-align: right; font-size: 11px; color: var(--ink-2); }
   .enc-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 12px 10px; font-size: 20px; line-height: 1; }
   .enc-list .sep { align-self: stretch; width: 1px; background: var(--line-2); }
-  .ex-tier .lock-svg { color: var(--dim); }
-  /* Desktop: tier jadi menu kiri, kartu jelajah kotak (±30% lebar layar) dengan jurnal di bawahnya.
-     900–1099: dua kolom (menu · kartu + bagian lain di bawahnya). ≥1100: tiga kolom, perlengkapan/tas/area di kanan. */
+  /* Desktop: kartu tier jadi daftar di kiri, pemandangan kotak dengan jurnal di bawahnya.
+     900–1099: dua kolom (tier · kartu + bagian lain di bawahnya). ≥1100: tiga kolom, kolom tengah = 50% isi. */
   @media (min-width: 900px) {
-    .ex-wrap { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 16px; align-items: start; }
+    .ex-wrap { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; align-items: start; }
     .ex-folds { grid-column: 2; }
     .ex-col { max-width: 480px; }
-    .ex-tiers {
-      position: sticky; top: calc(var(--top-h) + 20px); display: flex; flex-direction: column; gap: 0; margin: 0;
-      border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--panel);
-    }
-    .ex-tier { position: relative; min-height: 0; gap: 3px; padding: 9px 12px 0; border: 0; border-radius: 0; border-bottom: 1px solid var(--line); background: none; }
-    .ex-tier:last-child { border-bottom: 0; }
-    .ex-tier:hover { background: var(--side-hover); }
-    .ex-tier[aria-pressed="true"] { background: var(--side-cur); }
-    .ex-tier[aria-pressed="true"]::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 10px; width: 2px; background: var(--ink); animation: nav-line .22s var(--ease-out) both; }
-    .ex-tier.locked { background: none; border-style: solid; }
-    .ex-tier.locked[aria-pressed="true"] { background: var(--sunken); }
-    .ex-tier.locked[aria-pressed="true"]::before { background: var(--muted); }
-    .t-name { font-size: 13px; white-space: normal; }
-    .t-bar { margin: 6px -12px 0; }
+    .ex-tiers { position: sticky; top: calc(var(--top-h) + 20px); flex-direction: column; margin: 0; padding: 0; overflow: visible; }
+    .ex-tier { flex: none; }
+    .ex-tier:not([aria-pressed="true"]):not(.locked):hover { border-color: var(--line-strong); }
     .ex-scene { height: auto; aspect-ratio: 1; }
   }
   .gear-row .tool-title { flex-wrap: wrap; }
@@ -970,10 +975,20 @@
     .ex-folds .gear-stats { grid-template-columns: 1fr; }
   }
   @media (min-width: 1100px) {
-    .ex-wrap { grid-template-columns: 168px minmax(300px, 30vw) minmax(240px, 1fr); }
+    .ex-wrap { grid-template-columns: 180px minmax(0, 50%) minmax(0, 1fr); }
     .ex-col { max-width: none; }
     .ex-folds { grid-column: 3; }
   }
+  /* ≥1280: Tas ada di panel kanan, jadi bagian Tas di halaman jelajah disembunyikan */
+  @media (min-width: 1280px) {
+    .ex-folds .fold[data-fold="bag"] { display: none; }
+  }
+  .side-bag .bag-items { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }
+  .side-bag .bag-items .item-icon { font-size: 20px; }
+  .side-bag .sell-row { gap: 6px; padding: 6px 10px; }
+  .side-bag .sell-icon { font-size: 20px; }
+  .side-bag .sell-btn { min-width: 36px; padding: 0 6px; }
+  .side-bag .empty { padding: 10px 12px; }
 
   /* ---------- Motion: animasi mengikuti input, tidak pernah menahan input ---------- */
   .btn2, .forge-btn, .sell-btn, .notice-btn, .upgrade-btn, .tab, .subtab, .seg button, .goal, .hint-go, .act-stop, .chip, .item, .seed-row, .reset-btn, .tool-link, .nav-item {
@@ -1166,6 +1181,10 @@
     <div class="activity" id="side-activity"></div>
   </section>
   <section class="next-strip side-box" hidden></section>
+  <section class="side-box side-bag" id="side-bag">
+    <div class="side-head"><span class="caps" data-i18n="bag"></span><span class="caps" id="side-bag-slots"></span></div>
+    <div id="side-bag-body"></div>
+  </section>
   <section class="side-box">
     <div class="side-head"><span class="caps" data-i18n="house"></span><span class="caps" id="side-house-slots"></span></div>
     <ul class="items side-items" id="side-items"></ul>
@@ -1180,9 +1199,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-16.2"></script>
-<script src="js/game.js?v=2026-11-16.2"></script>
-<script src="js/ui.js?v=2026-11-16.2"></script>
-<script src="js/debug.js?v=2026-11-16.2"></script>
+<script src="js/data.js?v=2026-11-16.3"></script>
+<script src="js/game.js?v=2026-11-16.3"></script>
+<script src="js/ui.js?v=2026-11-16.3"></script>
+<script src="js/debug.js?v=2026-11-16.3"></script>
 </body>
 </html>
