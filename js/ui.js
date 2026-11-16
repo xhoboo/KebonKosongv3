@@ -714,7 +714,7 @@ for (const [region, r] of Object.entries(REGIONS)) {
   // Slider batas makan dibuat sekali (bukan lewat setHTML) supaya tidak terganti saat digeser
   wrap.querySelector('[data-fold="provision"] .fold-body').innerHTML = '<div class="prov-main"></div>' +
     `<label class="eat-at"><span class="eat-head"><span data-i18n="eatAtLabel"></span><span class="mono eat-val"></span></span>` +
-    `<input type="range" min="10" max="90" step="5" data-eat></label>`;
+    `<input type="range" min="10" max="90" step="1" data-eat></label>`;
   main.appendChild(wrap);
   const q = sel => wrap.querySelector(sel);
   exEls[region] = {
@@ -907,7 +907,7 @@ function renderFolds(region, key) {
 // Isi tas (hanya lihat) + tautan ke Rumah; dipakai bagian Tas halaman jelajah dan panel kanan di luar Rumah
 function bagViewHtml() {
   const busy = exploring(), bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
-  return (bagKeys.length ? `<ul class="items bag-items">${bagKeys.map(k => `<li><span class="item" title="${nameOf(k)}" role="img" aria-label="${nameOf(k)}, ${num(state.bag.items[k])}">` +
+  return (bagKeys.length ? `<ul class="items bag-items">${bagKeys.map(k => `<li><span class="item" data-item="${k}" tabindex="0" role="img" aria-label="${nameOf(k)}, ${num(state.bag.items[k])}">` +
       `<span class="item-icon" aria-hidden="true">${iconOf(k)}</span><span class="item-qty" aria-hidden="true">${num(state.bag.items[k])}</span></span></li>`).join('')}</ul>`
       : `<p class="empty">${t('bagEmpty')}</p>`) +
     `<button class="goal" data-go="rumah"><span>${busy ? t('bagBusy') : t('bagSortHint')}</span><span class="mono">→</span></button>`;
@@ -1432,16 +1432,24 @@ marketEl.addEventListener('click', e => {
   renderMarket();
 });
 
+// Nama item: muncul saat item diklik (2 detik, klik lagi menutup) atau saat kursor di atas item (hover).
+// Berlaku untuk semua kotak item yang punya data-item: isi Rumah dan isi tas di semua halaman.
+// Tooltip dipindah ke <body>: animasi masuk halaman memberi transform pada <main>, dan transform membuat
+// posisi fixed dihitung dari <main>, bukan layar, sehingga nama muncul jauh dari itemnya.
 const tipEl = $('tip');
-let tipTimer;
+document.body.appendChild(tipEl);
+let tipTimer, tipSticky = false;
+const canHover = matchMedia('(hover: hover)');
 
-function showTip(key) {
-  openItem = key;
+function showTip(key, el, sticky = false) {
   clearTimeout(tipTimer);
-  renderHouse();
-  if (!key) { tipEl.hidden = true; return; }
-  const r = itemsEl.querySelector(`[data-item="${key}"]`).getBoundingClientRect();
-  const def = itemDef(key);
+  tipSticky = !!key && sticky;
+  // Tanda terbuka di kotak Rumah hanya untuk tooltip hasil klik
+  openItem = tipSticky ? key : null;
+  itemsEl.querySelectorAll('.item[aria-expanded="true"]').forEach(b => b.setAttribute('aria-expanded', 'false'));
+  if (openItem) itemsEl.querySelectorAll('.item[data-item]').forEach(b => { if (b.dataset.item === openItem) b.setAttribute('aria-expanded', 'true'); });
+  if (!key || !el) { tipEl.hidden = true; return; }
+  const r = el.getBoundingClientRect(), def = itemDef(key);
   // Nama berwarna tier hanya di tooltip
   tipEl.innerHTML = `<span class="tip-name q-${parseKey(key).q}">${nameOf(key)}</span>` + (heals[key] ? ' <span class="tip-meta">❤️ ' + heals[key] + '</span>' : '') +
     (def.weapon || def.armor ? ' <span class="tip-meta">' + gearStats(key) + '</span>' : '');
@@ -1452,19 +1460,31 @@ function showTip(key) {
   tipEl.style.left = x + 'px';
   tipEl.style.top = (r.top - 8) + 'px';
   tipEl.style.setProperty('--arrow', (r.left + r.width / 2 - x) + 'px');
-  tipTimer = setTimeout(() => showTip(null), 2000);
+  if (sticky) tipTimer = setTimeout(() => showTip(null), 2000);
 }
 
 // Klik item: munculkan nama; klik item yang sama atau di luar item: tutup
 document.addEventListener('click', e => {
   const item = e.target.closest('.item[data-item]');
-  if (item) {
-    showTip(openItem === item.dataset.item ? null : item.dataset.item);
-    itemsEl.querySelector(`[data-item="${item.dataset.item}"]`).focus();
-  } else if (openItem) showTip(null);
+  if (item) showTip(tipSticky && openItem === item.dataset.item ? null : item.dataset.item, item, true);
+  else if (!tipEl.hidden) showTip(null);
 });
-window.addEventListener('scroll', () => openItem && showTip(null), { passive: true });
-window.addEventListener('resize', () => openItem && showTip(null));
+// Hover (perangkat dengan kursor) dan fokus keyboard: nama tampil selama kursor/fokus di item
+document.addEventListener('mouseover', e => {
+  const item = canHover.matches && !tipSticky && e.target.closest('.item[data-item]');
+  if (item) showTip(item.dataset.item, item);
+});
+document.addEventListener('mouseout', e => {
+  const item = e.target.closest('.item[data-item]');
+  if (item && !tipSticky && !item.contains(e.relatedTarget)) showTip(null);
+});
+document.addEventListener('focusin', e => {
+  const item = !tipSticky && e.target.closest('.item[data-item]');
+  if (item) showTip(item.dataset.item, item);
+});
+document.addEventListener('focusout', e => { if (!tipSticky && e.target.closest('.item[data-item]')) showTip(null); });
+window.addEventListener('scroll', () => { if (!tipEl.hidden) showTip(null); }, { passive: true });
+window.addEventListener('resize', () => { if (!tipEl.hidden) showTip(null); });
 
 // ---------- Aktivitas (dock ponsel, strip tablet, panel kanan desktop) ----------
 // Penghitung sesi "+N kayu" hanya hidup di tampilan (tidak disimpan); mulai dari 0 tiap kegiatan berganti.
@@ -1584,7 +1604,7 @@ function setMenu() {}
 
 function showPage(name) {
   exPick = null;
-  if (openItem) showTip(null);
+  showTip(null);
   // Tautan lama: Inventory jadi Rumah, Pohon jadi Hutan
   name = { inventory: 'rumah', pohon: 'hutan', petualangan: 'hutan' }[name] || name;
   page = PAGES.includes(name) && areaOpen(name) ? name : 'hutan';

@@ -386,9 +386,9 @@ function unequipGear(slot) {
   save();
   return true;
 }
-// Batas makan otomatis, 10–90% HP maks
+// Batas makan otomatis, 10–90% HP maks, per 1%
 function setEatAt(v) {
-  state.eatAt = Math.min(0.9, Math.max(0.1, Math.round(v * 20) / 20));
+  state.eatAt = Math.min(0.9, Math.max(0.1, Math.round(v * 100) / 100));
   save();
 }
 // Musuh makin kuat seiring meter (lurus sampai 1.000 m, lalu tetap)
