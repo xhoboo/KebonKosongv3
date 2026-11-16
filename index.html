@@ -289,25 +289,6 @@
   .sheet .side-head { padding: 12px 16px; }
   @keyframes sheet-up { from { transform: translateY(100%); } }
   @keyframes fade { from { opacity: 0; } }
-  /* Strip "Berikutnya": rantai 4 langkah loop pertama */
-  .next-strip { margin-bottom: 12px; }
-  .next-chain { display: flex; align-items: center; justify-content: space-between; padding: 12px; }
-  .next-step { position: relative; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line-2); border-radius: var(--r); font-size: 22px; line-height: 1; }
-  .next-step.cur { border-color: var(--ink); }
-  .next-step.todo { border-style: dashed; }
-  .next-step.todo > .ni { filter: grayscale(1); opacity: .45; }
-  .next-step.done > .ni { opacity: .8; }
-  .next-check { position: absolute; right: -5px; top: -5px; width: 14px; height: 14px; border-radius: 3px; background: var(--ink); display: grid; place-items: center; }
-  .next-check svg { width: 9px; height: 9px; }
-  .next-arrow { width: 12px; height: 12px; color: var(--off); }
-  .next-text {
-    display: flex; width: 100%; justify-content: space-between; gap: 8px; padding: 0 12px 12px; background: none; border: 0;
-    font: inherit; font-size: 13px; color: var(--ink-2); text-align: left; cursor: pointer;
-  }
-  .next-text .mono { color: var(--muted); font-size: 12px; }
-  .side-panel .next-strip { margin: 0; }
-  .side-panel .next-step { width: 36px; height: 36px; font-size: 20px; }
-  @media (min-width: 1280px) { #page-kebun > .next-strip, #page-hutan > .next-strip { display: none; } }
   .shop { margin: 0 0 16px; }
   /* Kualitas tempa: warna nama + bingkai kotak item */
   .q-good { --q: var(--q-good); } .q-great { --q: var(--q-great); } .q-legend { --q: var(--q-legend); }
@@ -887,6 +868,8 @@
   .slot.empty .ibox { border-style: dashed; border-color: var(--line-2); }
   .slot.empty .r-name { color: var(--muted); font-weight: 500; }
   .slot.empty .r-sub { color: var(--dim); }
+  .slot .sell-btn { flex: none; }
+  .slot-ic { width: 22px; height: 22px; color: var(--off); }
   .ex-view { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; }
   .ex-col > .fold:last-child, .ex-folds > .fold:last-child { margin-bottom: 0; }
   .ex-scene { position: relative; height: 220px; border-bottom: 1px solid var(--line); overflow: hidden; }
@@ -967,7 +950,9 @@
     .ex-tiers { position: sticky; top: calc(var(--top-h) + 20px); flex-direction: column; margin: 0; padding: 0; overflow: visible; }
     .ex-tier { flex: none; }
     .ex-tier:not([aria-pressed="true"]):not(.locked):hover { border-color: var(--line-strong); }
-    .ex-scene { height: auto; aspect-ratio: 1; }
+    /* Kotak sampai lebar 720px; tinggi juga dibatasi layar supaya tombol tetap terlihat */
+    .ex-view { container-type: inline-size; }
+    .ex-scene { height: min(100cqw, calc(100dvh - var(--top-h) - 250px)); min-height: 260px; }
   }
   .gear-row .tool-title { flex-wrap: wrap; }
   .gear-row .tool-title .name { white-space: normal; }
@@ -976,7 +961,7 @@
   }
   @media (min-width: 1100px) {
     .ex-wrap { grid-template-columns: 180px minmax(0, 50%) minmax(0, 1fr); }
-    .ex-col { max-width: none; }
+    .ex-col { max-width: 720px; }
     .ex-folds { grid-column: 3; }
   }
   /* ≥1280: Tas ada di panel kanan, jadi bagian Tas di halaman jelajah disembunyikan */
@@ -1044,7 +1029,6 @@
   <section class="dock activity" id="dock" hidden></section>
   <div class="lock-bar" id="lock-bar" role="status" hidden></div>
   <main id="page-kebun" hidden>
-    <section class="next-strip side-box" hidden></section>
     <section class="tool">
       <div class="tool-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b id="farm-lv"></b></div><div class="tool-main">
         <div class="tool-title"><span class="tool-icon" aria-hidden="true">🧑‍🌾</span><span class="name" data-i18n="farming"></span><span class="tool-xp" id="farm-xp"></span></div>
@@ -1063,9 +1047,7 @@
     <p class="note seed-note" data-i18n="seedTableNote"></p>
   </main>
 
-  <main id="page-hutan" class="explore">
-    <section class="next-strip side-box" hidden></section>
-  </main>
+  <main id="page-hutan" class="explore"></main>
 
   <main id="page-goa" class="explore" hidden></main>
 
@@ -1180,7 +1162,6 @@
     <div class="side-head"><span class="caps" data-i18n="lblActivity"></span><span class="caps live" id="side-running" data-i18n="lblRunning" hidden></span></div>
     <div class="activity" id="side-activity"></div>
   </section>
-  <section class="next-strip side-box" hidden></section>
   <section class="side-box side-bag" id="side-bag">
     <div class="side-head"><span class="caps" data-i18n="bag"></span><span class="caps" id="side-bag-slots"></span></div>
     <div id="side-bag-body"></div>
@@ -1199,9 +1180,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-16.3"></script>
-<script src="js/game.js?v=2026-11-16.3"></script>
-<script src="js/ui.js?v=2026-11-16.3"></script>
-<script src="js/debug.js?v=2026-11-16.3"></script>
+<script src="js/data.js?v=2026-11-16.4"></script>
+<script src="js/game.js?v=2026-11-16.4"></script>
+<script src="js/ui.js?v=2026-11-16.4"></script>
+<script src="js/debug.js?v=2026-11-16.4"></script>
 </body>
 </html>

@@ -664,10 +664,20 @@ function journalText(e) {
   return '';
 }
 
-// Jurnal di bawah kartu jelajah; slot perlengkapan, Mastery Armor, dan Tas di kolom kanan.
+// Jurnal di bawah kartu jelajah; Perbekalan, slot perlengkapan, Mastery Armor, dan Tas di kolom kanan.
 // Info area (level, exp, kecepatan) ada di kartu tier masing-masing. Tas pindah ke panel kanan di ≥1280px.
-const FOLDS = ['journal', 'gear', 'mastery', 'bag'];
-const FOLD_TEXT = { journal: 'foldJournal', bag: 'foldBag', gear: 'foldGear', mastery: 'armorMastery' };
+const FOLDS = ['journal', 'provision', 'gear', 'mastery', 'bag'];
+const FOLD_TEXT = { journal: 'foldJournal', provision: 'foldProvision', bag: 'foldBag', gear: 'foldGear', mastery: 'armorMastery' };
+// Slot perlengkapan dan ikon garis redupnya saat kosong. Tangan memegang alat wilayah (kapak/beliung/tombak).
+const SLOT_ICON = d => `<svg class="slot-ic" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const GEAR_SLOTS = [
+  ['head', 'slotHead', SLOT_ICON('<path d="M5 15a7 7 0 0 1 14 0v2H5z"/><path d="M3 17h18"/><path d="M12 8V5"/>')],
+  ['body', 'slotBody', SLOT_ICON('<path d="M8 4 4 7l2 4 2-1v10h8V10l2 1 2-4-4-3c-1 1.5-2.4 2-4 2s-3-.5-4-2z"/>')],
+  ['hands', 'slotHands', SLOT_ICON('<path d="M7 20v-7l-2-3a1.4 1.4 0 0 1 2.3-1.6L9 10V5a1.3 1.3 0 0 1 2.6 0v5-6a1.3 1.3 0 0 1 2.6 0v6-5a1.3 1.3 0 0 1 2.6 0v9c0 3-1.5 6-4.8 6z"/>')],
+  ['legs', 'slotLegs', SLOT_ICON('<path d="M6 4h12l1 16h-5l-2-10-2 10H5z"/><path d="M6 7h12"/>')],
+  ['feet', 'slotFeet', SLOT_ICON('<path d="M8 4h5v9l6 3a2 2 0 0 1 1 2v2H4v-4l4-3z"/><path d="M4 18h16"/>')],
+];
+const FOOD_SLOT_ICON = SLOT_ICON('<path d="M5 11h14a7 7 0 0 1-14 0z"/><path d="M3 11h18"/><path d="M9 4c0 2 2 2 2 4M13 4c0 2 2 2 2 4"/>');
 const exSel = {}; // tier area yang sedang dilihat per wilayah
 const exEls = {}; // elemen tiap halaman wilayah
 const lastHit = {}; // encounter terakhir per area (untuk toast di pemandangan): { res, at }
@@ -832,17 +842,28 @@ function renderFolds(region, key) {
   // Tas (juga di panel kanan pada ≥1280px)
   setText(els.fold.bag.querySelector('.fold-meta'), t('bagSlots')(num(bagUsed()), num(bagCapacity())));
   setHTML(els.fold.bag.querySelector('.fold-body'), bagHtml());
-  // Slot perlengkapan: alat wilayah (terpasang), senjata & armor (kosong, belum dipakai saat menjelajah)
-  const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], rank = toolRank(tool);
-  const slot = (label, icon, name, sub, tier, empty) => `<div class="slot${empty ? ' empty' : ''}"><span class="ibox" aria-hidden="true">${icon}</span>` +
+  // Perbekalan: satu slot masakan (dimakan otomatis), plus masakan di tas yang bisa dipasang
+  const pv = state.provision, bagFoods = Object.keys(state.bag.items).filter(k => heals[k] && state.bag.items[k] >= 1).sort((a, b) => heals[b] - heals[a]);
+  const slot = (label, icon, name, sub, tier, empty, act = '') => `<div class="slot${empty ? ' empty' : ''}"><span class="ibox" aria-hidden="true">${icon}</span>` +
     `<div class="r-info"><div class="caps">${label}</div><div class="r-name">${name}</div>${sub ? `<div class="r-sub">${sub}</div>` : ''}</div>` +
-    (tier ? `<span class="r-tier">${tier}</span>` : '') + '</div>';
+    (tier ? `<span class="r-tier">${tier}</span>` : '') + act + '</div>';
+  setText(els.fold.provision.querySelector('.fold-meta'), pv ? '×' + num(pv.qty) : '');
+  setHTML(els.fold.provision.querySelector('.fold-body'),
+    (pv ? slot(t('catFood'), iconOf(pv.key), nameOf(pv.key), `×${num(pv.qty)} · ❤️ ${heals[pv.key]}`, '', false,
+      `<button class="sell-btn" data-unprov="1">${t('provUnequip')}</button>`)
+      : slot(t('catFood'), FOOD_SLOT_ICON, t('slotEmpty'), '', '', true)) +
+    `<p class="note pad">${t('provHint')}</p>` +
+    (bagFoods.length ? `<ul class="market">${bagFoods.map(k =>
+      `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
+      `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">${num(state.bag.items[k])} · ❤️ ${heals[k]}</span></span>` +
+      `<button class="sell-btn" data-prov="${k}">${t('provEquip')}</button></li>`).join('')}</ul>`
+      : pv ? '' : `<p class="empty">${t('provNone')}</p>`));
+  // Slot perlengkapan: Kepala, Badan, Tangan (alat wilayah), Celana, Kaki. Slot kosong = kotak dengan ikon garis redup.
+  const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], rank = toolRank(tool);
   setText(els.fold.gear.querySelector('.fold-meta'), rank ? '⚔️ ' + toolAtk(tool) : '');
-  setHTML(els.fold.gear.querySelector('.fold-body'),
-    (rank ? slot(t('slotTool'), def.icon, t(def.tiers[st.tier].key), `${t('toolAtk')} ${toolAtk(tool)}`, 'T' + rank)
-      : slot(t('slotTool'), '', t('slotEmpty'), t('needs')(t(def.tiers[1].key)), '', true)) +
-    slot(t('weapon'), '', t('slotEmpty'), t('slotSoon'), '', true) +
-    slot(t('armor'), '', t('slotEmpty'), t('slotSoon'), '', true));
+  setHTML(els.fold.gear.querySelector('.fold-body'), GEAR_SLOTS.map(([k, label, icon]) =>
+    k === 'hands' && rank ? slot(t(label), def.icon, t(def.tiers[st.tier].key), `${t('toolAtk')} ${toolAtk(tool)}`, 'T' + rank)
+      : slot(t(label), icon, t('slotEmpty'), k === 'hands' ? t('needs')(t(def.tiers[1].key)) : '', '', true)).join(''));
   // Mastery Armor
   const ar = state.armor, arMax = ar.level >= MAX_LEVEL;
   setText(els.fold.mastery.querySelector('.fold-meta'), 'LV ' + ar.level);
@@ -912,7 +933,10 @@ function onExploreClick(region, e) {
     settings.folds[f] = !settings.folds[f];
     saveSettings();
   } else if (b.dataset.pack) packFood(b.dataset.pack, b.dataset.qty === 'all' ? Infinity : +b.dataset.qty);
+  else if (b.dataset.prov) equipProvision(b.dataset.prov);
+  else if (b.dataset.unprov) { if (!unequipProvision()) { replay(b, 'nope'); return; } }
   else return;
+  renderSideBag(performance.now(), true);
   renderExplore(region);
   render();
 }
@@ -1262,46 +1286,6 @@ function harvestPop(i, html) {
 // Petak dihitung dari jam nyata: perbarui tiap detik selama halaman Kebun terbuka
 setInterval(() => { if (page === 'kebun') renderFarm(); }, 1000);
 
-// ---------- Berikutnya: rantai loop pertama (daun → Kepeng → benih → tanaman) ----------
-const NEXT_STEPS = [
-  { icon: () => icons.leaf, text: 'nextLeaf', to: 'hutan' },
-  // Daun dari Hutan masih di tas: simpan dulu di Rumah, baru dijual
-  { icon: () => KEPENG_ICON, text: () => state.items.leaf >= 1 || !(state.bag.items.leaf >= 1) ? 'nextSell' : 'nextStore', to: () => state.items.leaf >= 1 || !(state.bag.items.leaf >= 1) ? 'pasar' : 'rumah' },
-  { icon: () => icons.kangkungSeed, text: 'nextPlant', to: 'kebun' },
-  { icon: () => icons.kangkung, text: 'nextHarvest', to: 'kebun' },
-];
-const CHECK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10" fill="none" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round"/></svg>';
-const NEXT_ARROW = '<svg class="next-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h12m-5-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-let nextKey = '', onboardPrev = state.onboard, onboardDoneUntil = 0;
-function renderNext() {
-  const ob = state.onboard;
-  // "Loop pertama selesai" tampil sekali (beberapa detik) saat langkah terakhir selesai, lalu strip hilang
-  if (ob === 4 && onboardPrev < 4) onboardDoneUntil = Date.now() + 6000;
-  onboardPrev = ob;
-  const show = ob < 4 || Date.now() < onboardDoneUntil;
-  const leaf = Math.min(5, Math.floor(leafCount()));
-  const stepText = s => typeof s.text === 'function' ? s.text() : s.text, stepTo = s => typeof s.to === 'function' ? s.to() : s.to;
-  const key = show + '|' + ob + '|' + (ob === 0 ? leaf : '') + '|' + (NEXT_STEPS[ob] ? stepText(NEXT_STEPS[ob]) : '') + '|' + settings.lang;
-  if (key === nextKey) return;
-  nextKey = key;
-  document.querySelectorAll('.next-strip').forEach(el => {
-    el.hidden = !show;
-    if (!show) return;
-    const step = NEXT_STEPS[ob];
-    el.innerHTML = `<div class="side-head"><span class="caps" id="next-h">${t('lblNext')}</span><span class="caps">${Math.min(ob, 4)}/4</span></div>` +
-      `<div class="next-chain" aria-hidden="true">${NEXT_STEPS.map((s, i) =>
-        `<span class="next-step ${i < ob ? 'done' : i === ob ? 'cur' : 'todo'}"><span class="ni">${s.icon()}</span>${i < ob ? `<span class="next-check">${CHECK_SVG}</span>` : ''}</span>` +
-        (i < 3 ? NEXT_ARROW : '')).join('')}</div>` +
-      (step ? `<button class="next-text" data-go="${stepTo(step)}"><span>${t(stepText(step))}</span><span class="mono">${ob === 0 ? leaf + '/5' : '→'}</span></button>`
-        : `<div class="next-text"><span>${t('nextDone')}</span><span class="mono">✓</span></div>`);
-    el.setAttribute('aria-label', t('lblNext') + ': ' + (step ? t(stepText(step)) : t('nextDone')));
-  });
-}
-document.addEventListener('click', e => {
-  const b = e.target.closest('.next-text[data-go]');
-  if (b) go(b.dataset.go);
-});
-
 // Pasar: beli benih biasa
 function renderSeedShop() {
   $('seed-shop').innerHTML = Object.entries(CROPS).filter(([, c]) => c.shop).map(([k, c]) =>
@@ -1576,7 +1560,6 @@ function loop(now) {
   renderNavStatus();
   renderCounter();
   renderActivity();
-  renderNext();
   renderSideItems(now);
   renderSideBag(now);
   requestAnimationFrame(loop);

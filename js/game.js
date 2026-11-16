@@ -6,7 +6,8 @@ const SETTINGS_KEY = 'kebon-kosong-settings';
 try { ['idle-penebang-v1', 'kebon-kosong', 'kebon-kosong-v2'].forEach(k => localStorage.removeItem(k)); } catch {}
 
 // Versi bentuk state. Setiap perubahan bentuk state: naikkan SAVE_VERSION dan tambahkan MIGRATIONS[versi baru].
-const SAVE_VERSION = 13;
+// 14: slot Perbekalan (state.provision)
+const SAVE_VERSION = 14;
 const freshState = () => ({
   items: Object.fromEntries(ITEMS.map(it => [it.key, 0])),
   nodes: Object.fromEntries(Object.keys(NODES).map(k => [k, { level: 0, xp: 0 }])), // node memancing
@@ -19,6 +20,7 @@ const freshState = () => ({
   farm: { level: 0, xp: 0, plots: Array(FARM.freeSlots).fill(null) }, // petak: null atau { crop, at: waktu tanam }
   armor: { level: 0, xp: 0 }, // Mastery Armor
   bag: { level: 0, items: {} },
+  provision: null, // slot Perbekalan: { key, qty } satu jenis masakan; hanya ini yang dimakan otomatis saat jelajah
   exMode: 'manual', // cara maju saat menjelajah: 'manual' (klik, 1 dtk/m) atau 'auto'
   trip: null, // perjalanan yang sedang berjalan: { area, meter, hp, walking, wins, losses, kepeng }
   lastTrip: null, // ringkasan perjalanan terakhir: { area, meter, wins, losses, kepeng }
@@ -48,8 +50,15 @@ function gainXp(s, amount, need) {
 
 // Migrasi simpanan: MIGRATIONS[n](saved) mengubah simpanan versi n−1 menjadi bentuk versi n, dijalankan berurutan
 // sebelum digabung ke state baru. Field baru yang cukup diisi bawaan tidak perlu migrasi (merge mengisinya).
-// Contoh: 14: s => { s.trip && (s.trip.kind = 'walk'); },
-const MIGRATIONS = {};
+const MIGRATIONS = {
+  // 14: makan otomatis sekarang hanya dari slot Perbekalan. Supaya perjalanan yang sedang berjalan tidak tiba-tiba
+  // tanpa makanan, masakan di tas dengan pemulihan terbesar langsung dipasang ke slot.
+  14: s => {
+    const items = s.bag && s.bag.items || {};
+    const food = Object.keys(items).filter(k => heals[k] && items[k] >= 1).sort((a, b) => heals[b] - heals[a])[0];
+    if (food && !s.provision) { s.provision = { key: food, qty: items[food] }; delete items[food]; }
+  },
+};
 
 // Gabungkan simpanan ke state baru: objek digabung per kunci (kunci yang belum ada di simpanan tetap bawaan,
 // kunci dinamis seperti item tetap dibawa), nilai lain diambil kalau jenisnya cocok.
@@ -459,18 +468,35 @@ const ticking = () => !!state.active && !(exploring() && state.exMode === 'manua
 
 const randInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
 
-// Makan otomatis selama HP ≤ batas dan masih ada masakan di tas: pilih yang paling pas
-// (pulihnya terbesar yang tidak melebihi HP yang hilang, kalau tidak ada yang terkecil)
+// Makan otomatis selama HP ≤ batas, hanya dari slot Perbekalan (masakan di tas harus dipasang dulu)
 function autoEat(at) {
-  const tr = state.trip, max = maxHp();
-  while (tr.hp > 0 && tr.hp <= max * EX.eatBelow) {
-    const foods = Object.keys(state.bag.items).filter(k => heals[k]).sort((a, b) => heals[b] - heals[a]);
-    if (!foods.length) return;
-    const missing = max - tr.hp, food = foods.find(k => heals[k] <= missing) || foods[foods.length - 1];
-    bagTake(food, 1);
-    tr.hp = Math.min(max, tr.hp + heals[food]);
-    log(at, { k: 'eat', a: tr.area, m: tr.meter, f: food, h: heals[food] });
+  const tr = state.trip, max = maxHp(), p = state.provision;
+  while (p && p.qty >= 1 && tr.hp > 0 && tr.hp <= max * EX.eatBelow) {
+    p.qty--;
+    tr.hp = Math.min(max, tr.hp + heals[p.key]);
+    log(at, { k: 'eat', a: tr.area, m: tr.meter, f: p.key, h: heals[p.key] });
   }
+  if (p && !(p.qty >= 1)) state.provision = null;
+}
+
+// Slot Perbekalan: satu jenis masakan. Pasang = seluruh tumpukan pindah dari tas ke slot (bekal lain di slot
+// kembali ke tas); Lepas = kembali ke tas. Boleh saat menjelajah.
+function equipProvision(key) {
+  if (!heals[key] || !(state.bag.items[key] >= 1)) return false;
+  const qty = state.bag.items[key], prev = state.provision;
+  bagTake(key, qty);
+  if (prev && prev.key === key) { prev.qty += qty; save(); return true; }
+  if (prev) bagAdd(prev.key, prev.qty); // selalu muat: satu jenis baru saja keluar dari tas
+  state.provision = { key, qty };
+  save();
+  return true;
+}
+function unequipProvision() {
+  const p = state.provision;
+  if (!p || !bagAdd(p.key, p.qty)) return false;
+  state.provision = null;
+  save();
+  return true;
 }
 
 // Undi encounter; temuan langka makin sering seiring kedalaman
