@@ -28,7 +28,7 @@ const TEXT = {
     carp: 'Ikan Mas', pangasius: 'Ikan Patin', giantSnakehead: 'Ikan Toman', eel: 'Ikan Sidat',
     mackerel: 'Ikan Kembung', tuna: 'Ikan Tongkol', snapper: 'Ikan Kakap', grouper: 'Ikan Kerapu',
     lakeLocked: 'Butuh Joran Lentur (tempa di Anvil)', unlockedLake: 'Danau terbuka!',
-    seaLocked: 'Butuh Joran Besi (tempa di Anvil)', unlockedSea: 'Laut terbuka!',
+    seaLocked: 'Butuh Tombak Bertali (tempa di Anvil)', unlockedSea: 'Laut terbuka!',
     grilledCarp: 'Ikan Mas Bakar', friedMackerel: 'Kembung Goreng', gulaiPatin: 'Gulai Patin', grilledSnapper: 'Kakap Bakar', grouperSoup: 'Sup Kerapu', honey: 'Madu Hutan',
     ironKris: 'Keris Besi', ironMachete: 'Golok Besi', ironSpear: 'Tombak Besi', scaleVest: 'Rompi Sisik',
     goldKris: 'Keris Luk Emas', ulinMachete: 'Golok Ulin', ulinSpear: 'Tombak Ulin', pantherArmor: 'Zirah Macan',
@@ -45,7 +45,7 @@ const TEXT = {
     buySlot: (n, max) => `Beli petak ke-${n} (maks ${max})`, plantAll: 'Tanam semua', harvestAll: 'Panen semua',
     chooseSeed: 'Pilih benih untuk ditanam', noSeeds: 'Belum punya benih. Beli di Pasar.', ready: 'Siap panen', wilted: 'Layu',
     wiltsIn: d => `layu dalam ${d}`, needFarm: lv => `Butuh Berkebun Lv. ${lv}`, grows: d => `Tumbuh ${d}`,
-    buySeeds: 'Beli benih', buy: n => `Beli ${n}`, rareSeedHint: 'Benih langka hanya didapat dari petualangan.',
+    buySeeds: 'Beli benih', buy: n => `Beli ${n}`, rareSeedHint: 'Benih langka hanya didapat dari Hutan.',
     hours: 'j', minutes: 'm', days: 'h',
     qCommon: 'Biasa', qGood: 'Bagus', qGreat: 'Istimewa', qLegend: 'Pusaka',
     trSharp: 'Tajam', trLight: 'Ringan', trLucky: 'Beruntung', trSturdy: 'Kokoh', trVital: 'Perkasa',
@@ -90,6 +90,38 @@ const TEXT = {
     sortCat: 'Kategori', sortQty: 'Jumlah', sortName: 'Nama',
     catWood: 'Kayu', catStone: 'Batu & Logam', catNature: 'Bahan Alam',
     discarded: 'Dibuang karena rumah penuh', dismiss: 'Tutup',
+    // Jelajah
+    grpExplore: 'Jelajah', navExplore: 'Menjelajah',
+    forest1: 'Hutan Tepi', forest2: 'Hutan Dalam', forest3: 'Hutan Rimba', forest4: 'Hutan Larangan',
+    cave1: 'Mulut Goa', cave2: 'Lorong Goa', cave3: 'Goa Gelap', cave4: 'Perut Bumi',
+    sea1: 'Pantai', sea2: 'Terumbu Karang', sea3: 'Laut Lepas', sea4: 'Palung Laut',
+    harpoonNone: 'Belum punya tombak', harpoonBasic: 'Tombak Bertali', harpoonShiny: 'Tombak Berkilau',
+    harpoonCopper: 'Tombak Tembaga', harpoonIron: 'Tombak Besi',
+    manual: 'Manual', auto: 'Auto', enter: 'Masuk', walk: 'Maju 1 m', walking: 'Berjalan…', goHome: 'Pulang',
+    secPerM: s => `${s} dtk/m`, autoSpeed: 'Kecepatan auto', manualSpeed: 'Kecepatan manual', maxHp: 'HP maks',
+    needAreaLv: (name, lv) => `Butuh ${name} Lv. ${lv}`, elsewhere: name => `Sedang menjelajah ${name}`, goThere: 'Lihat →',
+    foldJournal: 'Jurnal', foldBag: 'Tas', foldGear: 'Perlengkapan', foldArea: 'Area',
+    encounters: 'Bisa ditemui', winAt: m => `Peluang menang di ${m} m`, depthNote: 'Makin jauh, musuh makin kuat dan loot makin bagus (puncak di 1.000 m).',
+    actExplore: n => `Menjelajah ${n}`, armorMastery: 'Mastery Armor', toolAtk: 'Serangan',
+    jEmpty: 'Tidak menemukan apa-apa', jKepeng: n => `Menemukan ${n} Kepeng`,
+    jWinHit: (e, d, loot) => `Mengalahkan ${e}, −${d} HP` + (loot ? `, dapat ${loot}` : ''),
+    jBagFullFind: item => `Menemukan ${item}, tetapi tas penuh sehingga tidak bisa dibawa`,
+    tripNow: (m, w, l, k) => `Perjalanan ini: ${m} m · ${w} menang · ${l} kalah · ${k} Kepeng`,
+    tripLast: (m, w, l, k) => `Perjalanan terakhir: ${m} m · ${w} menang · ${l} kalah · ${k} Kepeng`,
+    bagSortHint: 'Isi tas dipilah di Rumah.', bagOpenHouse: 'Pilah di Rumah →', bagAll: 'Isi tas',
+    bagBusy: 'Tas tidak bisa dipilah saat sedang menjelajah.', packFood: 'Bawa bekal',
+    nextStore: 'Simpan daun dari tas di Rumah',
+    rattan: 'Rotan', resin: 'Getah Damar', agarwood: 'Gaharu', shell: 'Kerang', seaweed: 'Rumput Laut', coral: 'Karang',
+    pearl: 'Mutiara', crystal: 'Kristal', bullHide: 'Kulit Banteng', tigerPelt: 'Kulit Harimau', tigerFang: 'Taring Harimau',
+    spiritEssence: 'Sari Gaib', snakeGem: 'Mustika Ular', chitin: 'Cangkang Kitin', spiderSilk: 'Sutra Laba-laba',
+    dragonScale: 'Sisik Naga', crab: 'Kepiting', stingraySpine: 'Duri Pari', barracudaFish: 'Ikan Barakuda',
+    sharkTooth: 'Gigi Hiu', swordfishMeat: 'Daging Todak', ink: 'Tinta Gurita',
+    wildBull: 'Banteng', tiger: 'Harimau', babirusa: 'Babi Rusa', whiteTiger: 'Harimau Putih', forestSpirit: 'Penunggu Hutan',
+    snakeSpirit: 'Siluman Ular', centipede: 'Lipan', caveSpider: 'Laba-laba Goa', cobra: 'Kobra', rockGolem: 'Golem Batu',
+    blindSerpent: 'Ular Buta', stoneBeetle: 'Kumbang Batu', vampireBat: 'Kelelawar Vampir', caveDragon: 'Naga Goa',
+    mudCrab: 'Kepiting Bakau', seaSnake: 'Ular Laut', stingray: 'Ikan Pari', barracuda: 'Barakuda', moray: 'Belut Laut',
+    shark: 'Hiu', swordfish: 'Ikan Todak', giantOctopus: 'Gurita Raksasa', greatWhite: 'Hiu Putih', seaSerpent: 'Ular Laut Raksasa',
+    seaDragon: 'Naga Laut',
   },
   en: {
     farm: 'Farm', forest: 'Forest', cave: 'Cave', river: 'River', lake: 'Lake', sea: 'Sea', kitchen: 'Kitchen', adventure: 'Adventure', house: 'House', market: 'Market', anvil: 'Anvil', settings: 'Settings',
@@ -118,7 +150,7 @@ const TEXT = {
     carp: 'Carp', pangasius: 'Pangasius', giantSnakehead: 'Giant Snakehead', eel: 'Eel',
     mackerel: 'Mackerel', tuna: 'Little Tuna', snapper: 'Snapper', grouper: 'Grouper',
     lakeLocked: 'Requires Flexible Rod (forge at the Anvil)', unlockedLake: 'Lake unlocked!',
-    seaLocked: 'Requires Iron Rod (forge at the Anvil)', unlockedSea: 'Sea unlocked!',
+    seaLocked: 'Requires a Rope Harpoon (forge at the Anvil)', unlockedSea: 'Sea unlocked!',
     grilledCarp: 'Grilled Carp', friedMackerel: 'Fried Mackerel', gulaiPatin: 'Pangasius Curry', grilledSnapper: 'Grilled Snapper', grouperSoup: 'Grouper Soup', honey: 'Wild Honey',
     ironKris: 'Iron Kris', ironMachete: 'Iron Machete', ironSpear: 'Iron Spear', scaleVest: 'Scale Vest',
     goldKris: 'Golden Wavy Kris', ulinMachete: 'Ironwood Machete', ulinSpear: 'Ironwood Spear', pantherArmor: 'Panther Armor',
@@ -135,7 +167,7 @@ const TEXT = {
     buySlot: (n, max) => `Buy plot #${n} (max ${max})`, plantAll: 'Plant all', harvestAll: 'Harvest all',
     chooseSeed: 'Choose a seed to plant', noSeeds: 'No seeds yet. Buy some at the Market.', ready: 'Ready', wilted: 'Wilted',
     wiltsIn: d => `wilts in ${d}`, needFarm: lv => `Requires Farming Lv. ${lv}`, grows: d => `Grows in ${d}`,
-    buySeeds: 'Buy seeds', buy: n => `Buy ${n}`, rareSeedHint: 'Rare seeds only come from adventures.',
+    buySeeds: 'Buy seeds', buy: n => `Buy ${n}`, rareSeedHint: 'Rare seeds only come from the Forest.',
     hours: 'h', minutes: 'm', days: 'd',
     qCommon: 'Common', qGood: 'Fine', qGreat: 'Superior', qLegend: 'Heirloom',
     trSharp: 'Sharp', trLight: 'Light', trLucky: 'Lucky', trSturdy: 'Sturdy', trVital: 'Vigorous',
@@ -180,6 +212,38 @@ const TEXT = {
     sortCat: 'Category', sortQty: 'Amount', sortName: 'Name',
     catWood: 'Wood', catStone: 'Stone & Metal', catNature: 'Natural',
     discarded: 'Discarded because the house is full', dismiss: 'Close',
+    // Exploring
+    grpExplore: 'Explore', navExplore: 'Exploring',
+    forest1: 'Forest Edge', forest2: 'Deep Forest', forest3: 'Wild Jungle', forest4: 'Forbidden Forest',
+    cave1: 'Cave Mouth', cave2: 'Cave Tunnels', cave3: 'Dark Cave', cave4: 'Underdeep',
+    sea1: 'Beach', sea2: 'Coral Reef', sea3: 'Open Sea', sea4: 'Deep Trench',
+    harpoonNone: 'No harpoon yet', harpoonBasic: 'Rope Harpoon', harpoonShiny: 'Shiny Harpoon',
+    harpoonCopper: 'Copper Harpoon', harpoonIron: 'Iron Harpoon',
+    manual: 'Manual', auto: 'Auto', enter: 'Enter', walk: 'Step 1 m', walking: 'Walking…', goHome: 'Go home',
+    secPerM: s => `${s} sec/m`, autoSpeed: 'Auto speed', manualSpeed: 'Manual speed', maxHp: 'Max HP',
+    needAreaLv: (name, lv) => `Requires ${name} Lv. ${lv}`, elsewhere: name => `Exploring ${name}`, goThere: 'View →',
+    foldJournal: 'Journal', foldBag: 'Bag', foldGear: 'Gear', foldArea: 'Area',
+    encounters: 'Encounters', winAt: m => `Win chance at ${m} m`, depthNote: 'The further you go, the stronger the enemies and the better the loot (peaks at 1,000 m).',
+    actExplore: n => `Exploring ${n}`, armorMastery: 'Armor Mastery', toolAtk: 'Attack',
+    jEmpty: 'Found nothing', jKepeng: n => `Found ${n} Kepeng`,
+    jWinHit: (e, d, loot) => `Defeated ${e}, −${d} HP` + (loot ? `, got ${loot}` : ''),
+    jBagFullFind: item => `Found ${item}, but the bag is full so you could not carry it`,
+    tripNow: (m, w, l, k) => `This trip: ${m} m · ${w} won · ${l} lost · ${k} Kepeng`,
+    tripLast: (m, w, l, k) => `Last trip: ${m} m · ${w} won · ${l} lost · ${k} Kepeng`,
+    bagSortHint: 'Sort the bag at the House.', bagOpenHouse: 'Sort at the House →', bagAll: 'In the bag',
+    bagBusy: 'The bag cannot be sorted while exploring.', packFood: 'Pack food',
+    nextStore: 'Store the leaves from your bag at the House',
+    rattan: 'Rattan', resin: 'Damar Resin', agarwood: 'Agarwood', shell: 'Seashell', seaweed: 'Seaweed', coral: 'Coral',
+    pearl: 'Pearl', crystal: 'Crystal', bullHide: 'Banteng Hide', tigerPelt: 'Tiger Pelt', tigerFang: 'Tiger Fang',
+    spiritEssence: 'Spirit Essence', snakeGem: 'Serpent Gem', chitin: 'Chitin Shell', spiderSilk: 'Spider Silk',
+    dragonScale: 'Dragon Scale', crab: 'Crab', stingraySpine: 'Stingray Spine', barracudaFish: 'Barracuda',
+    sharkTooth: 'Shark Tooth', swordfishMeat: 'Swordfish Steak', ink: 'Octopus Ink',
+    wildBull: 'Banteng', tiger: 'Tiger', babirusa: 'Babirusa', whiteTiger: 'White Tiger', forestSpirit: 'Forest Spirit',
+    snakeSpirit: 'Serpent Spirit', centipede: 'Centipede', caveSpider: 'Cave Spider', cobra: 'Cobra', rockGolem: 'Rock Golem',
+    blindSerpent: 'Blind Serpent', stoneBeetle: 'Stone Beetle', vampireBat: 'Vampire Bat', caveDragon: 'Cave Dragon',
+    mudCrab: 'Mud Crab', seaSnake: 'Sea Snake', stingray: 'Stingray', barracuda: 'Barracuda', moray: 'Moray Eel',
+    shark: 'Shark', swordfish: 'Swordfish', giantOctopus: 'Giant Octopus', greatWhite: 'Great White', seaSerpent: 'Sea Serpent',
+    seaDragon: 'Sea Dragon',
   },
 };
 
@@ -221,6 +285,13 @@ const DURIAN_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">'
   '<ellipse cx="12" cy="13" rx="5" ry="5.6" fill="#a9c552"/><path d="M12 3v2.5" stroke="#6b5530" stroke-width="1.6"/></svg>';
 // Benih: ikon tunas dengan ikon tanamannya kecil di pojok
 const seedIcon = crop => `<span class="emoji-seed">🌱<span class="seed-of">${crop}</span></span>`;
+
+const SHELL_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<path d="M12 3C6 3 3 9 3 14l9 7 9-7c0-5-3-11-9-11Z" fill="#f1c8a8"/>' +
+  '<path d="M12 3v18M12 3 7 19M12 3l5 16M12 3 4 15M12 3l8 12" stroke="#c9906b" stroke-width="1.1" fill="none"/></svg>';
+const PEARL_ICON = '<svg class="emoji" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<circle cx="12" cy="13" r="7.5" fill="#ece8f2"/><circle cx="12" cy="13" r="7.5" fill="none" stroke="#c8c0d6" stroke-width="1"/>' +
+  '<ellipse cx="9.5" cy="10" rx="2.4" ry="1.6" fill="#fff"/></svg>';
 
 // Mata uang
 const KEPENG_ICON = '🪙';
@@ -323,6 +394,29 @@ const ITEMS = [
   { key: 'caveCore', icon: '💎', cat: 'loot', price: 400 },
   { key: 'monitorHide', icon: '🦎', cat: 'loot', price: 25 },
   { key: 'crocTooth', icon: '🐊', cat: 'loot', price: 120 },
+  { key: 'bullHide', icon: tint('bull', '🟫'), cat: 'loot', price: 30 },
+  { key: 'tigerPelt', icon: '🐅', cat: 'loot', price: 80 },
+  { key: 'tigerFang', icon: tint('fang', '🦷'), cat: 'loot', price: 120 },
+  { key: 'spiritEssence', icon: '✨', cat: 'loot', price: 200 },
+  { key: 'snakeGem', icon: tint('snakegem', '💎'), cat: 'loot', price: 350 },
+  { key: 'chitin', icon: '🪲', cat: 'loot', price: 8 },
+  { key: 'spiderSilk', icon: '🕸️', cat: 'loot', price: 15 },
+  { key: 'dragonScale', icon: '🐉', cat: 'loot', price: 500 },
+  { key: 'stingraySpine', icon: '🦴', cat: 'loot', price: 20 },
+  { key: 'sharkTooth', icon: tint('shark', '🦷'), cat: 'loot', price: 60 },
+  { key: 'ink', icon: tint('ink', '💧'), cat: 'loot', price: 40 },
+  // Temuan jelajah
+  { key: 'rattan', icon: '🎋', cat: 'nature', price: 4 },
+  { key: 'resin', icon: tint('resin', '💧'), cat: 'nature', price: 15 },
+  { key: 'agarwood', icon: tint('agar', '🪵'), cat: 'wood', price: 120 },
+  { key: 'shell', icon: SHELL_ICON, cat: 'nature', price: 2 },
+  { key: 'seaweed', icon: tint('seaweed', '🌿'), cat: 'nature', price: 3 },
+  { key: 'coral', icon: '🪸', cat: 'nature', price: 12 },
+  { key: 'pearl', icon: PEARL_ICON, cat: 'nature', price: 150 },
+  { key: 'crystal', icon: tint('crystal', '💎'), cat: 'stone', price: 40 },
+  { key: 'crab', icon: '🦀', cat: 'fish', price: 8 },
+  { key: 'barracudaFish', icon: fishIcon('barracuda'), cat: 'fish', price: 30 },
+  { key: 'swordfishMeat', icon: '🥩', cat: 'fish', price: 70 },
 ];
 const ITEM = Object.fromEntries(ITEMS.map(it => [it.key, it]));
 const heals = Object.fromEntries(ITEMS.filter(it => it.heal).map(it => [it.key, it.heal]));
@@ -387,48 +481,60 @@ const HOUSE = {
 // Progres offline (dan saat tab tidak terlihat) paling lama dihitung 24 jam
 const OFFLINE_CAP = 24 * 60 * 60 * 1000;
 
-// Level sumber daya: tiap aksi memberi exp sebesar xp node-nya. Bagian eksponensial menjaga awal tetap cepat,
-// bagian kubik membuat level atas makin berat. Exp per detik sama untuk semua node (20 exp / 2 detik),
-// jadi tiap node butuh kira-kira: Lv 10 ≈ 2 menit, Lv 50 ≈ 2 jam, Lv 75 ≈ 11,5 jam, Lv 100 ≈ 2 hari.
+// Kurva exp skill (Memasak, Menempa, Berkebun, node memancing, Mastery Armor). Bagian eksponensial menjaga
+// awal tetap cepat, bagian kubik membuat level atas makin berat. Dengan 10 exp/detik: Lv 100 ≈ 2 hari.
 const MAX_LEVEL = 100;
-const xpNeeded = level => 20 * Math.floor(4 * 1.07 ** level + 0.0015 * level ** 3);
+const xpShape = level => 4 * 1.07 ** level + 0.0015 * level ** 3;
+const xpNeeded = level => 20 * Math.floor(xpShape(level));
 
-// Alat (kapak untuk pohon, beliung untuk batu, joran untuk memancing): dapat exp yang sama dengan node yang dikerjakan,
-// tiap level memotong waktu aksi 0,75% (75% di level 100). Tiap level butuh 10% exp lebih banyak:
-// menebang Akasia nonstop → Lv 10 ≈ 7 menit, Lv 50 ≈ 6,5 jam, Lv 75 ≈ 2 hari, Lv 100 ≈ 15 hari.
+// Joran: satu-satunya alat yang masih punya level (dari memancing). Tiap level memotong waktu memancing 0,75%,
+// tiap level butuh 10% exp lebih banyak.
 const TOOL_CUT = 0.0075;
 const toolXpNeeded = level => Math.round(283 * 1.1 ** level);
 
-// Tingkat alat. Tingkat berikutnya ditempa di Anvil; level & exp alat tetap.
-// double = peluang hasil utama ganda; anvil = level Anvil minimum; cost = bahan tempa.
-// Aturan silang: bahan selalu kayu + batu/logam dari tingkat di bawahnya, untuk kapak maupun beliung.
+// Tingkat alat. Tingkat berikutnya ditempa di Anvil. anvil = level Anvil minimum; cost = bahan tempa.
+// rank = tingkat alat yang dimiliki (1 = alat pertama). Kapak, beliung, dan tombak tidak punya level, hanya
+// serangan tetap per rank (TOOL_ATK) untuk melawan musuh di wilayahnya, dan rank membuka tier area.
+// Aturan silang: bahan alat rank r selalu kayu + batu/logam tier r−1, untuk semua alat.
+// none: tingkat 0 berarti belum punya (rank 0).
+const TOOL_ATK = [0, 10, 20, 40, 80];
 const TOOLS = {
   axe: {
-    icon: '🪓', area: 'hutan', interval: 'axeInterval', doubleText: 'doubleWood',
+    icon: '🪓', region: 'hutan',
     tiers: [
-      { key: 'axeBasic', double: 0 },
-      { key: 'axeShiny', double: 0.05, anvil: 1, cost: { acaciaWood: 250, stone: 250 } },
-      { key: 'axeCopper', double: 0.08, anvil: 2, cost: { teakWood: 400, copperOre: 400 } },
-      { key: 'axeIron', double: 0.12, anvil: 3, cost: { mahoganyWood: 500, ironOre: 500 } },
+      { key: 'axeBasic' },
+      { key: 'axeShiny', anvil: 1, cost: { acaciaWood: 250, stone: 250 } },
+      { key: 'axeCopper', anvil: 2, cost: { teakWood: 400, copperOre: 400 } },
+      { key: 'axeIron', anvil: 3, cost: { mahoganyWood: 500, ironOre: 500 } },
     ],
   },
   pickaxe: {
-    icon: '⛏️', area: 'goa', interval: 'pickInterval', doubleText: 'doubleOre',
+    icon: '⛏️', region: 'goa',
     tiers: [
-      { key: 'pickBasic', double: 0 },
-      { key: 'pickShiny', double: 0.05, anvil: 1, cost: { acaciaWood: 250, stone: 250 } },
-      { key: 'pickCopper', double: 0.08, anvil: 2, cost: { teakWood: 400, copperOre: 400 } },
-      { key: 'pickIron', double: 0.12, anvil: 3, cost: { mahoganyWood: 500, ironOre: 500 } },
+      { key: 'pickBasic' },
+      { key: 'pickShiny', anvil: 1, cost: { acaciaWood: 250, stone: 250 } },
+      { key: 'pickCopper', anvil: 2, cost: { teakWood: 400, copperOre: 400 } },
+      { key: 'pickIron', anvil: 3, cost: { mahoganyWood: 500, ironOre: 500 } },
     ],
   },
-  // Joran: tingkat 0 = belum punya (Sungai terkunci). Mulai tingkat 2 joran juga butuh benang dari Kebun.
-  rod: {
-    icon: '🎣', area: 'sungai', interval: 'rodInterval', doubleText: 'doubleFish',
+  // Tombak bertali untuk Laut: tombak pertama butuh Rotan dari Hutan dan Batu dari Goa; tingkat 2+ butuh benang (Kapas).
+  harpoon: {
+    icon: '🔱', region: 'laut',
     tiers: [
-      { key: 'rodNone', double: 0, none: true },
-      { key: 'rodBasic', double: 0, anvil: 1, cost: { teakWood: 150, copperOre: 150 } },
-      { key: 'rodFlex', double: 0, anvil: 2, cost: { teakWood: 300, copperOre: 300, cotton: 40 } },
-      { key: 'rodIron', double: 0, anvil: 3, cost: { mahoganyWood: 300, ironOre: 300, cotton: 80 } },
+      { key: 'harpoonNone', none: true },
+      { key: 'harpoonBasic', anvil: 1, cost: { acaciaWood: 150, stone: 150, rattan: 20 } },
+      { key: 'harpoonShiny', anvil: 1, cost: { acaciaWood: 250, stone: 250, cotton: 30 } },
+      { key: 'harpoonCopper', anvil: 2, cost: { teakWood: 400, copperOre: 400, cotton: 60 } },
+      { key: 'harpoonIron', anvil: 3, cost: { mahoganyWood: 500, ironOre: 500, cotton: 100 } },
+    ],
+  },
+  // Joran: tingkat 0 = belum punya (Sungai terkunci). Joran Lentur butuh benang dari Kebun.
+  rod: {
+    icon: '🎣', region: 'sungai', leveled: true, interval: 'rodInterval',
+    tiers: [
+      { key: 'rodNone', none: true },
+      { key: 'rodBasic', anvil: 1, cost: { acaciaWood: 150, stone: 150 } },
+      { key: 'rodFlex', anvil: 2, cost: { teakWood: 300, copperOre: 300, cotton: 40 } },
     ],
   },
 };
@@ -436,7 +542,7 @@ const TOOLS = {
 // Anvil: level menentukan tingkat alat yang bisa ditempa. Peluang berhasil tergantung selisih
 // level Anvil dengan syarat tingkat itu: pas = FORGE_BASE[tingkat], tiap level lebih +FORGE_GAP (maks 100%).
 // Gagal = bahan hilang, alat tetap.
-const FORGE_BASE = [1, 0.9, 0.75, 0.6];
+const FORGE_BASE = [1, 0.9, 0.75, 0.6, 0.6];
 const FORGE_GAP = 0.1;
 const ANVIL = {
   start: 1,
@@ -500,85 +606,275 @@ const GEAR = {
   pantherArmor: { tier: 3, anvil: 4, cost: { leopardPelt: 10, bearClaw: 5, ironOre: 80, goldOre: 10 } },
 };
 
-// Petualangan: kegiatan idle. Tiap interval senjata terjadi satu encounter yang diundi dari events.
-// Lawan musuh: peluang menang = A² / (A² + P²), A = serangan pemain, P = kekuatan musuh.
-// Menang → exp Jarak Dekat + loot ke tas. Kalah → HP berkurang (dikurangi pertahanan) + exp Armor.
-// HP ≤ 50% → makan otomatis dari tas. HP habis → pulang (loot di tas tetap aman).
-// Tas penuh tidak membuat pulang: loot jenis baru ditinggal dan dicatat di jurnal.
-const ADV = {
-  baseHp: 100, hpPerArmorLv: 2, atkPerMeleeLv: 0.02, defPerArmorLv: 1, eatBelow: 0.5, journalMax: 80,
+// ---------- Jelajah (Hutan, Goa, Laut) ----------
+// Tiap wilayah punya 4 tier area. Tiap langkah maju 1 meter terjadi satu encounter berbobot: kosong, temuan item,
+// Kepeng, atau musuh. Musuh dilawan dengan alat wilayahnya (kapak/beliung/tombak): peluang menang = A² / (A² + P²).
+// Menang → HP berkurang sedikit (EX.winDmg × serangan musuh), exp area, loot ke tas, Mastery Armor 50%.
+// Kalah → HP berkurang penuh, tanpa exp area, Mastery Armor 100%. Damage dikurangi pertahanan (Mastery Armor).
+// HP ≤ 50% → makan otomatis dari tas. HP habis → kembali ke rumah (meter 0), isi tas aman.
+// Kedalaman: kekuatan musuh, damage, jumlah loot, dan bobot temuan langka naik lurus tiap meter sampai 1.000 m,
+// setelah itu tetap (meter terus berjalan). Musuh terkuat tiap tier di 0 m = 0,6 × serangan alat tier itu, jadi
+// alat yang pas menang ±50% di 250 m dan alat satu tingkat di atasnya menang ±50% di ±900 m.
+const EX = {
+  baseHp: 100, hpPerArmorLv: 2, defPerArmorLv: 1, eatBelow: 0.5, journalMax: 80,
+  winDmg: 0.1, armorWin: 0.5, unlockLv: 25,
+  depthCap: 1000, depthPower: 8 / 3, depthDmg: 1.5, depthLoot: 1, depthRare: 2,
+  // Waktu per meter: auto 10 dtk (Lv. 0) → 2 dtk (Lv. 100), manual tetap 1 dtk
+  auto0: 10000, auto100: 2000, manual: 1000,
+  // Target waktu ke Lv. 100 dengan auto penuh: tier 1 = 5 hari, tiap tier ×1,25.
+  // Kalibrasi menganggap 80% pertarungan dimenangkan (kalah tidak memberi exp area).
+  days: 5, dayMult: 1.25, winAssume: 0.8,
 };
+const autoStep = level => EX.auto0 - (EX.auto0 - EX.auto100) * level / MAX_LEVEL;
+
 const ENEMIES = {
-  // power = kekuatan, dmg = damage saat pemain kalah, xp = exp Jarak Dekat saat menang
+  // power = kekuatan di 0 m, dmg = serangan di 0 m, xp = exp area saat menang (juga dasar exp Mastery Armor)
   // drops: [item, peluang, jumlah min, jumlah maks]
-  chicken: { icon: '🐓', power: 2, dmg: 4, xp: 40, drops: [['feather', 0.8, 1, 3]] },
-  boar: { icon: '🐗', power: 8, dmg: 10, xp: 120, drops: [['boarHide', 0.6, 1, 1], ['tusk', 0.1, 1, 1]] },
-  python: { icon: '🐍', power: 15, dmg: 20, xp: 250, drops: [['pythonScale', 0.6, 1, 2]] },
-  monkey: { icon: '🐒', power: 20, dmg: 12, xp: 300, drops: [['banana', 0.5, 1, 3]] },
-  leopard: { icon: '🐆', power: 35, dmg: 25, xp: 600, drops: [['leopardPelt', 0.5, 1, 1]] },
-  sunBear: { icon: '🐻', power: 50, dmg: 40, xp: 1000, drops: [['bearClaw', 0.4, 1, 2], ['honey', 0.6, 1, 2]] },
-  bat: { icon: '🦇', power: 15, dmg: 8, xp: 200, drops: [['batWing', 0.7, 1, 2]] },
-  scorpion: { icon: '🦂', power: 30, dmg: 22, xp: 500, drops: [['venom', 0.5, 1, 1]] },
-  caveGuardian: { icon: '👹', power: 70, dmg: 60, xp: 2000, drops: [['caveCore', 0.3, 1, 1], ['goldOre', 0.8, 3, 8]] },
-  monitor: { icon: '🦎', power: 12, dmg: 12, xp: 200, drops: [['monitorHide', 0.6, 1, 1]] },
-  crocodile: { icon: '🐊', power: 40, dmg: 50, xp: 900, drops: [['crocTooth', 0.35, 1, 2]] },
+  chicken: { icon: '🐓', power: 2, dmg: 5, xp: 8, drops: [['feather', 0.8, 1, 3]] },
+  boar: { icon: '🐗', power: 6, dmg: 12, xp: 24, drops: [['boarHide', 0.6, 1, 1], ['tusk', 0.1, 1, 1]] },
+  python: { icon: '🐍', power: 7, dmg: 14, xp: 28, drops: [['pythonScale', 0.6, 1, 2]] },
+  monkey: { icon: '🐒', power: 9, dmg: 17, xp: 36, drops: [['banana', 0.5, 1, 3]] },
+  leopard: { icon: '🐆', power: 12, dmg: 22, xp: 48, drops: [['leopardPelt', 0.5, 1, 1]] },
+  sunBear: { icon: '🐻', power: 14, dmg: 26, xp: 56, drops: [['bearClaw', 0.4, 1, 2], ['honey', 0.6, 1, 2]] },
+  wildBull: { icon: '🐃', power: 20, dmg: 36, xp: 80, drops: [['bullHide', 0.6, 1, 1]] },
+  tiger: { icon: '🐅', power: 24, dmg: 43, xp: 96, drops: [['tigerPelt', 0.5, 1, 1]] },
+  babirusa: { icon: tint('babirusa', '🐗'), power: 28, dmg: 50, xp: 112, drops: [['tusk', 0.6, 1, 2]] },
+  whiteTiger: { icon: tint('white', '🐅'), power: 40, dmg: 70, xp: 160, drops: [['tigerPelt', 0.5, 1, 1], ['tigerFang', 0.15, 1, 1]] },
+  forestSpirit: { icon: '👻', power: 48, dmg: 84, xp: 192, drops: [['spiritEssence', 0.4, 1, 1]] },
+  snakeSpirit: { icon: tint('gold', '🐍'), power: 56, dmg: 97, xp: 224, drops: [['snakeGem', 0.3, 1, 1]] },
+  bat: { icon: '🦇', power: 2, dmg: 5, xp: 8, drops: [['batWing', 0.7, 1, 2]] },
+  centipede: { icon: '🐛', power: 6, dmg: 12, xp: 24, drops: [['chitin', 0.6, 1, 2]] },
+  scorpion: { icon: '🦂', power: 7, dmg: 14, xp: 28, drops: [['venom', 0.5, 1, 1]] },
+  caveSpider: { icon: '🕷️', power: 9, dmg: 17, xp: 36, drops: [['spiderSilk', 0.6, 1, 3]] },
+  cobra: { icon: tint('cobra', '🐍'), power: 12, dmg: 22, xp: 48, drops: [['venom', 0.5, 1, 1]] },
+  monitor: { icon: '🦎', power: 14, dmg: 26, xp: 56, drops: [['monitorHide', 0.6, 1, 1]] },
+  rockGolem: { icon: '🗿', power: 20, dmg: 36, xp: 80, drops: [['crystal', 0.4, 1, 1], ['stone', 0.8, 3, 8]] },
+  blindSerpent: { icon: tint('iron', '🐍'), power: 24, dmg: 43, xp: 96, drops: [['pythonScale', 0.6, 1, 3]] },
+  stoneBeetle: { icon: '🪲', power: 28, dmg: 50, xp: 112, drops: [['chitin', 0.8, 2, 4], ['goldOre', 0.3, 1, 2]] },
+  vampireBat: { icon: tint('vampire', '🦇'), power: 40, dmg: 70, xp: 160, drops: [['batWing', 0.8, 2, 4], ['venom', 0.2, 1, 1]] },
+  caveGuardian: { icon: '👹', power: 48, dmg: 84, xp: 192, drops: [['caveCore', 0.3, 1, 1], ['goldOre', 0.8, 3, 8]] },
+  caveDragon: { icon: '🐉', power: 56, dmg: 97, xp: 224, drops: [['dragonScale', 0.4, 1, 1]] },
+  mudCrab: { icon: '🦀', power: 2, dmg: 5, xp: 8, drops: [['crab', 0.7, 1, 2]] },
+  seaSnake: { icon: tint('seasnake', '🐍'), power: 6, dmg: 12, xp: 24, drops: [['venom', 0.4, 1, 1]] },
+  stingray: { icon: tint('ray', '🐟'), power: 7, dmg: 14, xp: 28, drops: [['stingraySpine', 0.5, 1, 1]] },
+  barracuda: { icon: fishIcon('barracuda'), power: 9, dmg: 17, xp: 36, drops: [['barracudaFish', 0.7, 1, 1]] },
+  moray: { icon: tint('moray', '🐍'), power: 12, dmg: 22, xp: 48, drops: [['eel', 0.5, 1, 1]] },
+  crocodile: { icon: '🐊', power: 14, dmg: 26, xp: 56, drops: [['crocTooth', 0.35, 1, 2]] },
+  shark: { icon: '🦈', power: 20, dmg: 36, xp: 80, drops: [['sharkTooth', 0.5, 1, 2]] },
+  swordfish: { icon: tint('sword', '🐟'), power: 24, dmg: 43, xp: 96, drops: [['swordfishMeat', 0.6, 1, 1]] },
+  giantOctopus: { icon: '🐙', power: 28, dmg: 50, xp: 112, drops: [['ink', 0.6, 1, 2]] },
+  greatWhite: { icon: tint('white', '🦈'), power: 40, dmg: 70, xp: 160, drops: [['sharkTooth', 0.7, 2, 3]] },
+  seaSerpent: { icon: tint('seasnake', '🐉'), power: 48, dmg: 84, xp: 192, drops: [['pearl', 0.2, 1, 1], ['venom', 0.5, 1, 2]] },
+  seaDragon: { icon: '🐲', power: 56, dmg: 97, xp: 224, drops: [['dragonScale', 0.4, 1, 1], ['pearl', 0.3, 1, 2]] },
 };
-const ADVENTURES = {
-  edgeForest: {
-    icon: '🌳',
-    // bobot: musuh, atau temuan (item dengan jumlah, atau Kepeng)
+
+// Wilayah jelajah: halaman, alat, dan urutan tier area
+const REGIONS = {
+  hutan: { tool: 'axe', areas: ['forest1', 'forest2', 'forest3', 'forest4'] },
+  goa: { tool: 'pickaxe', areas: ['cave1', 'cave2', 'cave3', 'cave4'] },
+  laut: { tool: 'harpoon', areas: ['sea1', 'sea2', 'sea3', 'sea4'] },
+};
+// Area jelajah. events: { w: bobot, rare?: bobot naik dengan kedalaman } + salah satu dari
+// enemy, find (item, min, max, xp), kepeng ([min, max], xp), atau empty (tanpa exp).
+// Makanan yang bisa ditemukan (Madu) sengaja tidak `rare` supaya tidak bisa menopang perjalanan tanpa bekal.
+// Syarat buka tier ≥ 2: tier sebelumnya Lv. EX.unlockLv + alat rank = tier.
+const EXPLORE = {
+  forest1: {
     events: [
-      { w: 45, enemy: 'chicken' },
-      { w: 25, enemy: 'boar' },
-      { w: 8, enemy: 'python' },
-      { w: 8, find: 'twig', min: 1, max: 3 },
-      { w: 6, find: 'leaf', min: 1, max: 3 },
-      { w: 8, kepeng: [5, 20] },
-      // Benih langka: hanya dari petualangan
-      { w: 2, find: 'bananaSeed', min: 1, max: 2 },
-      { w: 1, find: 'mangoSeed', min: 1, max: 1 },
-      { w: 0.3, find: 'durianSeed', min: 1, max: 1 },
+      { w: 30, empty: true },
+      { w: 26, find: 'acaciaWood', min: 2, max: 5, xp: 3 },
+      { w: 10, find: 'twig', min: 1, max: 3, xp: 1 },
+      { w: 10, find: 'leaf', min: 1, max: 3, xp: 1 },
+      { w: 4, find: 'rattan', min: 1, max: 2, xp: 4 },
+      { w: 3, kepeng: [3, 12], xp: 2 },
+      { w: 0.4, find: 'honey', min: 1, max: 1, xp: 10 },
+      { w: 1, rare: true, find: 'bananaSeed', min: 1, max: 2, xp: 15 },
+      { w: 0.4, rare: true, find: 'mangoSeed', min: 1, max: 1, xp: 30 },
+      { w: 0.1, rare: true, find: 'durianSeed', min: 1, max: 1, xp: 60 },
+      { w: 9, enemy: 'chicken' },
+      { w: 6, enemy: 'boar' },
+      { w: 1.5, rare: true, enemy: 'python' },
     ],
   },
-  // Kedalaman lanjutan: req = syarat (level Jarak Dekat, area yang harus sudah terbuka)
-  deepForest: {
-    icon: '🌲', req: { melee: 20 },
+  forest2: {
     events: [
-      { w: 40, enemy: 'monkey' },
-      { w: 25, enemy: 'leopard' },
-      { w: 12, enemy: 'sunBear' },
-      { w: 8, find: 'twig', min: 2, max: 5 },
-      { w: 8, kepeng: [20, 60] },
-      { w: 4, find: 'bananaSeed', min: 1, max: 3 },
-      { w: 2, find: 'mangoSeed', min: 1, max: 2 },
-      { w: 0.8, find: 'durianSeed', min: 1, max: 1 },
+      { w: 28, empty: true },
+      { w: 22, find: 'teakWood', min: 2, max: 5, xp: 5 },
+      { w: 8, find: 'acaciaWood', min: 2, max: 5, xp: 3 },
+      { w: 8, find: 'twig', min: 1, max: 4, xp: 1 },
+      { w: 8, find: 'leaf', min: 1, max: 4, xp: 1 },
+      { w: 5, find: 'rattan', min: 1, max: 3, xp: 4 },
+      { w: 3, kepeng: [10, 30], xp: 4 },
+      { w: 0.6, find: 'honey', min: 1, max: 1, xp: 10 },
+      { w: 2, rare: true, find: 'bananaSeed', min: 1, max: 3, xp: 15 },
+      { w: 1, rare: true, find: 'mangoSeed', min: 1, max: 2, xp: 30 },
+      { w: 0.3, rare: true, find: 'durianSeed', min: 1, max: 1, xp: 60 },
+      { w: 9, enemy: 'monkey' },
+      { w: 6, enemy: 'leopard' },
+      { w: 1.5, rare: true, enemy: 'sunBear' },
     ],
   },
-  riverbank: {
-    icon: '🏞️', req: { melee: 15, area: 'sungai' },
+  forest3: {
     events: [
-      { w: 45, enemy: 'monitor' },
-      { w: 15, enemy: 'crocodile' },
-      { w: 15, find: 'wader', min: 1, max: 3 },
-      // Peti karam: Kepeng besar
-      { w: 6, kepeng: [50, 200] },
-      { w: 4, find: 'eel', min: 1, max: 1 },
+      { w: 28, empty: true },
+      { w: 22, find: 'mahoganyWood', min: 2, max: 5, xp: 8 },
+      { w: 8, find: 'teakWood', min: 2, max: 5, xp: 5 },
+      { w: 8, find: 'twig', min: 2, max: 5, xp: 1 },
+      { w: 6, find: 'leaf', min: 2, max: 5, xp: 1 },
+      { w: 5, find: 'resin', min: 1, max: 2, xp: 12 },
+      { w: 3, kepeng: [25, 70], xp: 6 },
+      { w: 0.8, find: 'honey', min: 1, max: 1, xp: 10 },
+      { w: 1.5, rare: true, find: 'mangoSeed', min: 1, max: 2, xp: 30 },
+      { w: 0.6, rare: true, find: 'durianSeed', min: 1, max: 1, xp: 60 },
+      { w: 9, enemy: 'wildBull' },
+      { w: 6, enemy: 'tiger' },
+      { w: 1.5, rare: true, enemy: 'babirusa' },
     ],
   },
-  darkCave: {
-    icon: '🕳️', req: { melee: 35, area: 'goa' },
+  forest4: {
     events: [
-      { w: 40, enemy: 'bat' },
-      { w: 30, enemy: 'scorpion' },
+      { w: 28, empty: true },
+      { w: 22, find: 'ulinWood', min: 2, max: 5, xp: 12 },
+      { w: 8, find: 'mahoganyWood', min: 2, max: 5, xp: 8 },
+      { w: 8, find: 'twig', min: 2, max: 6, xp: 1 },
+      { w: 6, find: 'resin', min: 1, max: 3, xp: 12 },
+      { w: 4, kepeng: [50, 150], xp: 8 },
+      { w: 1.5, rare: true, find: 'agarwood', min: 1, max: 1, xp: 80 },
+      { w: 1, rare: true, find: 'durianSeed', min: 1, max: 2, xp: 60 },
+      { w: 9, enemy: 'whiteTiger' },
+      { w: 6, enemy: 'forestSpirit' },
+      { w: 1.5, rare: true, enemy: 'snakeSpirit' },
+    ],
+  },
+  cave1: {
+    events: [
+      { w: 30, empty: true },
+      { w: 26, find: 'stone', min: 2, max: 5, xp: 3 },
+      { w: 10, find: 'pebble', min: 1, max: 4, xp: 1 },
+      { w: 3, kepeng: [3, 12], xp: 2 },
+      { w: 2, rare: true, find: 'copperOre', min: 1, max: 2, xp: 10 },
+      { w: 9, enemy: 'bat' },
+      { w: 6, enemy: 'centipede' },
+      { w: 1.5, rare: true, enemy: 'scorpion' },
+    ],
+  },
+  cave2: {
+    events: [
+      { w: 28, empty: true },
+      { w: 22, find: 'copperOre', min: 2, max: 5, xp: 5 },
+      { w: 10, find: 'stone', min: 2, max: 5, xp: 3 },
+      { w: 6, find: 'pebble', min: 1, max: 4, xp: 1 },
+      { w: 3, kepeng: [10, 30], xp: 4 },
+      { w: 2, rare: true, find: 'ironOre', min: 1, max: 2, xp: 16 },
+      { w: 9, enemy: 'caveSpider' },
+      { w: 6, enemy: 'cobra' },
+      { w: 1.5, rare: true, enemy: 'monitor' },
+    ],
+  },
+  cave3: {
+    events: [
+      { w: 28, empty: true },
+      { w: 22, find: 'ironOre', min: 2, max: 5, xp: 8 },
+      { w: 8, find: 'copperOre', min: 2, max: 5, xp: 5 },
+      { w: 8, find: 'stone', min: 2, max: 6, xp: 3 },
+      { w: 4, find: 'crystal', min: 1, max: 1, xp: 25 },
+      { w: 4, kepeng: [25, 70], xp: 6 },
+      { w: 2, rare: true, find: 'goldOre', min: 1, max: 2, xp: 24 },
+      { w: 9, enemy: 'rockGolem' },
+      { w: 6, enemy: 'blindSerpent' },
+      { w: 1.5, rare: true, enemy: 'stoneBeetle' },
+    ],
+  },
+  cave4: {
+    events: [
+      { w: 28, empty: true },
+      { w: 22, find: 'goldOre', min: 2, max: 5, xp: 12 },
+      { w: 8, find: 'ironOre', min: 2, max: 5, xp: 8 },
+      { w: 6, find: 'crystal', min: 1, max: 2, xp: 25 },
+      { w: 5, kepeng: [50, 150], xp: 8 },
+      { w: 1, rare: true, find: 'caveCore', min: 1, max: 1, xp: 120 },
+      { w: 9, enemy: 'vampireBat' },
       { w: 6, enemy: 'caveGuardian' },
-      { w: 10, find: 'ironOre', min: 3, max: 8 },
-      { w: 6, find: 'goldOre', min: 1, max: 3 },
-      { w: 8, kepeng: [40, 120] },
+      { w: 1.5, rare: true, enemy: 'caveDragon' },
+    ],
+  },
+  sea1: {
+    events: [
+      { w: 30, empty: true },
+      { w: 18, find: 'shell', min: 1, max: 4, xp: 2 },
+      { w: 14, find: 'seaweed', min: 1, max: 4, xp: 2 },
+      { w: 10, find: 'mackerel', min: 1, max: 2, xp: 6 },
+      { w: 3, find: 'acaciaWood', min: 1, max: 3, xp: 3 },
+      { w: 4, kepeng: [5, 15], xp: 2 },
+      { w: 0.5, rare: true, find: 'pearl', min: 1, max: 1, xp: 60 },
+      { w: 9, enemy: 'mudCrab' },
+      { w: 6, enemy: 'seaSnake' },
+      { w: 1.5, rare: true, enemy: 'stingray' },
+    ],
+  },
+  sea2: {
+    events: [
+      { w: 28, empty: true },
+      { w: 14, find: 'tuna', min: 1, max: 2, xp: 8 },
+      { w: 6, find: 'mackerel', min: 1, max: 3, xp: 6 },
+      { w: 8, find: 'coral', min: 1, max: 2, xp: 6 },
+      { w: 6, find: 'shell', min: 2, max: 5, xp: 2 },
+      { w: 4, kepeng: [10, 35], xp: 4 },
+      { w: 1, rare: true, find: 'pearl', min: 1, max: 1, xp: 60 },
+      { w: 9, enemy: 'barracuda' },
+      { w: 6, enemy: 'moray' },
+      { w: 1.5, rare: true, enemy: 'crocodile' },
+    ],
+  },
+  sea3: {
+    events: [
+      { w: 28, empty: true },
+      { w: 14, find: 'snapper', min: 1, max: 2, xp: 12 },
+      { w: 6, find: 'tuna', min: 1, max: 3, xp: 8 },
+      { w: 8, find: 'coral', min: 1, max: 3, xp: 6 },
+      { w: 4, find: 'seaweed', min: 2, max: 6, xp: 2 },
+      { w: 5, kepeng: [25, 80], xp: 6 },
+      { w: 1.5, rare: true, find: 'pearl', min: 1, max: 1, xp: 60 },
+      { w: 9, enemy: 'shark' },
+      { w: 6, enemy: 'swordfish' },
+      { w: 1.5, rare: true, enemy: 'giantOctopus' },
+    ],
+  },
+  sea4: {
+    events: [
+      { w: 28, empty: true },
+      { w: 12, find: 'grouper', min: 1, max: 2, xp: 18 },
+      { w: 6, find: 'snapper', min: 1, max: 3, xp: 12 },
+      { w: 6, find: 'coral', min: 2, max: 4, xp: 6 },
+      { w: 6, kepeng: [60, 200], xp: 8 },
+      { w: 2, rare: true, find: 'pearl', min: 1, max: 2, xp: 60 },
+      { w: 1, rare: true, find: 'goldOre', min: 2, max: 6, xp: 24 },
+      { w: 9, enemy: 'greatWhite' },
+      { w: 6, enemy: 'seaSerpent' },
+      { w: 1.5, rare: true, enemy: 'seaDragon' },
     ],
   },
 };
+// Lengkapi tiap area: wilayah, tier (1–4), area sebelumnya, dan kurva exp yang dikalibrasi ke target hari.
+// need(L) = k × xpShape(L); k dipilih supaya Σ need(L) / exp per meter × waktu auto per meter = target.
+for (const [region, r] of Object.entries(REGIONS)) {
+  r.areas.forEach((key, i) => {
+    const a = EXPLORE[key], total = a.events.reduce((sum, e) => sum + e.w, 0);
+    a.region = region;
+    a.tier = i + 1;
+    a.prev = r.areas[i - 1] || null;
+    const perMeter = a.events.reduce((sum, e) => sum + e.w * (e.enemy ? ENEMIES[e.enemy].xp * EX.winAssume : e.xp || 0), 0) / total;
+    let shapeTime = 0;
+    for (let l = 0; l < MAX_LEVEL; l++) shapeTime += xpShape(l) * autoStep(l) / 1000;
+    a.xpK = EX.days * EX.dayMult ** i * 86400 * perMeter / shapeTime;
+  });
+}
+const areaXpNeeded = (key, level) => Math.max(1, Math.round(EXPLORE[key].xpK * xpShape(level)));
+// Kedalaman 0–1 (puncak di EX.depthCap meter)
+const depthOf = meter => Math.min(meter, EX.depthCap) / EX.depthCap;
+
 // Tas: jumlah item berbeda yang bisa dibawa (seperti Rumah). Draf.
-const BAG = { base: 5, perLevel: 2, maxLevel: 5, cost: level => ({ kepeng: 300 * 2 ** level, boarHide: 5 * (level + 1) }) };
+const BAG = { base: 10, perLevel: 2, maxLevel: 5, cost: level => ({ kepeng: 300 * 2 ** level, boarHide: 5 * (level + 1) }) };
 
 // Kebun: tanaman tumbuh paralel dengan kegiatan lain, memakai jam dunia nyata (tidak dibatasi 24 jam offline).
 // Matang setelah grow, lalu layu kalau tidak dipanen dalam FARM.wilt. Petak: 2 gratis, sisanya dibeli dengan
@@ -597,13 +893,11 @@ const CROPS = {
 };
 const SEED_CROP = Object.fromEntries(Object.entries(CROPS).map(([k, c]) => [c.seed, k]));
 
-// Area yang terkunci di awal; unlock(state) → true kalau syaratnya terpenuhi
+// Area yang terkunci di awal; unlock(state) → true kalau syaratnya terpenuhi. Hutan dan Goa terbuka sejak awal.
 const AREA_UNLOCKS = {
-  goa: { done: 'unlockedCave', unlock: s => s.nodes.acacia.level >= 10 },
   sungai: { done: 'unlockedRiver', unlock: s => s.tools.rod.tier >= 1 },
   danau: { done: 'unlockedLake', unlock: s => s.tools.rod.tier >= 2 },
-  laut: { done: 'unlockedSea', unlock: s => s.tools.rod.tier >= 3 },
-  petualangan: { done: 'unlockedAdv', unlock: s => !!s.equip.weapon || ITEMS.some(it => it.weapon && s.items[it.key] >= 1) },
+  laut: { done: 'unlockedSea', unlock: s => s.tools.harpoon.tier >= 1 },
 };
 
 // Memancing: hasil diundi dari daftar ikan berbobot; ikan bagus lebih jarang, makin sering seiring level
@@ -616,27 +910,9 @@ function fishDrops(fish, p, tier) {
   return [...weights.map(([item, w]) => [item, w / total * (1 - miss)]), [null, miss]];
 }
 
-// Pohon: kayu naik lurus dari 40% di level 0 ke 90% di level 100; sisanya Ranting & Daun sama rata,
-// jadi Ranting & Daun (bahan bakar dan bahan Dapur) tidak pernah hilang: 30% → 5% masing-masing.
-const treeDrops = (wood, p) => { const main = 0.4 + 0.5 * p; return [[wood, main], ['twig', (1 - main) / 2], ['leaf', (1 - main) / 2]]; };
-
-// Sumber daya yang bisa dikerjakan. drops(p, tier) → [item, peluang]; p = level / 100, tier = tingkat alat.
-// Batu/bijih: item utama naik lurus dari peluang awal ke 100% di level 100; sisanya dibagi dengan rasio tetap.
-// tool + tier = alat yang dipakai dan tingkat minimumnya (di bawah itu node terkunci).
-// main = item yang bisa jadi ganda karena alat. time naik per tingkat, xp ikut naik supaya exp per detik tetap.
+// Node memancing. drops(p, tier) → [item, peluang]; p = level / 100, tier = tingkat joran.
+// time naik per tingkat, xp ikut naik supaya exp per detik tetap.
 const NODES = {
-  acacia: {
-    area: 'hutan', icon: '🌳', time: 2000, xp: 20, tool: 'axe', tier: 0, main: 'acaciaWood',
-    drops: p => treeDrops('acaciaWood', p),
-  },
-  teak: {
-    area: 'hutan', icon: '🌲', time: 3000, xp: 30, tool: 'axe', tier: 1, main: 'teakWood',
-    drops: p => treeDrops('teakWood', p),
-  },
-  rock: {
-    area: 'goa', icon: '🪨', time: 2000, xp: 20, tool: 'pickaxe', tier: 0, main: 'stone',
-    drops: p => { const main = 0.4 + 0.6 * p; return [['stone', main], ['pebble', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
-  },
   river: {
     area: 'sungai', icon: '🎣', time: 3000, xp: 30, tool: 'rod', tier: 1, main: null, name: 'riverFishing',
     drops: (p, tier) => fishDrops([
@@ -646,14 +922,6 @@ const NODES = {
       ['snakehead', 1, 10, true],
     ], p, tier),
   },
-  mahogany: {
-    area: 'hutan', icon: tint('mahogany', '🌳'), time: 4000, xp: 40, tool: 'axe', tier: 2, main: 'mahoganyWood',
-    drops: p => treeDrops('mahoganyWood', p),
-  },
-  ulin: {
-    area: 'hutan', icon: tint('ulin', '🌲'), time: 5000, xp: 50, tool: 'axe', tier: 3, main: 'ulinWood',
-    drops: p => treeDrops('ulinWood', p),
-  },
   lake: {
     area: 'danau', icon: '🎣', time: 4000, xp: 40, tool: 'rod', tier: 2, main: null, name: 'lakeFishing',
     drops: (p, tier) => fishDrops([
@@ -662,26 +930,5 @@ const NODES = {
       ['giantSnakehead', 8, 22, true],
       ['eel', 1, 8, true],
     ], p, tier - 1),
-  },
-  sea: {
-    area: 'laut', icon: '🎣', time: 5000, xp: 50, tool: 'rod', tier: 3, main: null, name: 'seaFishing',
-    drops: (p, tier) => fishDrops([
-      ['mackerel', 50, 30],
-      ['tuna', 25, 35],
-      ['snapper', 8, 22, true],
-      ['grouper', 1, 8, true],
-    ], p, tier - 2),
-  },
-  copper: {
-    area: 'goa', icon: COPPER_ROCK_ICON, time: 3000, xp: 30, tool: 'pickaxe', tier: 1, main: 'copperOre',
-    drops: p => { const main = 0.4 + 0.6 * p; return [['copperOre', main], ['stone', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
-  },
-  iron: {
-    area: 'goa', icon: IRON_ROCK_ICON, time: 4000, xp: 40, tool: 'pickaxe', tier: 2, main: 'ironOre',
-    drops: p => { const main = 0.4 + 0.6 * p; return [['ironOre', main], ['stone', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
-  },
-  gold: {
-    area: 'goa', icon: GOLD_ROCK_ICON, time: 5000, xp: 50, tool: 'pickaxe', tier: 3, main: 'goldOre',
-    drops: p => { const main = 0.4 + 0.6 * p; return [['goldOre', main], ['stone', (1 - main) * 2 / 3], [null, (1 - main) / 3]]; },
   },
 };

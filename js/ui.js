@@ -14,13 +14,10 @@ function nameOf(key) {
   return t(base) + (q !== 'common' ? ' ' + t(QUALITY[q].name) : '') + (trait ? ` (${t(TRAITS[trait].name)})` : '');
 }
 
-// Nama tampilan area (untuk syarat petualangan)
-const AREA_NAMES = { goa: 'cave', sungai: 'river', danau: 'lake', laut: 'sea' };
+// Halaman tempat sebuah kegiatan berada
+const activityArea = key => EXPLORE[key] ? EXPLORE[key].region : RECIPES[key] ? 'dapur' : NODES[key].area;
 
-// Halaman tempat kartu sebuah kegiatan berada
-const activityArea = key => ADVENTURES[key] ? 'petualangan' : RECIPES[key] ? 'dapur' : NODES[key].area;
-
-// Label tingkat alat: T1 = alat pertama. Joran tingkat 0 berarti belum punya, jadi joran pertama = T1.
+// Label tingkat alat: T1 = alat pertama. Joran/tombak tingkat 0 berarti belum punya, jadi yang pertama = T1.
 const tierLabel = (tool, i) => 'T' + (TOOLS[tool].tiers[0].none ? i : i + 1);
 // Ikon anvil garis (untuk petunjuk kunci) dan panah kecil
 const ANVIL_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h14c0 3-2 4-4 4v3h3v3H6v-3h3v-3H7C5 11 3 9 3 7z" fill="none" stroke="#8c8c8c" stroke-width="1.6" stroke-linejoin="round"/></svg>';
@@ -34,11 +31,6 @@ function lockInfo(key) {
     const lv = RECIPES[key].kitchen;
     return { chip: `<span class="ci">🍳</span>LV ${lv}`, text: t('needKitchen')(lv) };
   }
-  if (ADVENTURES[key]) {
-    const req = ADVENTURES[key].req || {};
-    if (state.mastery.melee.level < (req.melee || 0)) return { chip: `<span class="ci">⚔️</span>LV ${req.melee}`, text: t('needMelee')(req.melee) };
-    return { chip: `${LOCK_SVG}${t(AREA_NAMES[req.area])}`, text: t('needArea')(t(AREA_NAMES[req.area])) };
-  }
   const node = NODES[key], tool = TOOLS[node.tool], icon = tool.icon;
   return {
     chip: `<span class="ci">${icon}</span>${tierLabel(node.tool, node.tier)}`, text: t('needs')(t(tool.tiers[node.tier].key)),
@@ -46,10 +38,10 @@ function lockInfo(key) {
   };
 }
 
-// Buat kartu untuk tiap kegiatan: sumber daya (tebang/tambang/mancing), resep Dapur, dan petualangan
+// Buat kartu untuk tiap kegiatan: memancing dan resep Dapur (jelajah punya halaman sendiri)
 const cards = {};
-for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES), ...Object.keys(ADVENTURES)]) {
-  const node = NODES[key] || ADVENTURES[key], recipe = RECIPES[key];
+for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES)]) {
+  const node = NODES[key], recipe = RECIPES[key];
   const wrap = document.createElement('div');
   wrap.className = 'card-wrap';
   const el = document.createElement('button');
@@ -77,11 +69,9 @@ for (const key of [...Object.keys(NODES), ...Object.keys(RECIPES), ...Object.key
     if (!nodeOpen(key)) { replay(el, 'nope'); toggleHint(key, true); return; }
     // Resep yang bahannya kurang tidak bisa dimulai
     if (recipe && state.active !== key && !canAfford(recipe.input)) { replay(el, 'nope'); popup(key, null, t('outOfIngredients')); return; }
-    if (ADVENTURES[key] && !state.equip.weapon) { replay(el, 'nope'); popup(key, null, t('needWeapon')); return; }
     setActive(state.active === key ? null : key);
     replay(el, 'sel');
     render();
-    renderAdventure();
     renderActivity();
   });
   hint.addEventListener('click', e => {
@@ -215,7 +205,6 @@ function render() {
     if (!open) tag = '';
     else if (on) tag = '● ' + t('activeTag');
     else if (RECIPES[key]) tag = '❤️ ' + heals[key]; // resep tidak punya level sendiri: HP yang dipulihkan
-    else if (ADVENTURES[key]) tag = '';
     else tag = 'LV ' + state.nodes[key].level;
     setText(card.tag, tag);
     card.tag.classList.toggle('live', on);
@@ -228,22 +217,22 @@ function render() {
   }
 }
 
-// Baris alat (kapak di Hutan, beliung di Goa, joran di Sungai): kotak LV alat, nama tingkat + T, exp alat.
-// Level alat selalu berlabel alatnya; level pohon/batu ada di kartu node masing-masing.
-for (const [tool, def] of Object.entries(TOOLS)) {
+// Baris joran di Sungai: kotak LV joran, nama tingkat + T, exp joran. Alat jelajah tidak punya level
+// (tampil di bagian Perlengkapan halaman wilayahnya).
+const LEVELED_TOOLS = Object.entries(TOOLS).filter(([, d]) => d.leveled);
+for (const [tool, def] of LEVELED_TOOLS) {
   const box = document.querySelector(`.tool[data-tool="${tool}"]`);
   box.innerHTML =
     `<div class="tool-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b></b></div><div class="tool-main">` +
     `<div class="tool-title"><span class="tool-icon" aria-hidden="true">${def.icon}</span><span class="name"></span><span class="tier"></span>` +
     `<span class="tool-xp"></span></div><span class="bar"><span class="fill"></span></span></div></div>` +
-    `<div class="tool-foot"><dl class="stats"><div class="row-cut"><dt data-i18n="${def.interval}"></dt><dd></dd></div>` +
-    `<div class="row-double"><dt data-i18n="${def.doubleText}"></dt><dd></dd></div></dl>` +
+    `<div class="tool-foot"><dl class="stats"><div class="row-cut"><dt data-i18n="${def.interval}"></dt><dd></dd></div></dl>` +
     `<button class="tool-link" data-go="anvil"></button></div>`;
   box.querySelector('.tool-link').addEventListener('click', () => go('anvil'));
 }
 
 function renderTools() {
-  for (const [tool, def] of Object.entries(TOOLS)) {
+  for (const [tool, def] of LEVELED_TOOLS) {
     const el = document.querySelector(`.tool[data-tool="${tool}"]`), s = state.tools[tool];
     const tier = def.tiers[s.tier], maxed = s.level >= MAX_LEVEL, next = nextTier(tool);
     el.querySelector('.lv-box b').textContent = s.level;
@@ -256,9 +245,7 @@ function renderTools() {
     // Baris bonus hanya tampil kalau bonusnya ada
     el.querySelector('.row-cut').hidden = !s.level;
     el.querySelector('.row-cut dd').textContent = '−' + num(TOOL_CUT * s.level * 100, 2) + '%';
-    el.querySelector('.row-double').hidden = !tier.double;
-    el.querySelector('.row-double dd').textContent = num(tier.double * 100) + '%';
-    el.querySelector('.stats').hidden = !s.level && !tier.double;
+    el.querySelector('.stats').hidden = !s.level;
     const link = el.querySelector('.tool-link');
     link.hidden = !next;
     if (next) link.textContent = t('forgeAt')(tierLabel(tool, s.tier + 1));
@@ -275,17 +262,12 @@ function renderTools() {
       card.el.removeAttribute('aria-label');
       card.hint.hidden = true;
     }
-    if (ADVENTURES[key]) {
-      // Petualangan: musuhnya beserta peluang menang dengan senjata sekarang
-      const enemies = ADVENTURES[key].events.filter(e => e.enemy).map(e => e.enemy);
-      card.duration.innerHTML = open ? enemies.map(e => ENEMIES[e].icon + (state.equip.weapon ? ' ' + num(winChance(e) * 100) + '%' : '')).join(' · ') : '—';
-      continue;
-    }
     card.duration.textContent = open ? (actionTime(key) / 1000).toFixed(1) + 's' : '—';
     card.duration.title = open ? `${node.xp} Exp` : '';
     if (card.inputs) setHTML(card.inputs, matsHtml(node.input));
   }
   renderKitchen();
+  renderExplore();
 }
 
 // Dapur: kartu level + skill Memasak + upgrade
@@ -315,23 +297,24 @@ kitchenUpgradeBtn.addEventListener('click', () => {
 // Ponsel: 5 tab di bawah (grup) + sub-tab per grup di atas. Desktop: sidebar teks per grup.
 const PAGE_TEXT = {
   kebun: 'farm', hutan: 'forest', goa: 'cave', sungai: 'river', danau: 'lake', laut: 'sea', dapur: 'kitchen', anvil: 'anvil',
-  petualangan: 'adventure', rumah: 'house', pasar: 'market', settings: 'settings',
+  rumah: 'house', pasar: 'market', settings: 'settings',
 };
 const pageName = p => PAGE_TEXT[p] ? t(PAGE_TEXT[p]) : p === 'debug' ? 'Debug' : p;
 // Teks syarat area terkunci (title/aria)
-const LOCK_TEXT = { goa: 'caveLocked', sungai: 'riverLocked', danau: 'lakeLocked', laut: 'seaLocked', petualangan: 'advLocked' };
+const LOCK_TEXT = { sungai: 'riverLocked', danau: 'lakeLocked', laut: 'seaLocked' };
 // Grup tab bar ponsel; urutan = urutan tab. Ikon garis khusus.
 const TAB_GROUPS = [
-  { key: 'gather', text: 'grpGather', pages: ['kebun', 'hutan', 'goa', 'sungai', 'danau', 'laut'],
+  { key: 'explore', text: 'grpExplore', pages: ['hutan', 'goa', 'laut'],
+    icon: '<circle cx="12" cy="12" r="8.5"/><path d="m15.5 8.5-2 5-5 2 2-5z"/>' },
+  { key: 'gather', text: 'grpGather', pages: ['kebun', 'sungai', 'danau'],
     icon: '<path d="M12 21v-8"/><path d="M12 13c0-4 3-7 7-7 0 4-3 7-7 7z"/><path d="M12 15c0-3-2.5-5.5-6-5.5 0 3 2.5 5.5 6 5.5z"/>' },
   { key: 'craft', text: 'grpCraft', pages: ['dapur', 'anvil'], icon: '<path d="M3 7h14c0 3-2 4-4 4v3h3v4H6v-4h3v-3H7C5 11 3 9 3 7z"/>' },
   { key: 'home', text: 'grpHome', pages: ['rumah', 'settings', 'debug'], icon: '<path d="M4 11 12 4l8 7v9H4z"/><path d="M10 20v-5h4v5"/>' },
   { key: 'market', text: 'grpMarket', pages: ['pasar'], icon: '<path d="M3 9h18l-2-5H5z"/><path d="M5 9v11h14V9"/><path d="M10 20v-6h4v6"/>' },
-  { key: 'combat', text: 'grpCombat', pages: ['petualangan'], icon: '<path d="M5 19 19 5"/><path d="M15 5h4v4"/><path d="M19 19 5 5"/><path d="M9 5H5v4"/>' },
 ];
 // Grup sidebar desktop
-const SIDE_GROUPS = [['grpGather', TAB_GROUPS[0].pages], ['grpCraft', ['dapur', 'anvil']], ['grpCombat', ['petualangan']], ['navOther', ['rumah', 'pasar', 'settings']]];
-const groupOf = p => TAB_GROUPS.find(g => g.pages.includes(p)) || TAB_GROUPS[2];
+const SIDE_GROUPS = [['grpExplore', TAB_GROUPS[0].pages], ['grpGather', TAB_GROUPS[1].pages], ['grpCraft', ['dapur', 'anvil']], ['navOther', ['rumah', 'pasar', 'settings']]];
+const groupOf = p => TAB_GROUPS.find(g => g.pages.includes(p)) || TAB_GROUPS[3];
 const LOCK_SVG = '<svg class="lock-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.6"/></svg>';
 const lastInGroup = {}; // halaman terakhir per grup (tab kembali ke sana)
 
@@ -364,12 +347,8 @@ function renderSubtabs() {
 
 // Syarat area terkunci sebagai chip + jalan ke sana (bar petunjuk saat sub-tab/sidebar terkunci diklik)
 function areaReq(area) {
-  const rod = i => ({ chip: `<span class="ci">${TOOLS.rod.icon}</span>${tierLabel('rod', i)}`, to: 'anvil' });
-  const req = {
-    goa: { chip: `<span class="ci">${NODES.acacia.icon}</span>LV 10`, to: 'hutan' },
-    sungai: rod(1), danau: rod(2), laut: rod(3),
-    petualangan: { chip: '<span class="ci">⚔️</span>T1', to: 'anvil' },
-  }[area];
+  const tool = (k, i) => ({ chip: `<span class="ci">${TOOLS[k].icon}</span>${tierLabel(k, i)}`, to: 'anvil' });
+  const req = { sungai: tool('rod', 1), danau: tool('rod', 2), laut: tool('harpoon', 1) }[area];
   return { ...req, text: t(LOCK_TEXT[area]), go: req.to === 'anvil' ? t('openAnvil') : pageName(req.to) + ' →' };
 }
 let lockBarTimer;
@@ -388,7 +367,7 @@ $('lock-bar').addEventListener('click', e => {
   if (b) go(b.dataset.go);
 });
 
-// Area terkunci: item sidebar nonaktif + gembok (syarat di title); tab Tarung abu-abu sampai Petualangan terbuka
+// Area terkunci: item sidebar nonaktif + gembok (syarat di title)
 function renderNav() {
   for (const area of Object.keys(AREA_UNLOCKS)) {
     const btn = document.querySelector(`.nav-item[data-page="${area}"]`), open = areaOpen(area);
@@ -408,9 +387,11 @@ function renderNav() {
 
 // Status di sidebar: level skill tiap area (LV n) dan titik putih berkedip di kegiatan yang berjalan.
 // Hanya menulis ke DOM kalau nilainya berubah karena dipanggil tiap frame.
+// Wilayah jelajah: level tertinggi di antara tier area-nya
+const regionLevel = region => ({ level: Math.max(...REGIONS[region].areas.map(k => state.areas[k].level)) });
 const NAV_SKILL = {
-  kebun: () => state.farm, hutan: () => state.tools.axe, goa: () => state.tools.pickaxe, sungai: () => state.tools.rod,
-  dapur: () => state.cooking, anvil: () => state.smithing, petualangan: () => state.mastery.melee,
+  hutan: () => regionLevel('hutan'), goa: () => regionLevel('goa'), laut: () => regionLevel('laut'),
+  kebun: () => state.farm, sungai: () => state.tools.rod, dapur: () => state.cooking, anvil: () => state.smithing,
 };
 let navStatusKey = '';
 function renderNavStatus() {
@@ -461,6 +442,9 @@ const SOUNDS = {
   },
   success: at => { tone({ freq: 660, dur: 0.15, at }); tone({ freq: 990, dur: 0.35, at: at + 0.12 }); },
   fail: at => { tone({ freq: 220, type: 'sawtooth', dur: 0.4, vol: 0.12, at, slide: 70 }); },
+  // Jelajah: pukulan pendek saat menang, dentum rendah saat kalah
+  hit: at => { tone({ freq: 320, type: 'triangle', dur: 0.08, vol: 0.08, at, slide: 180 }); },
+  hurt: at => { tone({ freq: 140, type: 'square', dur: 0.18, vol: 0.07, at, slide: 60 }); },
 };
 
 // Anvil: skill Menempa, panel upgrade Anvil, lalu kartu resep (Alat | Senjata) dan baris NANTI
@@ -469,7 +453,8 @@ const FORGE_TIME = 1500; // animasi + suara sebelum hasil tempa keluar
 let forging = null; // alat yang sedang ditempa
 let forgingTier = null; // tingkat yang sedang ditempa + peluangnya (kartu dibekukan selama animasi)
 const forgeResults = {}; // tool → { ok, key, timer } hasil terakhir yang masih ditampilkan
-let anvilTab = 'tools'; // 'tools' | 'gear' (segmented control di bar atas)
+// Senjata & armor disembunyikan dulu (belum dipakai); datanya tetap ada untuk dungeon nanti
+const anvilTab = 'tools';
 
 // Statistik singkat perlengkapan: serangan & interval untuk senjata, pertahanan & HP untuk armor
 const gearStats = key => {
@@ -478,11 +463,12 @@ const gearStats = key => {
     : `🛡️ ${num(it.armor.def)} · ❤️ +${num(it.armor.hp)}`) + (it.trait ? ' · ' + t(TRAITS[it.trait].desc) : '');
 };
 
-// Area asal sebuah bahan, untuk baris tujuan "Kurang 110 Batu, Goa →"
+// Area asal sebuah bahan, untuk baris tujuan "Kurang 110 Batu, Goa →". Temuan utama area menang atas drop musuh.
 const ITEM_SOURCE = { kepeng: 'pasar' };
-for (const [k, n] of Object.entries(NODES)) for (const item of nodeDrops(k)) if (!ITEM_SOURCE[item] || item === n.main) ITEM_SOURCE[item] = n.area;
+for (const a of Object.values(EXPLORE)) for (const e of a.events) if (e.find && !ITEM_SOURCE[e.find]) ITEM_SOURCE[e.find] = a.region;
+for (const a of Object.values(EXPLORE)) for (const e of a.events) if (e.enemy) for (const [item] of ENEMIES[e.enemy].drops) if (!ITEM_SOURCE[item]) ITEM_SOURCE[item] = a.region;
+for (const k of Object.keys(NODES)) for (const item of nodeDrops(k)) if (!ITEM_SOURCE[item]) ITEM_SOURCE[item] = NODES[k].area;
 for (const k of Object.keys(CROPS)) ITEM_SOURCE[k] = 'kebun';
-for (const it of ITEMS) if (!ITEM_SOURCE[it.key] && it.cat === 'loot') ITEM_SOURCE[it.key] = 'petualangan';
 
 // Ikon anvil garis untuk animasi tempa, dan 6 percikan dengan arah berbeda
 const ANVIL_ART = '<span class="anvil-ic"><svg viewBox="0 0 24 16" aria-hidden="true"><path d="M2 2h16c0 3-2 4-4 4v3h3v5H6V9h3V6H6C4 6 2 4.5 2 2z" fill="none" stroke="#8c8c8c" stroke-width="1.4" stroke-linejoin="round"/></svg></span>';
@@ -535,8 +521,10 @@ function recipeParts(key) {
     // Setelah tingkat terakhir ditempa, kartunya tetap tampil sampai hasilnya hilang
     const shown = next || def.tiers[s.tier];
     if (next && lv < next.anvil && !result && !busy) return { later: def.icon, title: t(next.key) + ' · ' + t('needAnvil')(next.anvil) };
-    const opens = Object.entries(NODES).filter(([, n]) => n.tool === key && n.tier === idx)
-      .map(([k, n]) => `<span>${n.icon} ${n.name ? t(AREA_TEXT[n.area]) : t(k)}</span>`).join('');
+    // Yang dibuka tingkat ini: tier area jelajah dengan rank yang sama, atau node memancing
+    const rank = idx + (def.tiers[0].none ? 0 : 1);
+    const opens = def.leveled ? Object.entries(NODES).filter(([, n]) => n.tool === key && n.tier === idx).map(([, n]) => `<span>${n.icon} ${t(AREA_TEXT[n.area])}</span>`).join('')
+      : REGIONS[def.region].areas.filter(k => EXPLORE[k].tier === rank).map(k => `<span>${t(k)}</span>`).join('');
     const old = cur.none || idx === 0 ? '' : `<span class="ibox old" aria-hidden="true">${def.icon}</span>${ARROW_SVG.replace('class="arrow"', 'class="r-arrow"')}`;
     return {
       ready: next && canForge(key),
@@ -551,7 +539,7 @@ function recipeParts(key) {
   const g = GEAR[key];
   if (lv < g.anvil && !result && !busy) return { later: ITEM[key].icon, title: t(key) + ' · ' + t('needAnvil')(g.anvil) };
   const mine = k => parseKey(k).base === key;
-  const owned = ownedKeys().filter(mine).reduce((n, k) => n + state.items[k], 0) + ['weapon', 'armor'].filter(s => state.equip[s] && mine(state.equip[s])).length;
+  const owned = ownedKeys().filter(mine).reduce((n, k) => n + state.items[k], 0) ;
   const full = usedSlots() >= houseCapacity();
   return {
     ready: canForgeGear(key),
@@ -584,8 +572,6 @@ function renderAnvil() {
     anvilUpgradeBtn.disabled = !canAfford(cost);
     setHTML(anvilUpgradeBtn, `<span>${t('upgradeLv')(lv + 1)}</span><span class="mono">${canAfford(cost) ? '↑' : ''}</span>`);
   }
-  // Segmented Alat | Senjata di bar atas
-  $('top-extra').querySelectorAll('[data-anvil-tab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.anvilTab === anvilTab));
 
   const keys = anvilTab === 'tools' ? Object.keys(TOOLS) : Object.keys(GEAR);
   const parts = keys.map(k => [k, recipeParts(k)]).filter(([, p]) => p);
@@ -609,13 +595,6 @@ function renderAnvil() {
   $('recipes-later').hidden = !later.length;
   setHTML($('recipes-later'), `<span class="caps">${t('lblLater')}</span>` + later.map(([, p]) => `<span class="ic" title="${p.title}" role="img" aria-label="${p.title}">${p.later}</span>`).join(''));
 }
-$('top-extra').innerHTML = '<div class="seg" role="group"><button data-anvil-tab="tools" data-i18n="tabTools"></button><button data-anvil-tab="gear" data-i18n="tabGear"></button></div>';
-$('top-extra').addEventListener('click', e => {
-  const b = e.target.closest('[data-anvil-tab]');
-  if (!b || b.dataset.anvilTab === anvilTab) return;
-  anvilTab = b.dataset.anvilTab;
-  renderAnvil();
-});
 
 anvilUpgradeBtn.addEventListener('click', () => {
   if (!upgradeAnvil()) { replay(anvilUpgradeBtn, 'nope'); return; }
@@ -651,11 +630,12 @@ recipesEl.addEventListener('click', e => {
     if (row && !result.ok) replay(row, 'nope');
     renderTools();
     renderNav();
-    renderAdventure();
   }, FORGE_TIME);
 });
 
-// ---------- Petualangan ----------
+// ---------- Jelajah (Hutan, Goa, Laut) ----------
+// Tiap halaman wilayah: pilihan tier area, kartu jelajah (pemandangan POV + meter + HP + tombol), lalu bagian
+// yang bisa dilipat: Jurnal, Tas, Perlengkapan, Area. Status lipat disimpan di pengaturan (settings.folds).
 
 // Skill dengan kotak LV: angka level, bar exp, "xp/butuh XP"
 function skillBar(prefix, s) {
@@ -664,58 +644,374 @@ function skillBar(prefix, s) {
   $(prefix + '-fill').style.width = (maxed ? 100 : s.xp / xpNeeded(s.level) * 100) + '%';
   $(prefix + '-xp').textContent = maxed ? t('max') : num(s.xp) + '/' + num(xpNeeded(s.level)) + ' XP';
 }
-const lootText = loot => loot.map(([k, n]) => (k === 'kepeng' ? KEPENG_ICON : icons[k]) + ' ' + num(n)).join(', ');
+const lootText = loot => loot.map(([k, n]) => (k === 'kepeng' ? KEPENG_ICON : iconOf(k)) + ' ' + num(n)).join(', ');
+// Nama pendek area untuk label jurnal: "Hutan T1"
+const areaShort = key => t(PAGE_TEXT[EXPLORE[key].region]) + ' T' + EXPLORE[key].tier;
 
 function journalText(e) {
   switch (e.k) {
-    case 'start': return t('jStart')(t(e.area));
+    case 'start': return t('jStart')(t(e.a));
     case 'stop': return t('jStop');
     case 'home': return t('jHome');
-    case 'win': return t('jWin')(t(e.e), lootText(e.loot || []));
-    case 'lose': return t('jLose')(t(e.e), e.d);
+    case 'win': return t('jWinHit')(t(e.e), num(e.d), lootText(e.loot || []));
+    case 'lose': return t('jLose')(t(e.e), num(e.d));
     case 'find': return t('jFind')(lootText(e.loot));
+    case 'kepeng': return t('jKepeng')(num(e.n));
+    case 'empty': return t('jEmpty');
     case 'eat': return t('jEat')(t(e.f), e.h);
-    case 'bagFull': return t('jBagFull')(nameOf(e.item));
+    case 'bagFull': return t('jBagFullFind')(iconOf(e.item) + ' ' + num(e.n || 1) + ' ' + nameOf(e.item));
   }
   return '';
 }
 
+const FOLDS = ['journal', 'bag', 'gear', 'area'];
+const FOLD_TEXT = { journal: 'foldJournal', bag: 'foldBag', gear: 'foldGear', area: 'foldArea' };
+const exSel = {}; // tier area yang sedang dilihat per wilayah
+const exEls = {}; // elemen tiap halaman wilayah
+const lastHit = {}; // encounter terakhir per area (untuk toast di pemandangan): { res, at }
 let armedDiscard = null, discardTimer;
 
-const equipOpen = settings.equipOpen; // disimpan di pengaturan; null = belum pernah dipilih (lipat kalau slot terisi)
-function renderAdventure() {
-  const busy = adventuring(), max = maxHp(), hp = busy ? state.hp : max;
-  // Status: HP, mastery, statistik
-  $('adv-hp-fill').style.width = Math.min(100, hp / max * 100) + '%';
-  $('adv-hp-fill').classList.toggle('low', hp <= max * ADV.eatBelow);
-  $('adv-hp').textContent = num(hp) + '/' + num(max);
-  skillBar('melee', state.mastery.melee);
-  skillBar('armor', state.mastery.armor);
-  $('adv-atk').textContent = num(meleeAtk(), 1);
-  $('adv-interval').textContent = state.equip.weapon ? num(actionTime('edgeForest') / 1000) + ' ' + t('seconds') : '—';
-  $('adv-def').textContent = num(playerDef());
-  // Peluang menang untuk petualangan yang sedang berjalan (atau Hutan Tepi)
-  const enemies = [...new Set(ADVENTURES[adventuring() ? state.active : 'edgeForest'].events.filter(e => e.enemy).map(e => e.enemy))];
-  $('adv-win').textContent = state.equip.weapon ? enemies.map(e => `${ENEMIES[e].icon} ${num(winChance(e) * 100)}%`).join(' · ') : '—';
+for (const [region, r] of Object.entries(REGIONS)) {
+  const main = $('page-' + region);
+  const wrap = document.createElement('div');
+  wrap.className = 'ex-wrap';
+  wrap.innerHTML =
+    `<div class="ex-tiers" role="group">${r.areas.map(k => `<button class="ex-tier" data-area="${k}">` +
+      `<span class="t-top"><span class="t-tier">T${EXPLORE[k].tier}</span><span class="t-dot live" hidden></span><span class="t-lv"></span></span>` +
+      `<span class="t-name" data-i18n="${k}"></span><span class="t-bar"><span class="fill"></span></span></button>`).join('')}</div>` +
+    `<div class="ex-grid">` +
+    `<section class="ex-view">` +
+      `<div class="ex-scene"><canvas aria-hidden="true"></canvas>` +
+        `<div class="ex-hud"><span class="ex-name"></span><span class="ex-meter"></span></div>` +
+        `<div class="ex-toast" role="status"></div><div class="ex-lock" hidden></div></div>` +
+      `<div class="ex-stat"><div class="ex-hp-head"><span class="caps" data-i18n="hp"></span><span class="mono ex-hp-n"></span></div>` +
+        `<span class="bar"><span class="fill hp ex-hp-fill"></span></span>` +
+        `<span class="bar ex-step"><span class="fill ex-step-fill"></span></span></div>` +
+      `<div class="ex-controls"><div class="seg ex-mode" role="group"><button data-mode="manual" data-i18n="manual"></button><button data-mode="auto" data-i18n="auto"></button></div>` +
+        `<button class="forge-btn ex-main"></button><button class="btn2 ex-home" data-i18n="goHome"></button></div>` +
+      `<p class="note ex-note" hidden></p>` +
+    `</section>` +
+    `<div class="ex-folds">${FOLDS.map(f => `<section class="fold" data-fold="${f}">` +
+      `<button class="fold-head" aria-expanded="true"><span class="caps" data-i18n="${FOLD_TEXT[f]}"></span><span class="caps fold-meta"></span><span class="caret" aria-hidden="true"></span></button>` +
+      `<div class="fold-body"></div></section>`).join('')}</div>` +
+    `</div>`;
+  main.appendChild(wrap);
+  const q = sel => wrap.querySelector(sel);
+  exEls[region] = {
+    wrap, canvas: q('canvas'), name: q('.ex-name'), meter: q('.ex-meter'), toast: q('.ex-toast'), lock: q('.ex-lock'),
+    hpN: q('.ex-hp-n'), hpFill: q('.ex-hp-fill'), step: q('.ex-step-fill'), main: q('.ex-main'), home: q('.ex-home'), note: q('.ex-note'),
+    fold: Object.fromEntries(FOLDS.map(f => [f, q(`[data-fold="${f}"]`)])),
+  };
+  wrap.addEventListener('click', e => onExploreClick(region, e));
+}
 
-  // Perlengkapan: yang dipakai + pilihan dari Rumah. Daftar pilihan bisa dilipat; bawaannya terlipat
-  // kalau slot sudah terisi dan terbuka kalau masih kosong, sampai pemain menekan tombolnya sendiri.
-  $('equip').innerHTML = ['weapon', 'armor'].map(slot => {
-    const cur = state.equip[slot];
-    const options = ownedKeys().filter(k => itemDef(k)[slot]);
-    const open = options.length > 0 && (equipOpen[slot] ?? !cur);
-    return `<div class="equip-slot"><div class="equip-head"><span class="equip-label">${t(slot)}</span>` +
-      (options.length ? `<button class="equip-toggle" data-toggle-equip="${slot}" aria-expanded="${open}">` +
-        `${open ? t('equipHide') : t('equipShow')(num(options.length))}<span class="caret" aria-hidden="true"></span></button>` : '') + `</div>` +
-      `<div class="equip-cur">${cur ? `<span class="equip-icon">${iconOf(cur)}</span><span class="equip-name q-${parseKey(cur).q}"><b>${nameOf(cur)}</b><small>${gearStats(cur)}</small></span>` +
-        `<button class="chip" data-unequip="${slot}" ${busy ? 'disabled' : ''}>${t('unequip')}</button>` : `<span class="equip-none">${t('none')}</span>`}</div>` +
-      (open ? `<div class="equip-options">${options.map(k =>
-        `<button class="chip q-${parseKey(k).q}" data-equip="${slot}" data-key="${k}" ${busy ? 'disabled' : ''}>${iconOf(k)} ${nameOf(k)} ×${num(state.items[k])}</button>`).join('')}</div>` : '') +
-      `</div>`;
-  }).join('');
+// Tier yang dilihat: pilihan pemain; bawaannya area perjalanan yang berjalan di wilayah ini, atau tier tertinggi yang terbuka
+function selArea(region) {
+  if (exSel[region]) return exSel[region];
+  const areas = REGIONS[region].areas;
+  if (state.trip && EXPLORE[state.trip.area].region === region) return state.trip.area;
+  return [...areas].reverse().find(exploreOpen) || areas[0];
+}
 
-  // Tas
-  const bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1);
+// Syarat area jelajah yang masih terkunci: teks + tujuan
+function exploreLock(key) {
+  const a = EXPLORE[key], tool = regionTool(key), def = TOOLS[tool];
+  const rankIdx = a.tier - (def.tiers[0].none ? 0 : 1);
+  const parts = [];
+  if (toolRank(tool) < a.tier) parts.push({ icon: def.icon, text: t('needs')(t(def.tiers[rankIdx].key)), to: 'anvil', go: t('openAnvil') });
+  if (a.prev && state.areas[a.prev].level < EX.unlockLv) parts.push({ icon: 'T' + (a.tier - 1), text: t('needAreaLv')(t(a.prev), EX.unlockLv), area: a.prev });
+  return parts;
+}
+
+// Ringkasan encounter untuk toast di pemandangan
+function hitHtml(res) {
+  if (res.home) return `<b>${t('jHome')}</b>`;
+  if (res.enemy) {
+    const loot = res.loot.map(([k, n]) => `+${num(n)} ${iconOf(k)}`).join(' ');
+    return `<span class="tb">${ENEMIES[res.enemy].icon}</span><span>${res.win ? '⚔️' : '✕'} −${num(res.dmg)} ❤️ ${loot}</span>`;
+  }
+  if (res.kepeng) return `<span class="tb">${KEPENG_ICON}</span><span>+${num(res.kepeng)}</span>`;
+  if (res.loot.length) return `<span class="tb">${iconOf(res.loot[0][0])}</span><span>+${num(res.loot[0][1])}</span>`;
+  if (res.lost.length) return `<span class="tb">${iconOf(res.lost[0][0])}</span><span>${t('bagSlots')(num(bagUsed()), num(bagCapacity()))}</span>`;
+  return `<span class="dim">${t('jEmpty')}</span>`;
+}
+
+// Dipanggil setelah tiap langkah jelajah
+function onExploreStep(key, res) {
+  lastHit[key] = { res, at: performance.now() };
+  const region = EXPLORE[key].region, els = exEls[region];
+  if (page === region) {
+    setHTML(els.toast, hitHtml(res));
+    replay(els.toast, 'show');
+    if (res.enemy) replay(els.canvas.parentNode, res.win ? 'hit' : 'hurt');
+  }
+  if (res.enemy && settings.sound) (res.win ? SOUNDS.hit : SOUNDS.hurt)(0);
+}
+
+// Isi halaman wilayah. Bagian besar (fold) hanya ditulis ulang kalau isinya berubah (setHTML).
+function renderExplore(region = REGIONS[page] ? page : null) {
+  if (!region) return;
+  const els = exEls[region], key = selArea(region), a = EXPLORE[key], open = exploreOpen(key);
+  const tr = state.trip, here = !!tr && tr.area === key, away = !!tr && tr.area !== key;
+  // Tier
+  for (const btn of els.wrap.querySelectorAll('.ex-tier')) {
+    const k = btn.dataset.area, s = state.areas[k], o = exploreOpen(k);
+    btn.classList.toggle('locked', !o);
+    btn.setAttribute('aria-pressed', k === key);
+    setText(btn.querySelector('.t-lv'), o ? 'LV ' + s.level : '');
+    btn.querySelector('.t-dot').hidden = !(tr && tr.area === k);
+    btn.querySelector('.fill').style.width = (s.level >= MAX_LEVEL ? 100 : s.xp / areaXpNeeded(k, s.level) * 100) + '%';
+    btn.title = o ? '' : exploreLock(k).map(p => p.text).join(' · ');
+  }
+  // Kartu jelajah
+  setText(els.name, t(key) + (open ? ' · LV ' + state.areas[key].level : ''));
+  els.lock.hidden = open;
+  if (!open) {
+    setHTML(els.lock, LOCK_SVG + exploreLock(key).map(p => `<button class="hint-go" ${p.to ? `data-go="${p.to}"` : `data-sel="${p.area}"`}>` +
+      `<span class="ci">${p.icon}</span> ${p.text}</button>`).join(''));
+  }
+  els.wrap.querySelectorAll('.ex-mode button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === state.exMode));
+  els.wrap.querySelector('.ex-controls').hidden = !open;
+  els.home.hidden = !here;
+  if (away) {
+    els.note.hidden = false;
+    setHTML(els.note, t('elsewhere')(t(tr.area)) + (EXPLORE[tr.area].region === region ? '' : ` <button class="tool-link" data-go="${EXPLORE[tr.area].region}">${t('goThere')}</button>`));
+  } else els.note.hidden = true;
+  renderExploreLive(region);
+  renderFolds(region, key);
+}
+
+// Bagian yang berubah tiap frame: meter, HP, tombol utama, bar langkah
+function renderExploreLive(region) {
+  const els = exEls[region], key = selArea(region), tr = state.trip, here = !!tr && tr.area === key;
+  const max = maxHp(), hp = here ? tr.hp : max;
+  setText(els.meter, num(here ? tr.meter : 0) + ' m');
+  setText(els.hpN, num(hp) + '/' + num(max));
+  els.hpFill.style.width = Math.min(100, hp / max * 100) + '%';
+  els.hpFill.classList.toggle('low', hp <= max * EX.eatBelow);
+  els.step.style.width = (here && ticking() ? Math.min(100, state.progress / actionTime(key) * 100) : 0) + '%';
+  let label, disabled = false;
+  if (!here) label = t('enter');
+  else if (state.exMode === 'auto') { label = t('auto') + ' · ' + t('secPerM')(num(autoStep(state.areas[key].level) / 1000, 1)); disabled = true; }
+  else if (tr.walking) { label = t('walking'); disabled = true; }
+  else label = t('walk');
+  setText(els.main, label);
+  els.main.disabled = disabled;
+  els.main.classList.toggle('auto', here && state.exMode === 'auto');
+}
+
+function renderFolds(region, key) {
+  const els = exEls[region], tr = state.trip, busy = exploring();
+  for (const f of FOLDS) {
+    const closed = !!settings.folds[f];
+    els.fold[f].classList.toggle('closed', closed);
+    els.fold[f].querySelector('.fold-head').setAttribute('aria-expanded', !closed);
+  }
+  // Jurnal: ringkasan perjalanan + catatan
+  const fmt = new Intl.DateTimeFormat(settings.lang === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' });
+  const sum = tr ? t('tripNow')(num(tr.meter), num(tr.wins), num(tr.losses), num(tr.kepeng))
+    : state.lastTrip ? t('tripLast')(num(state.lastTrip.meter), num(state.lastTrip.wins), num(state.lastTrip.losses), num(state.lastTrip.kepeng)) : '';
+  setText(els.fold.journal.querySelector('.fold-meta'), tr ? num(tr.meter) + ' m' : '');
+  setHTML(els.fold.journal.querySelector('.fold-body'), (sum ? `<p class="panel-hint">${sum}</p>` : '') +
+    (state.journal.length ? `<ol class="journal">${state.journal.map(e =>
+      `<li class="j-${e.k}"><time>${fmt.format(e.at)}</time><span class="j-where">${e.a ? areaShort(e.a) + (e.m ? ' · ' + num(e.m) + ' m' : '') : ''}</span><span>${journalText(e)}</span></li>`).join('')}</ol>`
+      : `<p class="empty">${t('journalEmpty')}</p>`));
+  // Tas: isi (hanya lihat) + bawa bekal dari Rumah
+  const bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
+  setText(els.fold.bag.querySelector('.fold-meta'), t('bagSlots')(num(bagKeys.length), num(bagCapacity())));
+  const foods = ITEMS.filter(it => it.cat === 'food' && state.items[it.key] >= 1);
+  setHTML(els.fold.bag.querySelector('.fold-body'),
+    (bagKeys.length ? `<ul class="items bag-items">${bagKeys.map(k => `<li><span class="item" title="${nameOf(k)}" role="img" aria-label="${nameOf(k)}, ${num(state.bag.items[k])}">` +
+      `<span class="item-icon" aria-hidden="true">${iconOf(k)}</span><span class="item-qty" aria-hidden="true">${num(state.bag.items[k])}</span></span></li>`).join('')}</ul>`
+      : `<p class="empty">${t('bagEmpty')}</p>`) +
+    `<button class="goal" data-go="rumah"><span>${busy ? t('bagBusy') : t('bagSortHint')}</span><span class="mono">→</span></button>` +
+    `<div class="sub-head caps">${t('packFood')}</div>` +
+    (foods.length ? `<ul class="market">${foods.map(it =>
+      `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${it.icon}</span>` +
+      `<span class="sell-info"><span class="sell-name">${t(it.key)}</span><span class="sell-meta">${num(state.items[it.key])} · ❤️ ${it.heal}</span></span>` +
+      [1, 10].map(n => `<button class="sell-btn" data-pack="${it.key}" data-qty="${n}" ${busy ? 'disabled' : ''}>+${n}</button>`).join('') +
+      `<button class="sell-btn" data-pack="${it.key}" data-qty="all" ${busy ? 'disabled' : ''}>${t('all')}</button></li>`).join('')}</ul>`
+      : `<p class="empty">${t('noFood')}</p>`));
+  // Perlengkapan: alat wilayah, Mastery Armor, statistik, peluang menang di meter sekarang
+  const tool = REGIONS[region].tool, def = TOOLS[tool], st = state.tools[tool], next = nextTier(tool), ar = state.armor;
+  const meter = tr && tr.area === key ? tr.meter : 0;
+  const enemies = [...new Set(EXPLORE[key].events.filter(e => e.enemy).map(e => e.enemy))];
+  setText(els.fold.gear.querySelector('.fold-meta'), toolRank(tool) ? '⚔️ ' + toolAtk(tool) : '');
+  setHTML(els.fold.gear.querySelector('.fold-body'),
+    `<div class="gear-row"><span class="ibox" aria-hidden="true">${def.icon}</span><div class="r-info"><div class="r-name">${t(def.tiers[st.tier].key)}</div>` +
+      `<div class="r-sub">${toolRank(tool) ? `${t('toolAtk')} ${toolAtk(tool)}` : '—'}</div></div><span class="r-tier">${toolRank(tool) ? 'T' + toolRank(tool) : ''}</span></div>` +
+    (next ? `<button class="goal" data-go="anvil"><span>${t('forgeAt')(tierLabel(tool, st.tier + 1))}</span><span class="mono">→</span></button>` : '') +
+    `<div class="gear-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b>${ar.level}</b></div><div class="tool-main">` +
+      `<div class="tool-title"><span class="name">${t('armorMastery')}</span><span class="tool-xp">${ar.level >= MAX_LEVEL ? t('max') : num(ar.xp) + '/' + num(xpNeeded(ar.level)) + ' XP'}</span></div>` +
+      `<span class="bar"><span class="fill" style="width:${ar.level >= MAX_LEVEL ? 100 : ar.xp / xpNeeded(ar.level) * 100}%"></span></span></div></div>` +
+    `<dl class="stats gear-stats"><div><dt>${t('maxHp')}</dt><dd>${num(maxHp())}</dd></div><div><dt>${t('defense')}</dt><dd>${num(playerDef())}</dd></div></dl>` +
+    `<div class="sub-head caps">${t('winAt')(num(meter))}</div>` +
+    `<ul class="win-list">${enemies.map(e => `<li><span class="sell-icon" aria-hidden="true">${ENEMIES[e].icon}</span><span class="sell-name">${t(e)}</span>` +
+      `<span class="win-bar"><span class="bar"><span class="fill" style="width:${winChance(e, key, meter) * 100}%"></span></span></span>` +
+      `<span class="mono">${toolRank(tool) ? num(winChance(e, key, meter) * 100) + '%' : '—'}</span></li>`).join('')}</ul>`);
+  // Area: level, kecepatan, yang bisa ditemui
+  const s = state.areas[key], maxed = s.level >= MAX_LEVEL, need = areaXpNeeded(key, s.level);
+  const finds = [...new Set(EXPLORE[key].events.flatMap(e => e.find ? [e.find] : e.enemy ? ENEMIES[e.enemy].drops.map(d => d[0]) : []))];
+  setText(els.fold.area.querySelector('.fold-meta'), 'LV ' + s.level);
+  setHTML(els.fold.area.querySelector('.fold-body'),
+    `<div class="gear-row"><div class="lv-box" aria-hidden="true"><span>LV</span><b>${s.level}</b></div><div class="tool-main">` +
+      `<div class="tool-title"><span class="name">${t(key)}</span><span class="tool-xp">${maxed ? t('max') : num(s.xp) + '/' + num(need) + ' XP'}</span></div>` +
+      `<span class="bar"><span class="fill" style="width:${maxed ? 100 : s.xp / need * 100}%"></span></span></div></div>` +
+    `<dl class="stats gear-stats"><div><dt>${t('autoSpeed')}</dt><dd>${t('secPerM')(num(autoStep(s.level) / 1000, 1))}</dd></div>` +
+      `<div><dt>${t('manualSpeed')}</dt><dd>${t('secPerM')(num(EX.manual / 1000, 1))}</dd></div></dl>` +
+    `<div class="sub-head caps">${t('encounters')}</div>` +
+    `<div class="enc-list">${enemies.map(e => `<span title="${t(e)}">${ENEMIES[e].icon}</span>`).join('')}<span class="sep"></span>${finds.map(k => `<span title="${nameOf(k)}">${iconOf(k)}</span>`).join('')}</div>` +
+    `<p class="note pad">${t('depthNote')}</p>`);
+}
+
+function onExploreClick(region, e) {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.classList.contains('ex-tier')) {
+    exSel[region] = b.dataset.area;
+    replay(b, 'sel');
+  } else if (b.dataset.sel) exSel[region] = b.dataset.sel;
+  else if (b.dataset.go) { go(b.dataset.go); return; }
+  else if (b.dataset.mode) setMode(b.dataset.mode);
+  else if (b.classList.contains('ex-main')) {
+    const key = selArea(region);
+    if (!state.trip || state.trip.area !== key) {
+      if (!setActive(key)) { replay(b, 'nope'); return; }
+      lastHit[key] = null;
+      setHTML(exEls[region].toast, '');
+    } else if (!walk()) { replay(b, 'nope'); return; }
+    renderActivity();
+  } else if (b.classList.contains('ex-home')) {
+    setActive(null);
+    renderActivity();
+  } else if (b.classList.contains('fold-head')) {
+    const f = b.parentNode.dataset.fold;
+    settings.folds[f] = !settings.folds[f];
+    saveSettings();
+  } else if (b.dataset.pack) packFood(b.dataset.pack, b.dataset.qty === 'all' ? Infinity : +b.dataset.qty);
+  else return;
+  renderExplore(region);
+  render();
+}
+
+// ---------- Pemandangan POV (canvas monokrom) ----------
+// Kamera maju sepanjang lorong. Benda (batang pohon, dinding goa, ombak) dibuat dari meter-nya sendiri dengan
+// angka acak tetap, jadi pemandangan sama tiap kali melewati meter yang sama. Hanya digambar saat halamannya terbuka.
+const rand = (k, salt) => { const x = Math.sin(k * 127.1 + salt * 311.7) * 43758.5453; return x - Math.floor(x); };
+const REDUCED = matchMedia('(prefers-reduced-motion: reduce)');
+let sceneT = 0;
+function drawScene(region, now) {
+  const els = exEls[region], cv = els.canvas, dpr = Math.min(2, devicePixelRatio || 1);
+  const w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;
+  if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const key = selArea(region), tr = state.trip, here = !!tr && tr.area === key && exploring();
+  const moving = here && ticking();
+  const frac = moving ? Math.min(1, state.progress / actionTime(key)) : 0;
+  const cam = (here ? tr.meter : 0) + frac;
+  // Langkah: naik-turun tiap ±0,45 dtk saat berjalan, napas pelan saat diam
+  sceneT = now / 1000;
+  const still = REDUCED.matches;
+  const bob = still ? 0 : moving ? Math.abs(Math.sin(sceneT * Math.PI / 0.45)) * 5 - 2.5 : Math.sin(sceneT * 1.3) * 0.8;
+  const sway = still ? 0 : region === 'laut' ? Math.sin(sceneT * 0.9) * 0.025 : moving ? Math.sin(sceneT * Math.PI / 0.9) * 0.006 : 0;
+  const locked = !exploreOpen(key);
+  ctx.fillStyle = '#0b0b0b';
+  ctx.fillRect(0, 0, w, h);
+  ctx.save();
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate(sway);
+  ctx.translate(-w / 2, -h / 2 + bob);
+  const f = w * 0.55, hy = h * (region === 'laut' ? 0.42 : 0.46), camH = 1.6, far = 14;
+  const X = (x, z) => w / 2 + x * f / z, Y = (y, z) => hy - (y - camH) * f / z;
+  // Warna: makin jauh makin gelap (kabut ke latar)
+  const shade = (z, near = 150, base = 14) => { const v = Math.round(base + (near - base) * Math.max(0, 1 - z / far)); return `rgb(${v},${v},${v})`; };
+  if (region === 'laut') {
+    // Langit polos, garis cakrawala, ombak tiap 0,5 m mendekat
+    ctx.fillStyle = '#121212';
+    ctx.fillRect(-20, -20, w + 40, hy + 20);
+    ctx.strokeStyle = '#3a3a3a';
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-20, hy); ctx.lineTo(w + 20, hy); ctx.stroke();
+    for (let i = Math.ceil(far * 2); i >= 1; i--) {
+      const k = Math.floor(cam * 2) + i, z = k / 2 - cam;
+      if (z < 0.35) continue;
+      ctx.strokeStyle = shade(z, 120, 30);
+      ctx.lineWidth = Math.max(0.6, 2.2 / z);
+      ctx.beginPath();
+      for (let sx = -20; sx <= w + 20; sx += 8) {
+        const wx = (sx - w / 2) * z / f;
+        const y = Y(0.15 * Math.sin(wx * 1.3 + k * 1.7 + sceneT * (still ? 0 : 1.2)), z);
+        if (sx === -20) ctx.moveTo(sx, y); else ctx.lineTo(sx, y);
+      }
+      ctx.stroke();
+      // Batu karang / pelampung sesekali di samping
+      if (k % 2 === 0 && rand(k, 3) < 0.18) {
+        const side = rand(k, 4) < 0.5 ? -1 : 1, x = side * (2 + rand(k, 5) * 4);
+        ctx.fillStyle = shade(z, 70, 16);
+        ctx.beginPath();
+        ctx.moveTo(X(x - 0.5, z), Y(0, z)); ctx.lineTo(X(x - 0.15, z), Y(0.5 + rand(k, 6) * 0.6, z));
+        ctx.lineTo(X(x + 0.3, z), Y(0.35, z)); ctx.lineTo(X(x + 0.55, z), Y(0, z)); ctx.closePath(); ctx.fill();
+      }
+    }
+  } else if (region === 'goa') {
+    // Cincin dinding goa tiap meter + stalaktit
+    for (let i = far; i >= 0; i--) {
+      const k = Math.floor(cam) + i, z = k - cam;
+      if (z < 0.3) continue;
+      ctx.strokeStyle = shade(z, 125, 22);
+      ctx.lineWidth = Math.max(0.8, 3 / z);
+      ctx.beginPath();
+      const n = 12;
+      for (let j = 0; j <= n; j++) {
+        const ang = Math.PI * (j / n), r = 2.2 + rand(k, j % n) * 0.6;
+        const x = -Math.cos(ang) * r * 1.25, y = Math.sin(ang) * r * 1.05 - 0.2;
+        if (j === 0) ctx.moveTo(X(x, z), Y(y, z)); else ctx.lineTo(X(x, z), Y(y, z));
+      }
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X(-2.75, z), Y(0, z)); ctx.lineTo(X(2.75, z), Y(0, z)); ctx.stroke();
+      if (z > 1.2 && rand(k, 20) < 0.5) {
+        const x = (rand(k, 21) - 0.5) * 3, top = 2.0 + rand(k, 22) * 0.4, len = 0.35 + rand(k, 23) * 0.6;
+        ctx.fillStyle = shade(z, 90, 16);
+        ctx.beginPath(); ctx.moveTo(X(x - 0.12, z), Y(top, z)); ctx.lineTo(X(x + 0.12, z), Y(top, z)); ctx.lineTo(X(x, z), Y(top - len, z)); ctx.closePath(); ctx.fill();
+      }
+      if (rand(k, 30) < 0.3) {
+        const x = (rand(k, 31) < 0.5 ? -1 : 1) * (1.2 + rand(k, 32) * 1.1), s = 0.25 + rand(k, 33) * 0.3;
+        ctx.fillStyle = shade(z, 80, 14);
+        ctx.beginPath(); ctx.ellipse(X(x, z), Y(s * 0.5, z), s * f / z, s * 0.6 * f / z, 0, Math.PI, 0); ctx.fill();
+      }
+    }
+  } else {
+    // Hutan: tanah bergaris tiap meter, jalan setapak, batang pohon + tajuk di kiri-kanan
+    for (let i = far; i >= 0; i--) {
+      const k = Math.floor(cam) + i, z = k - cam;
+      if (z < 0.25) continue;
+      ctx.strokeStyle = shade(z, 46, 16);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(X(-0.7, z), Y(0, z)); ctx.lineTo(X(0.7, z), Y(0, z)); ctx.stroke();
+      for (const side of [-1, 1]) {
+        for (let n = 0; n < 2; n++) {
+          if (rand(k, side * 7 + n) < 0.35) continue;
+          const x = side * (1.3 + n * 1.8 + rand(k, side * 11 + n) * 1.4), th = 3.2 + rand(k, side * 13 + n) * 2.5;
+          const tw = 0.16 + rand(k, side * 17 + n) * 0.12;
+          ctx.fillStyle = shade(z, 120, 18);
+          ctx.fillRect(X(x - tw, z), Y(th, z), Math.max(1, 2 * tw * f / z), Y(0, z) - Y(th, z));
+          ctx.fillStyle = shade(z, 70, 14);
+          ctx.beginPath(); ctx.ellipse(X(x, z), Y(th, z), (0.9 + rand(k, side * 19 + n) * 0.6) * f / z, 0.9 * f / z, 0, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    }
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.beginPath(); ctx.moveTo(X(-0.7, 0.4), Y(0, 0.4)); ctx.lineTo(w / 2 - 2, hy); ctx.moveTo(X(0.7, 0.4), Y(0, 0.4)); ctx.lineTo(w / 2 + 2, hy); ctx.stroke();
+  }
+  ctx.restore();
+  if (locked) { ctx.fillStyle = 'rgba(10,10,10,.6)'; ctx.fillRect(0, 0, w, h); }
+}
+
+// Panel Tas di Rumah: simpan/buang per item, simpan semua, upgrade tas
+function renderBag() {
+  const busy = exploring(), bagKeys = Object.keys(state.bag.items).filter(k => state.bag.items[k] >= 1).sort(compareKeys);
   $('bag-level').textContent = 'LV ' + state.bag.level;
   $('bag-slots').textContent = t('bagSlots')(num(bagKeys.length), num(bagCapacity()));
   const bagCost = state.bag.level < BAG.maxLevel && BAG.cost(state.bag.level);
@@ -725,6 +1021,7 @@ function renderAdventure() {
     $('bag-cost').innerHTML = costHtml(bagCost);
     $('bag-upgrade').disabled = !canAfford(bagCost);
   }
+  $('bag-busy').hidden = !busy;
   $('bag-items').innerHTML = bagKeys.map(k =>
     `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${iconOf(k)}</span>` +
     `<span class="sell-info"><span class="sell-name">${nameOf(k)}</span><span class="sell-meta">${num(state.bag.items[k])}${heals[k] ? ' · ❤️ ' + heals[k] : ''}</span></span>` +
@@ -733,44 +1030,20 @@ function renderAdventure() {
   $('bag-empty').hidden = bagKeys.length > 0;
   $('bag-store-all').hidden = !bagKeys.length;
   $('bag-store-all').disabled = busy;
-
-  // Bawa masakan dari Rumah
-  const foods = ITEMS.filter(it => it.cat === 'food' && state.items[it.key] >= 1);
-  $('pack').innerHTML = foods.map(it =>
-    `<li class="sell-row"><span class="sell-icon" aria-hidden="true">${it.icon}</span>` +
-    `<span class="sell-info"><span class="sell-name">${t(it.key)}</span><span class="sell-meta">${num(state.items[it.key])} · ❤️ ${it.heal}</span></span>` +
-    [1, 10].map(n => `<button class="sell-btn" data-pack="${it.key}" data-qty="${n}" ${busy ? 'disabled' : ''}>+${n}</button>`).join('') +
-    `<button class="sell-btn" data-pack="${it.key}" data-qty="all" ${busy ? 'disabled' : ''}>${t('all')}</button></li>`).join('');
-  $('pack-empty').hidden = foods.length > 0;
-
-  // Jurnal
-  $('adv-summary').textContent = state.journal.length ? t('advSummary')(num(state.adv.wins), num(state.adv.losses), num(state.adv.kepeng)) : '';
-  const fmt = new Intl.DateTimeFormat(settings.lang === 'id' ? 'id-ID' : 'en-US', { hour: '2-digit', minute: '2-digit' });
-  $('journal').innerHTML = state.journal.map(e =>
-    `<li class="j-${e.k}"><time>${fmt.format(e.at)}</time><span>${journalText(e)}</span></li>`).join('');
-  $('journal-empty').hidden = state.journal.length > 0;
 }
-
-$('page-petualangan').addEventListener('click', e => {
+$('bag-panel').addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b || b.disabled) return;
-  if (b.dataset.toggleEquip) {
-    const slot = b.dataset.toggleEquip;
-    equipOpen[slot] = b.getAttribute('aria-expanded') !== 'true';
-    saveSettings();
-  } else if (b.dataset.equip) { equipItem(b.dataset.equip, b.dataset.key); }
-  else if (b.dataset.unequip) unequip(b.dataset.unequip);
-  else if (b.dataset.store) storeFromBag(b.dataset.store);
+  if (b.dataset.store) storeFromBag(b.dataset.store);
   else if (b.dataset.discard) {
     clearTimeout(discardTimer);
     if (armedDiscard === b.dataset.discard) { discardFromBag(b.dataset.discard); armedDiscard = null; }
-    else { armedDiscard = b.dataset.discard; discardTimer = setTimeout(() => { armedDiscard = null; renderAdventure(); }, 3000); }
-  } else if (b.dataset.pack) packFood(b.dataset.pack, b.dataset.qty === 'all' ? Infinity : +b.dataset.qty);
-  else if (b.id === 'bag-store-all') storeAllFromBag();
+    else { armedDiscard = b.dataset.discard; discardTimer = setTimeout(() => { armedDiscard = null; renderBag(); }, 3000); }
+  } else if (b.id === 'bag-store-all') storeAllFromBag();
   else if (b.id === 'bag-upgrade') { if (upgradeBag()) renderKepeng(); }
   else return;
-  renderAdventure();
-  render();
+  renderBag();
+  renderHouse();
 });
 
 // ---------- Kebun ----------
@@ -969,7 +1242,8 @@ setInterval(() => { if (page === 'kebun') renderFarm(); }, 1000);
 // ---------- Berikutnya: rantai loop pertama (daun → Kepeng → benih → tanaman) ----------
 const NEXT_STEPS = [
   { icon: () => icons.leaf, text: 'nextLeaf', to: 'hutan' },
-  { icon: () => KEPENG_ICON, text: 'nextSell', to: 'pasar' },
+  // Daun dari Hutan masih di tas: simpan dulu di Rumah, baru dijual
+  { icon: () => KEPENG_ICON, text: () => state.items.leaf >= 1 || !(state.bag.items.leaf >= 1) ? 'nextSell' : 'nextStore', to: () => state.items.leaf >= 1 || !(state.bag.items.leaf >= 1) ? 'pasar' : 'rumah' },
   { icon: () => icons.kangkungSeed, text: 'nextPlant', to: 'kebun' },
   { icon: () => icons.kangkung, text: 'nextHarvest', to: 'kebun' },
 ];
@@ -982,8 +1256,9 @@ function renderNext() {
   if (ob === 4 && onboardPrev < 4) onboardDoneUntil = Date.now() + 6000;
   onboardPrev = ob;
   const show = ob < 4 || Date.now() < onboardDoneUntil;
-  const leaf = Math.min(5, Math.floor(state.items.leaf || 0));
-  const key = show + '|' + ob + '|' + (ob === 0 ? leaf : '') + '|' + settings.lang;
+  const leaf = Math.min(5, Math.floor(leafCount()));
+  const stepText = s => typeof s.text === 'function' ? s.text() : s.text, stepTo = s => typeof s.to === 'function' ? s.to() : s.to;
+  const key = show + '|' + ob + '|' + (ob === 0 ? leaf : '') + '|' + (NEXT_STEPS[ob] ? stepText(NEXT_STEPS[ob]) : '') + '|' + settings.lang;
   if (key === nextKey) return;
   nextKey = key;
   document.querySelectorAll('.next-strip').forEach(el => {
@@ -994,9 +1269,9 @@ function renderNext() {
       `<div class="next-chain" aria-hidden="true">${NEXT_STEPS.map((s, i) =>
         `<span class="next-step ${i < ob ? 'done' : i === ob ? 'cur' : 'todo'}"><span class="ni">${s.icon()}</span>${i < ob ? `<span class="next-check">${CHECK_SVG}</span>` : ''}</span>` +
         (i < 3 ? NEXT_ARROW : '')).join('')}</div>` +
-      (step ? `<button class="next-text" data-go="${step.to}"><span>${t(step.text)}</span><span class="mono">${ob === 0 ? leaf + '/5' : '→'}</span></button>`
+      (step ? `<button class="next-text" data-go="${stepTo(step)}"><span>${t(stepText(step))}</span><span class="mono">${ob === 0 ? leaf + '/5' : '→'}</span></button>`
         : `<div class="next-text"><span>${t('nextDone')}</span><span class="mono">✓</span></div>`);
-    el.setAttribute('aria-label', t('lblNext') + ': ' + (step ? t(step.text) : t('nextDone')));
+    el.setAttribute('aria-label', t('lblNext') + ': ' + (step ? t(stepText(step)) : t('nextDone')));
   });
 }
 document.addEventListener('click', e => {
@@ -1036,7 +1311,7 @@ function applySettings() {
   renderHouse();
   renderMarket();
   renderKepeng();
-  renderAdventure();
+  renderBag();
   renderFarm();
   renderPageTitle();
 }
@@ -1161,7 +1436,7 @@ window.addEventListener('resize', () => openItem && showTip(null));
 const session = { key: null, n: 0 };
 const AREA_TEXT = { sungai: 'river', danau: 'lake', laut: 'sea' };
 function activityName(key) {
-  if (ADVENTURES[key]) return t('actAdv')(t(key));
+  if (EXPLORE[key]) return t('actExplore')(t(key));
   if (RECIPES[key]) return t('actCook')(t(key));
   const node = NODES[key];
   if (node.tool === 'rod') return t('actFish')(t(AREA_TEXT[node.area]));
@@ -1174,7 +1449,7 @@ function tally(key, got) {
   if (RECIPES[key] || (node && (node.main ? got.item === node.main : true))) session.n += got.qty;
 }
 function activityMeta(key) {
-  if (ADVENTURES[key]) return '❤️ ' + num(state.hp) + ' / ' + num(maxHp());
+  if (EXPLORE[key]) return num(state.trip.meter) + ' m · ❤️ ' + num(state.trip.hp) + '/' + num(maxHp());
   const what = RECIPES[key] ? nameOf(key) : NODES[key].main ? nameOf(NODES[key].main) : t('catFish');
   return '+' + num(session.n) + ' ' + what.toLowerCase();
 }
@@ -1199,13 +1474,13 @@ function renderActivity() {
           `<div class="act-bar"><span class="fill"></span></div>`;
       }
       el.querySelector('.act-name').textContent = activityName(key);
-      el.querySelector('.act-meta').textContent = activityMeta(key) + (el.id === 'side-activity' && !ADVENTURES[key] ? ' · ' + (actionTime(key) / 1000).toFixed(1) + 's' : '');
+      el.querySelector('.act-meta').textContent = activityMeta(key) + (el.id === 'side-activity' ? ' · ' + (actionTime(key) / 1000).toFixed(1) + 's' : '');
       el.querySelector('.act-stop').setAttribute('aria-label', t('stop'));
       el.querySelector('.act-main').setAttribute('aria-label', activityName(key) + ', ' + pageName(activityArea(key)));
     }
   }
   if (key) {
-    const w = Math.min(100, state.progress / actionTime(key) * 100) + '%';
+    const w = (ticking() ? Math.min(100, state.progress / actionTime(key) * 100) : 0) + '%';
     for (const el of activityEls) el.querySelector('.act-bar .fill').style.width = w;
   }
 }
@@ -1214,7 +1489,7 @@ for (const el of activityEls) el.addEventListener('click', e => {
   if (e.target.closest('.act-stop')) {
     setActive(null);
     render();
-    renderAdventure();
+    renderExplore();
     renderActivity();
   } else if (e.target.closest('.act-main')) go(activityArea(state.active));
 });
@@ -1241,35 +1516,39 @@ function loop(now) {
   const dt = Math.min(now - last, OFFLINE_CAP) * timeScale;
   last = now;
   const key = state.active;
-  if (key) {
+  if (key && ticking()) {
     state.progress += dt;
     if (state.progress >= actionTime(key)) {
       let got;
-      for (let time; state.active && state.progress >= (time = actionTime(key)); state.progress -= time) tally(key, got = act(key));
-      if (got && got.stopped) save();
+      for (let time; state.active && ticking() && state.progress >= (time = actionTime(key)); state.progress -= time) {
+        got = act(key);
+        if (EXPLORE[key]) onExploreStep(key, got); else tally(key, got);
+      }
+      if (!ticking()) state.progress = 0;
+      if (got && (got.stopped || got.home)) save();
       const opened = checkUnlocks();
       if (opened.length) {
         save();
         renderNav();
-        if (page === activityArea(key)) popup(key, null, t(AREA_UNLOCKS[opened[0]].done));
+        if (page === activityArea(key) && cards[key]) popup(key, null, t(AREA_UNLOCKS[opened[0]].done));
       }
-      renderTools();
-      if (page === activityArea(key) && ADVENTURES[key]) {
-        const loot = got.loot.map(([k, n]) => '+' + num(n) + ' ' + (k === 'kepeng' ? KEPENG_ICON : icons[k])).join(' ');
-        if (got.enemy && !got.win) popup(key, null, ENEMIES[got.enemy].icon + ' −' + got.dmg + ' ❤️', 'full');
-        else if (got.enemy || loot) popup(key, null, (got.enemy ? ENEMIES[got.enemy].icon + ' ⚔️ ' : '') + loot);
-        if (got.home) popup(key, null, t('jHome'), 'full');
-      } else if (page === activityArea(key)) {
-        if (!got || got.item) popup(key, got);
-        if (got && got.stopped) popup(key, null, t('outOfIngredients'));
+      if (EXPLORE[key]) {
+        renderKepeng();
+        renderExplore();
+        if (page === 'rumah') renderBag();
+      } else {
+        renderTools();
+        if (page === activityArea(key)) {
+          if (!got || got.item) popup(key, got);
+          if (got && got.stopped) popup(key, null, t('outOfIngredients'));
+        }
       }
-      if (ADVENTURES[key]) renderKepeng();
-      if (ADVENTURES[key] && (page === 'petualangan' || got.home)) renderAdventure();
-      else if (page === 'anvil') renderAnvil();
+      if (page === 'anvil') renderAnvil();
       else if (page === 'rumah') renderHouse();
       else if (page === 'pasar') renderMarket();
     }
   }
+  if (REGIONS[page]) { renderExploreLive(page); drawScene(page, now); }
   render();
   renderNavStatus();
   renderCounter();
@@ -1281,14 +1560,14 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // Menu & halaman
-const PAGES = ['kebun', 'hutan', 'goa', 'sungai', 'danau', 'laut', 'dapur', 'petualangan', 'rumah', 'pasar', 'anvil', 'settings'];
+const PAGES = ['hutan', 'goa', 'laut', 'kebun', 'sungai', 'danau', 'dapur', 'rumah', 'pasar', 'anvil', 'settings'];
 // Dulu menutup drawer ponsel; tetap ada karena dipanggil mode uji
 function setMenu() {}
 
 function showPage(name) {
   if (openItem) showTip(null);
   // Tautan lama: Inventory jadi Rumah, Pohon jadi Hutan
-  name = { inventory: 'rumah', pohon: 'hutan' }[name] || name;
+  name = { inventory: 'rumah', pohon: 'hutan', petualangan: 'hutan' }[name] || name;
   page = PAGES.includes(name) && areaOpen(name) ? name : 'hutan';
   lastInGroup[groupOf(page).key] = page;
   document.body.dataset.page = page;
@@ -1302,18 +1581,18 @@ function showPage(name) {
   renderPageTitle();
   renderNav();
   renderCounter();
-  if (page === 'rumah') renderHouse();
+  if (page === 'rumah') { renderHouse(); renderBag(); }
   if (page === 'pasar') { renderMarket(); renderSeedShop(); }
   if (page === 'anvil') renderAnvil();
   if (page === 'kebun') renderFarm();
-  if (page === 'petualangan') renderAdventure();
+  if (REGIONS[page]) renderExplore(page);
 }
 
 // Animasi masuk halaman: container naik + isi muncul bertahap, sekali per showPage (render tiap tick tidak memutarnya lagi)
 let enterTimer;
 function enterPage(main) {
   document.querySelectorAll('main.entered').forEach(m => m.classList.remove('entered', 'page-in'));
-  const groups = main.querySelectorAll(':scope > *, .cards, .plots, .recipes, .items, .market');
+  const groups = main.querySelectorAll(':scope > *, .cards, .plots, .recipes, .items, .market, .ex-folds');
   for (const g of groups) [...g.children].forEach((el, i) => el.style.setProperty('--i', Math.min(i, 8)));
   replay(main, 'page-in');
   main.classList.add('entered');
@@ -1390,6 +1669,7 @@ resetBtn.addEventListener('click', () => {
   renderHouse();
   renderMarket();
   renderKepeng();
+  renderBag();
   showPage(location.hash.slice(1));
 });
 

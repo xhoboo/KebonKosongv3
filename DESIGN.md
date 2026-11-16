@@ -7,7 +7,7 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 
 - Game idle: dicek beberapa kali sehari, progres offline wajib jalan.
 - Gameplay simpel (sedikit tombol, sedikit skill), kerumitan ada di item, resep, dan petualangan.
-- Satu kegiatan dalam satu waktu (menebang, menambang, memancing, memasak, berpetualang).
+- Satu kegiatan dalam satu waktu (menjelajah, memancing, memasak).
   **Pengecualian: Kebun** tumbuh paralel; menanam/panen instan, lalu pemain bebas melakukan kegiatan lain.
   **Menempa bukan kegiatan idle**: klik, animasi + suara tempa 1–2 detik, hasil langsung keluar.
   Menempa **tidak** menghentikan kegiatan yang sedang berjalan. Memasak tetap kegiatan idle.
@@ -30,14 +30,14 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 | Area | Kegiatan | Gerbang |
 |---|---|---|
 | Kebun | menanam sayur & buah (paralel) | slot |
-| Hutan | menebang kayu | tier kapak |
-| Goa | menambang batu & bijih | tier beliung |
-| Sungai → Danau → Laut | memancing (ikan acak per area) | tier alat pancing |
+| Hutan | jelajah 4 tier (kayu, ranting, daun, rotan, benih langka, musuh hutan) | rank kapak + tier sebelumnya Lv. 25 |
+| Goa | jelajah 4 tier (batu, bijih, kristal, musuh goa) | rank beliung + tier sebelumnya Lv. 25 |
+| Laut | jelajah 4 tier (ikan laut, kerang, karang, mutiara, musuh laut) | Tombak Bertali; rank tombak + tier sebelumnya Lv. 25 |
+| Sungai → Danau | memancing (ikan acak per area) | tier joran |
 | Rumah | kapasitas jenis item | level rumah |
 | Dapur | memasak | level dapur membuka resep |
 | Anvil | menempa alat, senjata, armor | level anvil membuka barang yang lebih bagus |
 | Pasar | jual item, beli benih biasa | — |
-| Petualangan | idle di Hutan/Goa/Sungai/Danau/Laut | kedalaman dipilih pemain |
 
 ### Kebun
 - Punya level (exp dari panen).
@@ -48,23 +48,28 @@ yang **sudah** berlaku di game. Angka di sini draf dan boleh disetel ulang setel
 - Wajib ada tombol "Tanam semua" dan "Panen semua".
 - Hasil kebun harus terserap: bahan dapur, dijual, bahan resep lain.
 
-### Hutan & Goa: rantai alat silang
-- Kayu lebih keras butuh kapak tier lebih tinggi; bijih lebih bagus butuh beliung tier lebih tinggi.
-  Tanpa alatnya, node itu terkunci.
-- Alat tier N didapat dengan meng-upgrade alat tier N−1 di Anvil.
-- Bahan upgrade **selalu kayu + batu/logam dari tier di bawahnya**, untuk kapak maupun beliung,
-  sehingga Hutan dan Goa harus naik bergantian. Tidak boleh ada resep yang butuh bahan dari tier yang dikunci olehnya.
-- Kapak Berkilau (sudah ada di game) = kapak tier 2, pembuka Jati.
-- Level & exp alat tetap saat di-upgrade. Alat membuka node; level node menambah drop dan kecepatan.
+### Hutan, Goa, Laut: jelajah dengan rantai alat silang
+- Tiap wilayah punya 4 tier area (Hutan Tepi → Hutan Dalam → Hutan Rimba → Hutan Larangan; Mulut Goa → Lorong Goa →
+  Goa Gelap → Perut Bumi; Pantai → Terumbu Karang → Laut Lepas → Palung Laut), masing-masing dengan level 0–100.
+- Maju per meter: Manual (klik, 1 dtk/m) atau Auto (10 → 2 dtk/m seiring level area). Tiap meter satu encounter.
+- Musuh dilawan dengan alat wilayahnya; alat tidak punya level, hanya serangan per rank. Senjata menunggu dungeon.
+- Bahan alat rank r selalu kayu + batu/logam tier r−1, sehingga Hutan dan Goa harus naik bergantian.
+  Tidak boleh ada resep yang butuh bahan dari tier yang dikunci olehnya.
+- Rincian aturan yang sudah berlaku ada di `CLAUDE.md`.
 
-Draf tier:
+Draf tier bahan:
 
-| Tier | Kayu | Batu/Bijih |
-|---|---|---|
-| 1 | Akasia | Batu |
-| 2 | Jati | Tembaga |
-| 3 | Mahoni | Besi |
-| 4 | Ulin | Emas |
+| Tier | Kayu | Batu/Bijih | Laut |
+|---|---|---|---|
+| 1 | Akasia | Batu | Kembung, Kerang |
+| 2 | Jati | Tembaga | Tongkol, Karang |
+| 3 | Mahoni | Besi | Kakap |
+| 4 | Ulin | Emas | Kerapu |
+
+### Nanti
+- Alat tier 5–6 untuk bagian dalam T3/T4.
+- Dungeon (area khusus monster) tempat senjata Keris/Golok/Tombak dipakai; resep senjata & armor masih ada di data.
+- Kegunaan loot monster baru (kulit, taring, sisik, mustika).
 
 ### Memancing
 - Punya level.
@@ -90,41 +95,22 @@ Draf tier:
 - Exp Menempa dihitung terhadap bahan yang dipakai, bukan per klik.
 - Skill Menempa (exp per tempa) menaikkan peluang kualitas: Biasa / Bagus (+10%) / Istimewa (+25%) / Pusaka (+50% + 1 sifat).
 
-## Petualangan
+## Jelajah (pengganti Petualangan)
 
-- Kegiatan idle di Hutan, Goa, Sungai, Danau, atau Laut, dengan **kedalaman yang dipilih pemain**
-  (mis. Hutan Tepi → Hutan Dalam → Hutan Larangan). Musuh dan loot tetap per kedalaman, **tidak** menyesuaikan gear.
-- Tiap interval senjata terjadi satu encounter: musuh, loot, atau kejadian.
-- Senjata menentukan interval dan serangan (3 jenis, tanpa keunggulan area):
-  - Keris: 5 detik per encounter, serangan kecil, mudah kalah dari musuh kuat.
-  - Golok: di tengah.
-  - Tombak: 15 detik per encounter, serangan besar, bisa menang melawan musuh kuat.
-- Petualangan air (Sungai/Danau/Laut) memberi musuh air dan harta karun, bukan ikan biasa (ikan dari Memancing).
-- **Tas** membatasi bekal makanan dan loot yang bisa dibawa pulang; bisa di-upgrade.
-- Armor mengurangi HP yang hilang saat kalah.
-- Petualangan punya **HP**. Kalah dalam encounter = HP berkurang. Makan otomatis dari masakan yang dibawa.
-  HP habis = pulang; **loot yang sudah didapat tetap dibawa** (tanpa hukuman selain waktu).
-- Tas penuh **tidak** membuat pulang: petualangan jalan terus (loot baru dibuang dan dicatat di jurnal) sampai HP habis.
-- Level petualangan per gaya (mastery). Awal hanya dua:
-  - **Jarak Dekat**: exp dari mengalahkan musuh, menaikkan serangan.
-  - **Armor**: exp dari menerima serangan, menaikkan HP maksimal dan mengurangi damage.
-  - Jarak jauh dan magic menyusul di fase akhir. Musuh tidak punya kelemahan terhadap gaya tertentu.
-- Tas & Rumah:
-  - Selesai petualangan, pemain memilih item tas mana yang masuk Rumah dan mana yang dibuang;
-    yang tidak dibuang boleh tetap di tas (mis. kalau Rumah penuh) lalu lanjut berpetualang.
-  - Rumah → Tas: hanya item **bekal** (makanan, dan item lain yang membantu petualangan).
-  - Tas → Rumah: semua item.
-  - Kapasitas tas dihitung per item berbeda (seperti Rumah), jumlah per item tidak dibatasi.
-- **Jurnal** mencatat setiap encounter dan loot, termasuk item yang dibuang karena rumah penuh.
+- **Tas** membatasi bekal makanan dan loot yang bisa dibawa pulang (per item berbeda); bisa di-upgrade.
+- **HP**: menang tetap kena sedikit (10%), kalah kena penuh. Makan otomatis dari masakan yang dibawa.
+  HP habis = kembali ke rumah dari 0 m; **isi tas tetap aman**.
+- Tas penuh **tidak** membuat pulang: loot baru ditinggal dan dicatat di jurnal.
+- Mastery **Armor**: exp dari bertarung (menang 50%, kalah 100%), menaikkan HP maksimal dan pertahanan.
+- Isi tas dipilah di Rumah; yang tidak dipilah boleh tetap dibawa ke perjalanan berikutnya.
+- **Jurnal** mencatat setiap meter (encounter, loot, makan, tas penuh) untuk semua wilayah.
 
 ## Pembukaan area
 
-- Awal: Hutan dan Kebun, plus Pasar, Rumah, Dapur, Anvil.
-- Goa: Akasia Lv 10 (±2 menit).
-- Sungai: punya alat pancing tier 1 (butuh logam + benang, jadi otomatis setelah Goa dan Kebun).
-- Danau / Laut: alat pancing tier 2 / 3.
-- Petualangan: punya senjata pertama.
-- Migrasi save: pemain lama yang sudah punya progres Goa langsung punya Goa terbuka.
+- Awal: Hutan T1, Goa T1, Kebun, Pasar, Rumah, Dapur, Anvil.
+- Laut: Tombak Bertali (Akasia + Batu + Rotan).
+- Sungai / Danau: Joran Biasa (Akasia + Batu) / Joran Lentur (+ Kapas).
+- Tier 2–4 tiap wilayah: tier sebelumnya Lv. 25 + rank alat.
 
 ## Keputusan tertunda (putuskan setelah game dicoba)
 
@@ -142,3 +128,4 @@ Draf tier:
 7. ✅ Kualitas tempa (Biasa/Bagus/Istimewa/Pusaka + sifat, skill Menempa).
 8. ✅ Kebun (petak berbayar sampai 100, 7 tanaman, benih langka dari Hutan Tepi, Joran Lentur dari Kapas).
 9. ✅ Danau, Laut, kedalaman petualangan lanjutan (Hutan Dalam, Tepi Sungai, Goa Gelap), tingkat 3–4 (Mahoni/Besi, Ulin/Emas), perlengkapan tingkat 2–3, Anvil & Dapur Lv. 4.
+10. ✅ Perombakan Jelajah: Hutan/Goa/Laut jadi wilayah jelajah 4 tier per meter (manual/auto), Petualangan dan node tebang/tambang dihapus, progres dimulai ulang (save v3).

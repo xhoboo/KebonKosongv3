@@ -714,7 +714,7 @@
   .journal li { border-top-color: var(--line); }
   .journal time { color: var(--dim); font-size: 11px; }
   .journal .j-lose, .journal .j-home, .journal .j-bagFull { color: var(--ink-2); }
-  .journal .j-lose time + span::before, .journal .j-home time + span::before { content: "− "; color: var(--danger); }
+  .journal .j-lose .j-where + span::before, .journal .j-home .j-where + span::before { content: "− "; color: var(--danger); }
   .journal .j-start, .journal .j-stop { font-weight: 600; }
   /* Petualangan: HP & skill sebagai bar */
   .adv-status .hp-head { display: flex; justify-content: space-between; align-items: baseline; }
@@ -835,6 +835,121 @@
     #page-petualangan > .equip { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
   }
 
+  /* ---------- Jelajah: tier area, kartu pemandangan POV, bagian yang bisa dilipat ---------- */
+  .tint.bull { filter: brightness(.7) saturate(1.3); }
+  .tint.fang { filter: sepia(.6) brightness(.95); }
+  .tint.snakegem { filter: hue-rotate(-100deg) saturate(1.4); }
+  .tint.shark { filter: grayscale(.4) brightness(1.1); }
+  .tint.ink { filter: grayscale(1) brightness(.35); }
+  .tint.resin { filter: sepia(1) saturate(2.5) hue-rotate(-10deg); }
+  .tint.agar { filter: brightness(.5) sepia(.6) hue-rotate(-30deg); }
+  .tint.seaweed { filter: hue-rotate(40deg) brightness(.75); }
+  .tint.crystal { filter: hue-rotate(80deg) saturate(1.3); }
+  .tint.babirusa { filter: sepia(.5) brightness(.75); }
+  .tint.white { filter: grayscale(1) brightness(1.35); }
+  .tint.cobra { filter: sepia(1) hue-rotate(-20deg) brightness(.7); }
+  .tint.vampire { filter: sepia(1) saturate(4) hue-rotate(-50deg) brightness(.7); }
+  .tint.seasnake { filter: hue-rotate(110deg) saturate(1.2); }
+  .tint.ray { filter: grayscale(.6) brightness(.7); }
+  .tint.moray { filter: hue-rotate(30deg) brightness(.6); }
+  .tint.sword { filter: hue-rotate(170deg) saturate(1.5); }
+  .emoji-fish.barracuda { filter: grayscale(.7) brightness(1.15); }
+  .ex-tiers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
+  .ex-tier {
+    display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 56px; padding: 7px 8px 0; overflow: hidden;
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r);
+    font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+  }
+  .ex-tier[aria-pressed="true"] { background: var(--panel-2); border-color: var(--ink); }
+  .ex-tier.locked { background: var(--sunken); border-style: dashed; }
+  .ex-tier.locked[aria-pressed="true"] { border-color: var(--muted); }
+  .t-top { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  .t-lv { margin-left: auto; }
+  .t-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+  .t-name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ex-tier.locked .t-name { color: var(--dim); }
+  .t-bar { display: block; height: 2px; margin: auto -8px 0; background: var(--track); }
+  .t-bar .fill { background: var(--bar-xp); border-radius: 0; }
+  .ex-view { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; }
+  .ex-scene { position: relative; height: 220px; border-bottom: 1px solid var(--line); overflow: hidden; }
+  .ex-scene canvas { display: block; width: 100%; height: 100%; }
+  .ex-scene.hurt { animation: nope .32s ease-out; }
+  .ex-scene.hit canvas { animation: punch .25s ease-out; }
+  @keyframes punch { 40% { transform: scale(1.03); } }
+  .ex-hud { position: absolute; left: 0; right: 0; top: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 8px 10px; pointer-events: none; }
+  .ex-name { font-family: var(--mono); font-size: 11px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ex-meter { flex: none; font-family: var(--mono); font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ex-toast {
+    position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: calc(100% - 20px);
+    padding: 6px 10px; background: rgba(10, 10, 10, .88); border: 1px solid var(--line-strong); border-radius: var(--r-sm);
+    font-family: var(--mono); font-size: 12px; white-space: nowrap; overflow: hidden; pointer-events: none;
+  }
+  .ex-toast:empty { display: none; }
+  .ex-toast.show { animation: toast 1.6s ease-out forwards; }
+  .ex-toast .tb { font-size: 26px; line-height: 1; }
+  .ex-toast .dim { color: var(--muted); }
+  @keyframes toast { 0% { opacity: 0; transform: translate(-50%, 8px) scale(.92); } 12% { opacity: 1; transform: translate(-50%, 0); } 70% { opacity: 1; } 100% { opacity: .55; transform: translate(-50%, 0); } }
+  .ex-lock { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 36px 12px 12px; color: var(--muted); }
+  .ex-lock > svg { width: 18px; height: 18px; }
+  .ex-lock .hint-go { display: inline-flex; align-items: center; gap: 6px; background: var(--bg); }
+  .ex-lock .ci { font-family: var(--mono); font-size: 14px; }
+  .ex-stat { padding: 10px 12px 0; }
+  .ex-hp-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .ex-hp-head .mono { font-size: 12px; color: var(--ink-2); }
+  .ex-stat .fill.hp { background: var(--bar-hp); }
+  .ex-stat .fill.hp.low { background: var(--danger); }
+  .ex-step { height: 2px; margin-top: 6px; }
+  .ex-controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 12px 12px; }
+  .ex-mode { flex: none; }
+  .ex-mode button { min-height: 48px; }
+  .ex-main { flex: 1 1 140px; min-height: 48px; }
+  .ex-main.auto:disabled { color: var(--ink-2); }
+  .ex-home { flex: 0 0 auto; min-height: 48px; }
+  .ex-note { margin: 0; padding: 0 12px 12px; }
+  .fold { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 12px; overflow: hidden; }
+  .fold-head {
+    display: flex; width: 100%; align-items: center; gap: 10px; min-height: 44px; padding: 0 12px;
+    background: none; border: 0; font: inherit; color: var(--ink); text-align: left; cursor: pointer;
+  }
+  .fold-head > .caps:first-child { flex: 1; color: var(--ink-2); }
+  .fold-head .caret { flex: none; }
+  .fold-head[aria-expanded="true"] .caret { transform: translateY(1px) rotate(-135deg); }
+  .fold-body { border-top: 1px solid var(--line); }
+  .fold.closed .fold-body { display: none; }
+  .fold .journal { max-height: 320px; }
+  .fold .panel-hint { padding-bottom: 4px; }
+  .journal .j-where { flex: none; min-width: 92px; font-family: var(--mono); font-size: 10px; color: var(--dim); padding-top: 1px; }
+  .journal .j-win time + .j-where + span::before { content: "+ "; color: var(--muted); }
+  .bag-items { padding: 10px 12px; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); }
+  .bag-items .item { cursor: default; }
+  .bag-items .item-icon { font-size: 24px; }
+  .sub-head { padding: 10px 12px 6px; border-top: 1px solid var(--line); }
+  .fold-body > .goal { border-radius: 0; }
+  .gear-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+  .gear-row + .gear-row, .goal + .gear-row { border-top: 1px solid var(--line); }
+  .gear-row .bar { margin-top: 6px; height: 4px; }
+  .gear-row .fill { background: var(--bar-xp); }
+  .gear-stats { margin: 0; padding: 8px 12px; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; font-size: 12px; }
+  .gear-stats dd { font-family: var(--mono); }
+  .win-list { list-style: none; margin: 0; padding: 0 12px 10px; }
+  .win-list li { display: flex; align-items: center; gap: 10px; min-height: 34px; }
+  .win-list .sell-icon { width: 28px; text-align: center; }
+  .win-list .sell-name { width: 38%; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .win-bar { flex: 1; min-width: 0; }
+  .win-bar .bar { height: 4px; }
+  .win-list .mono { flex: none; width: 40px; text-align: right; font-size: 11px; color: var(--ink-2); }
+  .enc-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 12px 10px; font-size: 20px; line-height: 1; }
+  .enc-list .sep { align-self: stretch; width: 1px; background: var(--line-2); }
+  @media (min-width: 900px) {
+    .ex-scene { height: 280px; }
+    .ex-tier { min-height: 60px; }
+  }
+  @media (min-width: 1100px) {
+    .ex-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: 16px; align-items: start; }
+    .ex-view { position: sticky; top: calc(var(--top-h) + 16px); margin: 0; }
+    .ex-scene { height: 340px; }
+  }
+
   /* ---------- Motion: animasi mengikuti input, tidak pernah menahan input ---------- */
   .btn2, .forge-btn, .sell-btn, .notice-btn, .upgrade-btn, .tab, .subtab, .seg button, .goal, .hint-go, .act-stop, .chip, .item, .seed-row, .reset-btn, .tool-link, .nav-item {
     transition: transform 80ms ease, background-color .15s, border-color .15s, color .15s;
@@ -908,16 +1023,13 @@
     <p class="note seed-note" data-i18n="seedTableNote"></p>
   </main>
 
-  <main id="page-hutan">
+  <main id="page-hutan" class="explore">
     <section class="next-strip side-box" hidden></section>
-    <section class="tool" data-tool="axe"></section>
-    <div class="cards" data-area="hutan"></div>
   </main>
 
-  <main id="page-goa" hidden>
-    <section class="tool" data-tool="pickaxe"></section>
-    <div class="cards" data-area="goa"></div>
-  </main>
+  <main id="page-goa" class="explore" hidden></main>
+
+  <main id="page-laut" class="explore" hidden></main>
 
   <main id="page-sungai" hidden>
     <section class="tool" data-tool="rod"></section>
@@ -928,9 +1040,6 @@
     <div class="cards" data-area="danau"></div>
   </main>
 
-  <main id="page-laut" hidden>
-    <div class="cards" data-area="laut"></div>
-  </main>
 
   <main id="page-dapur" hidden>
     <section class="tool">
@@ -947,49 +1056,6 @@
     <div class="cards" data-area="dapur"></div>
   </main>
 
-  <main id="page-petualangan" hidden>
-    <section class="tool adv-status">
-      <div class="hp-head"><span class="caps" data-i18n="hp"></span><span class="tool-xp" id="adv-hp"></span></div>
-      <span class="bar hp-bar"><span class="fill hp" id="adv-hp-fill"></span></span>
-      <div class="tool-row adv-skill"><div class="lv-box" aria-hidden="true"><span>LV</span><b id="melee-level"></b></div><div class="tool-main">
-        <div class="tool-title"><span class="name" data-i18n="melee"></span><span class="tool-xp" id="melee-xp"></span></div>
-        <span class="bar"><span class="fill" id="melee-fill"></span></span></div></div>
-      <div class="tool-row adv-skill"><div class="lv-box" aria-hidden="true"><span>LV</span><b id="armor-level"></b></div><div class="tool-main">
-        <div class="tool-title"><span class="name" data-i18n="armorSkill"></span><span class="tool-xp" id="armor-xp"></span></div>
-        <span class="bar"><span class="fill" id="armor-fill"></span></span></div></div>
-      <dl class="stats adv-stats">
-        <div><dt data-i18n="attack"></dt><dd id="adv-atk"></dd></div>
-        <div><dt data-i18n="interval"></dt><dd id="adv-interval"></dd></div>
-        <div><dt data-i18n="defense"></dt><dd id="adv-def"></dd></div>
-        <div><dt data-i18n="winChance"></dt><dd id="adv-win"></dd></div>
-      </dl>
-    </section>
-    <section class="equip" id="equip"></section>
-    <div class="cards" data-area="petualangan"></div>
-
-    <section class="panel">
-      <div class="panel-head"><span class="caps"><span data-i18n="bag"></span> <span id="bag-level"></span></span><span class="caps" id="bag-slots"></span></div>
-      <ul class="market" id="bag-items"></ul>
-      <p class="empty" id="bag-empty" data-i18n="bagEmpty"></p>
-      <button class="notice-btn" id="bag-store-all" data-i18n="storeAll"></button>
-      <button class="upgrade-btn" id="bag-upgrade"><span id="bag-next"></span><span class="cost" id="bag-cost"></span></button>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><span class="caps" data-i18n="pack"></span></div>
-      <p class="panel-hint" data-i18n="packHint"></p>
-      <ul class="market" id="pack"></ul>
-      <p class="empty" id="pack-empty" data-i18n="noFood"></p>
-    </section>
-
-    <section class="panel">
-      <div class="panel-head"><span class="caps" data-i18n="journal"></span></div>
-      <p class="panel-hint" id="adv-summary"></p>
-      <ol class="journal" id="journal"></ol>
-      <p class="empty" id="journal-empty" data-i18n="journalEmpty"></p>
-    </section>
-  </main>
-
   <main id="page-rumah" hidden>
     <section class="side-box anvil-up">
       <div class="side-head"><span class="caps" id="house-level"></span><span class="caps" id="house-slots"></span></div>
@@ -1001,6 +1067,14 @@
       <span class="notice-title" data-i18n="discarded"></span>
       <div class="notice-list" id="discarded-list"></div>
       <button class="notice-btn" id="discarded-dismiss" data-i18n="dismiss"></button>
+    </section>
+    <section class="panel" id="bag-panel">
+      <div class="panel-head"><span class="caps"><span data-i18n="bag"></span> <span id="bag-level"></span></span><span class="caps" id="bag-slots"></span></div>
+      <p class="panel-hint" id="bag-busy" data-i18n="bagBusy" hidden></p>
+      <ul class="market" id="bag-items"></ul>
+      <p class="empty" id="bag-empty" data-i18n="bagEmpty"></p>
+      <button class="notice-btn" id="bag-store-all" data-i18n="storeAll"></button>
+      <button class="upgrade-btn" id="bag-upgrade"><span id="bag-next"></span><span class="cost" id="bag-cost"></span></button>
     </section>
     <div class="seg sort" role="group">
       <button data-sort-choice="cat" data-i18n="sortCat"></button>
@@ -1081,9 +1155,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-12.8"></script>
-<script src="js/game.js?v=2026-11-12.8"></script>
-<script src="js/ui.js?v=2026-11-12.8"></script>
-<script src="js/debug.js?v=2026-11-12.8"></script>
+<script src="js/data.js?v=2026-11-16.1"></script>
+<script src="js/game.js?v=2026-11-16.1"></script>
+<script src="js/ui.js?v=2026-11-16.1"></script>
+<script src="js/debug.js?v=2026-11-16.1"></script>
 </body>
 </html>

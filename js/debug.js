@@ -22,26 +22,25 @@
     checkUnlocks();
     save();
     render(); renderTools(); renderNav(); renderAnvil(); renderHouse(); renderMarket();
-    renderSeedShop(); renderKepeng(); renderAdventure(); renderFarm(); renderDebug();
+    renderSeedShop(); renderKepeng(); renderBag(); renderExplore(); renderFarm(); renderDebug();
   }
 
   // Majukan waktu: tanaman Kebun digeser mundur, kegiatan berjalan seperti offline tapi tanpa batas 24 jam
+  // (jelajah manual hanya menyelesaikan langkah yang sedang berjalan)
   function advance(ms) {
     state.farm.plots.forEach(p => { if (p) p.at -= ms; });
-    let elapsed = ms + state.progress, at = Date.now() - ms, n = 0;
-    for (let time; state.active && elapsed >= (time = actionTime(state.active)); elapsed -= time) { act(state.active, at += time); n++; }
-    if (state.active) state.progress = elapsed;
+    const n = simulate(ms);
     refreshAll();
     return n;
   }
 
   // Semua hal yang punya level, untuk diatur langsung
   const levelTargets = () => [
-    ...Object.keys(NODES).map(k => [`node:${k}`, `Node · ${t(NODES[k].name || k)}${NODES[k].name ? ' (' + k + ')' : ''}`, state.nodes[k], MAX_LEVEL]),
-    ...Object.keys(TOOLS).map(k => [`tool:${k}`, `Alat · ${k} (level)`, state.tools[k], MAX_LEVEL]),
+    ...Object.keys(EXPLORE).map(k => [`area:${k}`, `Area · ${t(k)} (${k})`, state.areas[k], MAX_LEVEL]),
+    ...Object.keys(NODES).map(k => [`node:${k}`, `Node · ${t(NODES[k].name || k)} (${k})`, state.nodes[k], MAX_LEVEL]),
+    ['tool:rod', 'Alat · rod (level)', state.tools.rod, MAX_LEVEL],
     ...Object.keys(TOOLS).map(k => [`tier:${k}`, `Alat · ${k} (tingkat 0–${TOOLS[k].tiers.length - 1})`, null, TOOLS[k].tiers.length - 1]),
-    ['skill:melee', 'Mastery · Jarak Dekat', state.mastery.melee, MAX_LEVEL],
-    ['skill:armor', 'Mastery · Armor', state.mastery.armor, MAX_LEVEL],
+    ['skill:armor', 'Mastery · Armor', state.armor, MAX_LEVEL],
     ['skill:cooking', 'Skill · Memasak', state.cooking, MAX_LEVEL],
     ['skill:smithing', 'Skill · Menempa', state.smithing, MAX_LEVEL],
     ['skill:farm', 'Skill · Berkebun', state.farm, MAX_LEVEL],
@@ -87,11 +86,12 @@
         <button class="chip" data-kepeng="100000">+100.000 Kepeng</button>
         <button class="chip" data-items="1000">+1.000 semua bahan</button>
         <button class="chip" data-food="20">+20 semua masakan</button>
-        <button class="chip" data-gear="1">+1 semua perlengkapan</button>
         <button class="chip" data-unlock="1">Buka semua area</button>
-        <button class="chip" data-heal="1">HP petualangan penuh</button>
+        <button class="chip" data-heal="1">HP jelajah penuh</button>
+        <button class="chip" data-meter="100">Jelajah +100 m</button>
+        <button class="chip" data-meter="1000">Jelajah +1.000 m</button>
       </div>
-      <p class="panel-hint">"Semua bahan" = kayu, batu/bijih, bahan alam, ikan, sayur/buah, benih, dan bahan monster. Tombol-tombol ini mengabaikan kapasitas Rumah, jadi Rumah bisa melebihi batasnya.</p>
+      <p class="panel-hint">"Semua bahan" = kayu, batu/bijih, bahan alam, ikan, sayur/buah, benih, dan bahan monster. Tombol-tombol ini mengabaikan kapasitas Rumah, jadi Rumah bisa melebihi batasnya. "Buka semua area" juga memberi alat tingkat tertinggi dan tier area sebelumnya Lv. 25. "+m" memindahkan posisi perjalanan yang sedang berjalan tanpa encounter.</p>
     </section>
     <section class="panel debug">
       <div class="panel-head"><span class="panel-title">📈 Level</span></div>
@@ -155,17 +155,19 @@
       for (const it of ITEMS) if (['wood', 'stone', 'nature', 'fish', 'crop', 'seed', 'loot'].includes(it.cat)) state.items[it.key] = (state.items[it.key] || 0) + +d.items;
     } else if (d.food) {
       for (const it of ITEMS) if (it.cat === 'food') state.items[it.key] = (state.items[it.key] || 0) + +d.food;
-    } else if (d.gear) {
-      for (const it of ITEMS) if (it.cat === 'gear') state.items[it.key] = (state.items[it.key] || 0) + 1;
     } else if (d.unlock) {
       for (const k of Object.keys(state.unlocked)) state.unlocked[k] = true;
-    } else if (d.heal) state.hp = maxHp();
+      for (const k of Object.keys(TOOLS)) state.tools[k].tier = TOOLS[k].tiers.length - 1;
+      for (const a of Object.values(EXPLORE)) if (a.prev && state.areas[a.prev].level < EX.unlockLv) setLevel('area:' + a.prev, EX.unlockLv);
+    } else if (d.heal) { if (state.trip) state.trip.hp = maxHp(); }
+    else if (d.meter) { if (state.trip) state.trip.meter += +d.meter; }
     else if (d.allLevels) {
-      for (const [id, , s] of levelTargets()) if (s && id.startsWith('node:') || id.startsWith('skill:') || id.startsWith('tool:')) setLevel(id, +d.allLevels);
+      for (const [id, , s] of levelTargets()) if (s && /^(node|skill|tool|area):/.test(id)) setLevel(id, +d.allLevels);
     } else if (b.id === 'dbg-set') {
       const v = parseInt($('dbg-level').value, 10);
       if (Number.isNaN(v)) return;
       setLevel($('dbg-target').value, v);
+      if (state.trip) state.trip.hp = Math.min(state.trip.hp, maxHp());
     } else if (b.id === 'dbg-copy') {
       const json = JSON.stringify(state);
       $('dbg-save').value = json;
