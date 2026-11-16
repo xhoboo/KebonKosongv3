@@ -871,6 +871,7 @@
   .t-bar { display: block; height: 2px; margin: auto -8px 0; background: var(--track); }
   .t-bar .fill { background: var(--bar-xp); border-radius: 0; }
   .ex-view { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; margin-bottom: 12px; }
+  .ex-col > .fold:last-child, .ex-folds > .fold:last-child { margin-bottom: 0; }
   .ex-scene { position: relative; height: 220px; border-bottom: 1px solid var(--line); overflow: hidden; }
   .ex-scene canvas { display: block; width: 100%; height: 100%; }
   .ex-scene.hurt { animation: nope .32s ease-out; }
@@ -940,14 +941,38 @@
   .win-list .mono { flex: none; width: 40px; text-align: right; font-size: 11px; color: var(--ink-2); }
   .enc-list { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 12px 10px; font-size: 20px; line-height: 1; }
   .enc-list .sep { align-self: stretch; width: 1px; background: var(--line-2); }
+  .ex-tier .lock-svg { color: var(--dim); }
+  /* Desktop: tier jadi menu kiri, kartu jelajah kotak (±30% lebar layar) dengan jurnal di bawahnya.
+     900–1099: dua kolom (menu · kartu + bagian lain di bawahnya). ≥1100: tiga kolom, perlengkapan/tas/area di kanan. */
   @media (min-width: 900px) {
-    .ex-scene { height: 280px; }
-    .ex-tier { min-height: 60px; }
+    .ex-wrap { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 16px; align-items: start; }
+    .ex-folds { grid-column: 2; }
+    .ex-col { max-width: 480px; }
+    .ex-tiers {
+      position: sticky; top: calc(var(--top-h) + 20px); display: flex; flex-direction: column; gap: 0; margin: 0;
+      border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--panel);
+    }
+    .ex-tier { position: relative; min-height: 0; gap: 3px; padding: 9px 12px 0; border: 0; border-radius: 0; border-bottom: 1px solid var(--line); background: none; }
+    .ex-tier:last-child { border-bottom: 0; }
+    .ex-tier:hover { background: var(--side-hover); }
+    .ex-tier[aria-pressed="true"] { background: var(--side-cur); }
+    .ex-tier[aria-pressed="true"]::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 10px; width: 2px; background: var(--ink); animation: nav-line .22s var(--ease-out) both; }
+    .ex-tier.locked { background: none; border-style: solid; }
+    .ex-tier.locked[aria-pressed="true"] { background: var(--sunken); }
+    .ex-tier.locked[aria-pressed="true"]::before { background: var(--muted); }
+    .t-name { font-size: 13px; white-space: normal; }
+    .t-bar { margin: 6px -12px 0; }
+    .ex-scene { height: auto; aspect-ratio: 1; }
+  }
+  .gear-row .tool-title { flex-wrap: wrap; }
+  .gear-row .tool-title .name { white-space: normal; }
+  @media (min-width: 1100px) and (max-width: 1599px) {
+    .ex-folds .gear-stats { grid-template-columns: 1fr; }
   }
   @media (min-width: 1100px) {
-    .ex-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(300px, 2fr); gap: 16px; align-items: start; }
-    .ex-view { position: sticky; top: calc(var(--top-h) + 16px); margin: 0; }
-    .ex-scene { height: 340px; }
+    .ex-wrap { grid-template-columns: 168px minmax(300px, 30vw) minmax(240px, 1fr); }
+    .ex-col { max-width: none; }
+    .ex-folds { grid-column: 3; }
   }
 
   /* ---------- Motion: animasi mengikuti input, tidak pernah menahan input ---------- */
@@ -1155,9 +1180,9 @@
 </div>
 
 <!-- Penanda versi (?v=…): naikkan di keempat baris setiap kali ada file js/ yang berubah, supaya browser tidak memakai versi lama dari cache -->
-<script src="js/data.js?v=2026-11-16.1"></script>
-<script src="js/game.js?v=2026-11-16.1"></script>
-<script src="js/ui.js?v=2026-11-16.1"></script>
-<script src="js/debug.js?v=2026-11-16.1"></script>
+<script src="js/data.js?v=2026-11-16.2"></script>
+<script src="js/game.js?v=2026-11-16.2"></script>
+<script src="js/ui.js?v=2026-11-16.2"></script>
+<script src="js/debug.js?v=2026-11-16.2"></script>
 </body>
 </html>

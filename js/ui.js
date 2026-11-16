@@ -664,22 +664,27 @@ function journalText(e) {
   return '';
 }
 
-const FOLDS = ['journal', 'bag', 'gear', 'area'];
+// Jurnal di bawah kartu jelajah; Perlengkapan (yang dipakai), Tas, dan Area di kolom kanan
+const FOLDS = ['journal', 'gear', 'bag', 'area'];
 const FOLD_TEXT = { journal: 'foldJournal', bag: 'foldBag', gear: 'foldGear', area: 'foldArea' };
 const exSel = {}; // tier area yang sedang dilihat per wilayah
 const exEls = {}; // elemen tiap halaman wilayah
 const lastHit = {}; // encounter terakhir per area (untuk toast di pemandangan): { res, at }
 let armedDiscard = null, discardTimer;
+const foldHtml = f => `<section class="fold" data-fold="${f}">` +
+  `<button class="fold-head" aria-expanded="true"><span class="caps" data-i18n="${FOLD_TEXT[f]}"></span><span class="caps fold-meta"></span><span class="caret" aria-hidden="true"></span></button>` +
+  `<div class="fold-body"></div></section>`;
 
 for (const [region, r] of Object.entries(REGIONS)) {
   const main = $('page-' + region);
   const wrap = document.createElement('div');
+  // Tata letak: tier (menu kiri di desktop, baris di ponsel) · kartu jelajah + jurnal · perlengkapan, tas, area
   wrap.className = 'ex-wrap';
   wrap.innerHTML =
-    `<div class="ex-tiers" role="group">${r.areas.map(k => `<button class="ex-tier" data-area="${k}">` +
-      `<span class="t-top"><span class="t-tier">T${EXPLORE[k].tier}</span><span class="t-dot live" hidden></span><span class="t-lv"></span></span>` +
-      `<span class="t-name" data-i18n="${k}"></span><span class="t-bar"><span class="fill"></span></span></button>`).join('')}</div>` +
-    `<div class="ex-grid">` +
+    `<nav class="ex-tiers">${r.areas.map(k => `<button class="ex-tier" data-area="${k}">` +
+      `<span class="t-top"><span class="t-tier">T${EXPLORE[k].tier}</span><span class="t-dot live" hidden></span><span class="t-lv"></span>${LOCK_SVG}</span>` +
+      `<span class="t-name" data-i18n="${k}"></span><span class="t-bar"><span class="fill"></span></span></button>`).join('')}</nav>` +
+    `<div class="ex-col">` +
     `<section class="ex-view">` +
       `<div class="ex-scene"><canvas aria-hidden="true"></canvas>` +
         `<div class="ex-hud"><span class="ex-name"></span><span class="ex-meter"></span></div>` +
@@ -690,11 +695,8 @@ for (const [region, r] of Object.entries(REGIONS)) {
       `<div class="ex-controls"><div class="seg ex-mode" role="group"><button data-mode="manual" data-i18n="manual"></button><button data-mode="auto" data-i18n="auto"></button></div>` +
         `<button class="forge-btn ex-main"></button><button class="btn2 ex-home" data-i18n="goHome"></button></div>` +
       `<p class="note ex-note" hidden></p>` +
-    `</section>` +
-    `<div class="ex-folds">${FOLDS.map(f => `<section class="fold" data-fold="${f}">` +
-      `<button class="fold-head" aria-expanded="true"><span class="caps" data-i18n="${FOLD_TEXT[f]}"></span><span class="caps fold-meta"></span><span class="caret" aria-hidden="true"></span></button>` +
-      `<div class="fold-body"></div></section>`).join('')}</div>` +
-    `</div>`;
+    `</section>` + foldHtml('journal') + `</div>` +
+    `<div class="ex-folds">${FOLDS.filter(f => f !== 'journal').map(foldHtml).join('')}</div>`;
   main.appendChild(wrap);
   const q = sel => wrap.querySelector(sel);
   exEls[region] = {
@@ -760,6 +762,7 @@ function renderExplore(region = REGIONS[page] ? page : null) {
     btn.setAttribute('aria-pressed', k === key);
     setText(btn.querySelector('.t-lv'), o ? 'LV ' + s.level : '');
     btn.querySelector('.t-dot').hidden = !(tr && tr.area === k);
+    btn.querySelector('.lock-svg').toggleAttribute('hidden', o);
     btn.querySelector('.fill').style.width = (s.level >= MAX_LEVEL ? 100 : s.xp / areaXpNeeded(k, s.level) * 100) + '%';
     btn.title = o ? '' : exploreLock(k).map(p => p.text).join(' · ');
   }
